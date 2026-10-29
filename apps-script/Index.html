@@ -146,6 +146,11 @@
         .option.correct { background: var(--green); border-color: #16a34a; color: #fff; }
         .option.incorrect { background: var(--red); border-color: #dc2626; color: #fff; }
         .option.dim { opacity: .5; }
+        .explication {
+            margin: 0 0 20px; padding: 14px 16px; border-radius: 10px;
+            background: #e8f4f8; border-left: 4px solid var(--blue);
+            font-size: .95rem; line-height: 1.4;
+        }
         .btn {
             display: block; margin: 0 auto; border: 0; border-radius: 999px;
             padding: 12px 30px; background: var(--blue); color: #fff;
@@ -159,6 +164,37 @@
         .result .actions { display: flex; flex-direction: column; gap: 10px; align-items: center; }
         .btn.secondary { background: #fff; color: var(--blue); border: 2px solid var(--blue); }
         .btn.secondary:hover { background: #eff6ff; }
+
+        /* Questions à réponse écrite */
+        .saisie {
+            width: 100%; padding: 14px 16px; font: inherit; font-size: 1.15rem;
+            border: 3px solid var(--line); border-radius: 14px; background: #fff;
+        }
+        .saisie:focus { outline: none; border-color: var(--blue); }
+        .saisie.input-correct { border-color: var(--green); background: #f0fdf4; color: #166534; }
+        .saisie.input-wrong { border-color: var(--red); background: #fef2f2; color: #991b1b; }
+        .feedback { min-height: 28px; margin: 12px 0; font-weight: 700; }
+        .feedback.ok { color: #16a34a; }
+        .feedback.ko { color: #dc2626; }
+        .saisie-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 18px; }
+        .saisie-actions .btn { margin: 0; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+        .shake { animation: shake .4s ease-in-out; }
+
+        /* Flashcards */
+        .flashcard {
+            width: 100%; min-height: 240px; padding: 24px; cursor: pointer; font: inherit;
+            border: 2px solid var(--line); border-radius: 18px; background: #fff;
+            box-shadow: 0 4px 14px rgba(0,0,0,.08);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px;
+        }
+        .flashcard.flipped { background: #eff6ff; border-color: var(--blue); }
+        .face-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+        .face-text { font-size: 1.5rem; font-weight: 700; text-align: center; line-height: 1.35; color: var(--ink); }
+        .deck-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 16px; }
+        .deck-nav .btn { margin: 0; }
+        .btn:disabled { opacity: .5; cursor: default; }
+        .hint-small { text-align: center; color: var(--muted); font-size: .85rem; margin: 12px 0 0; }
 
         /* Mobile : les onglets passent en barre horizontale */
         @media (max-width: 700px) {
@@ -250,10 +286,218 @@
                         correct: 1
                     }
                 ]
+            },
+            {
+                id: "byzance-30",
+                emoji: "🏛️",
+                matiere: "Histoire",
+                titre: "Grand quiz : Byzance et l'Empire carolingien",
+                description: "30 questions avec explications : Moyen Âge, Justinien, Charlemagne, le schisme de 1054.",
+                questions: [
+                    {
+                        question: "En quelle année s'effondre l'Empire romain, marquant le début du Moyen Âge ?",
+                        options: ["395", "476", "800", "1492"],
+                        correct: 1,
+                        explication: "La chute de l'Empire romain d'Occident a lieu en 476, ce qui marque le passage de l'Antiquité au Moyen Âge."
+                    },
+                    {
+                        question: "Quel événement marque historiquement la fin du Moyen Âge en 1492 ?",
+                        options: ["Le Traité de Verdun", "La prise de Constantinople", "La « découverte » des Amériques", "Le Schisme de l'Église"],
+                        correct: 2,
+                        explication: "La « découverte » des Amériques par Christophe Colomb en 1492 marque la fin du Moyen Âge et le début de la Renaissance."
+                    },
+                    {
+                        question: "Combien de temps environ a duré la période du Moyen Âge ?",
+                        options: ["Environ 100 ans", "Environ 500 ans", "Plus de mille ans", "Près de 2000 ans"],
+                        correct: 2,
+                        explication: "Le Moyen Âge dure plus de 1000 ans, entre 476 (chute de Rome) et 1492."
+                    },
+                    {
+                        question: "Que désigne la « légende noire » historiquement associée au Moyen Âge ?",
+                        options: ["Une image positive d'art et de beauté", "L'invention des universités", "Une image de chaos, guerres et ignorance", "L'expansion des empires romains"],
+                        correct: 2,
+                        explication: "La « légende noire » qualifie à tort le Moyen Âge de période sombre et ignorante, alors qu'il a été culturellement très riche."
+                    },
+                    {
+                        question: "Comment appelle-t-on un régime politique centralisé dirigé par un empereur regroupant des peuples divers ?",
+                        options: ["Une république", "Un empire", "Une démocratie", "Un duché"],
+                        correct: 1,
+                        explication: "Un empire est un régime centralisé où un empereur dirige des peuples et territoires variés."
+                    },
+                    {
+                        question: "De quel célèbre dirigeant en Occident descendent les empereurs carolingiens ?",
+                        options: ["Jules César", "Alexandre le Grand", "Charles Martel", "Auguste"],
+                        correct: 2,
+                        explication: "L'Empire carolingien regroupe les descendants de Charles Martel en Occident."
+                    },
+                    {
+                        question: "Sous le règne de quel empereur (527-565) l'Empire byzantin atteint-il son apogée ?",
+                        options: ["Charlemagne", "Justinien", "Constantin", "Louis le Pieux"],
+                        correct: 1,
+                        explication: "Justinien (527-565) permet à l'Empire byzantin de reconquérir une grande partie du bassin méditerranéen."
+                    },
+                    {
+                        question: "Où se situe le cœur territorial de l'Empire byzantin ?",
+                        options: ["En Gaule et en Italie", "En Asie mineure et en Grèce", "En Espagne et en Afrique", "En Germanie"],
+                        correct: 1,
+                        explication: "Le cœur historique et territorial de l'Empire byzantin se trouve en Grèce et en Asie mineure."
+                    },
+                    {
+                        question: "Quel événement met définitivement fin à l'Empire byzantin en 1453 ?",
+                        options: ["Le Traité de Verdun", "La prise de Constantinople par les Turcs", "L'invasion des Vikings", "Le sacre de Charlemagne"],
+                        correct: 1,
+                        explication: "En 1453, les Turcs ottomans s'emparent de Constantinople, marquant la fin définitive de l'Empire byzantin."
+                    },
+                    {
+                        question: "Pendant quelle période Charlemagne a-t-il régné sur l'Empire carolingien ?",
+                        options: ["527-565", "768-814", "800-843", "1054-1118"],
+                        correct: 1,
+                        explication: "Charlemagne a régné de 768 à 814. Il est sacré empereur à Rome en l'an 800."
+                    },
+                    {
+                        question: "Quel traité signé en 843 divise l'Empire carolingien entre les trois petits-fils de Charlemagne ?",
+                        options: ["Le Traité de Rome", "Le Traité de Verdun", "Le Traité de Constantinople", "Le Traité de Ravenne"],
+                        correct: 1,
+                        explication: "Le Traité de Verdun (843) partage le vaste empire de Charlemagne en trois royaumes distincts."
+                    },
+                    {
+                        question: "Quels peuples envahisseurs ont menacé l'Empire carolingien après sa division ?",
+                        options: ["Les Romains et les Grecs", "Les Vikings, les Hongrois et les Musulmans", "Les Incas et les Aztèques", "Les Perses"],
+                        correct: 1,
+                        explication: "Aux IXe et Xe siècles, l'Occident carolingien fait face aux invasions des Vikings, des Hongrois et des Musulmans."
+                    },
+                    {
+                        question: "Sur quelles mers la ville de Constantinople possède-t-elle une ouverture maritime stratégique ?",
+                        options: ["La mer du Nord et l'Océan Atlantique", "La mer Noire et la mer Méditerranée", "La mer Rouge et la mer Baltique", "La mer Manche"],
+                        correct: 1,
+                        explication: "Constantinople est une ville carrefour située au contact de la mer Noire et de la mer Méditerranée."
+                    },
+                    {
+                        question: "Quel est le plus grand monument religieux construit à Constantinople ?",
+                        options: ["La Chapelle Palatine", "La basilique Sainte-Sophie", "La cathédrale Saint-Pierre", "L'église Saint-Vital"],
+                        correct: 1,
+                        explication: "La basilique Sainte-Sophie est le cœur et le siège religieux majeur de l'Empire byzantin à Constantinople."
+                    },
+                    {
+                        question: "Quels éléments d'organisation urbaine et politique les Byzantins conservent-ils des Romains ?",
+                        options: ["Les pyramides et les temples égyptiens", "Le Sénat, les forums et les aqueducs", "Les châteaux forts en bois", "Les temples païens"],
+                        correct: 1,
+                        explication: "Les Byzantins s'inspirent directement des Romains en conservant le Sénat, les forums, les thermes et les aqueducs."
+                    },
+                    {
+                        question: "Pourquoi Charlemagne installe-t-il sa capitale à Aix-la-Chapelle ?",
+                        options: ["Pour être près de la mer", "Car elle est proche de la Saxe qu'il souhaite conquérir", "Parce que le Pape y réside", "Pour imiter la ville de Rome"],
+                        correct: 1,
+                        explication: "Aix-la-Chapelle a été choisie par Charlemagne car elle était proche de la Saxe, région qu'il cherchait à soumettre et christianiser."
+                    },
+                    {
+                        question: "Comment appelle-t-on les lois rédigées par l'empereur Charlemagne ?",
+                        options: ["Le Code Justinien", "Les Capitulaires", "Les Mosaïques", "Les Papyrus"],
+                        correct: 1,
+                        explication: "Les capitulaires sont les lois édictées par les empereurs carolingiens pour administrer l'Empire."
+                    },
+                    {
+                        question: "Quelle était la langue officielle parlée dans l'Empire byzantin ?",
+                        options: ["Le Latin", "Le Grec", "L'Arabe", "Le Francique"],
+                        correct: 1,
+                        explication: "Alors que l'Empire romain utilisait le latin, l'Empire byzantin adopte officiellement le grec."
+                    },
+                    {
+                        question: "Quelle langue était utilisée pour la messe et l'administration dans l'Empire carolingien ?",
+                        options: ["Le Grec", "Le Latin", "Le Français moderne", "L'Allemand"],
+                        correct: 1,
+                        explication: "Dans l'Empire carolingien en Occident, le latin reste la langue officielle de l'Église et de l'administration."
+                    },
+                    {
+                        question: "Combien d'habitants comptait la ville de Constantinople au XIe siècle ?",
+                        options: ["50 000 habitants", "100 000 habitants", "400 000 habitants", "1 000 000 d'habitants"],
+                        correct: 2,
+                        explication: "Avec 400 000 habitants au XIe siècle, Constantinople est la plus grande ville d'Europe."
+                    },
+                    {
+                        question: "Sur la mosaïque de Ravenne, quel élément au-dessus de la tête de Justinien montre la protection divine ?",
+                        options: ["Une couronne dorée", "Une auréole", "Un casque militaire", "Une mitre d'évêque"],
+                        correct: 1,
+                        explication: "L'auréole derrière la tête de Justinien montre qu'il est le représentant de Dieu sur Terre et bénéficie de sa protection."
+                    },
+                    {
+                        question: "Que signifie le mot grec « Basileus » ?",
+                        options: ["Empereur suprême", "Roi", "Général", "Saint"],
+                        correct: 1,
+                        explication: "« Basileus » est le mot grec qui signifie « Roi », titre porté par l'empereur byzantin."
+                    },
+                    {
+                        question: "Par qui le Basileus byzantin est-il sacré lors de son couronnement ?",
+                        options: ["Par le Pape de Rome", "Par le Patriarche de Constantinople", "Par les comtes", "Par l'armée"],
+                        correct: 1,
+                        explication: "L'empereur byzantin est sacré à Constantinople par le Patriarche, le chef de l'Église orthodoxe."
+                    },
+                    {
+                        question: "Quel nom porte le célèbre recueil de lois anciennes romaines compilé sous Justinien ?",
+                        options: ["Les Capitulaires", "Le Code Justinien", "La Mosaïque des Lois", "Le Traité de Rome"],
+                        correct: 1,
+                        explication: "Le Code Justinien rassemble et réorganise les anciennes lois romaines et autorise leur traduction en grec."
+                    },
+                    {
+                        question: "Qui sont les « missi dominici » sous Charlemagne ?",
+                        options: ["Des soldats de garde", "Des envoyés de l'empereur chargés de surveiller les comtes", "Des prêtres de village", "Des marchands"],
+                        correct: 1,
+                        explication: "Les missi dominici (« envoyés du maître ») circulent dans l'empire par deux pour contrôler la gestion des comtes."
+                    },
+                    {
+                        question: "Quel rôle majeur l'impératrice Théodora a-t-elle joué en 532 aux côtés de Justinien ?",
+                        options: ["Elle a traduit la Bible", "Elle l'a aidé à écraser la révolte Nika", "Elle a construit le palais d'Aix", "Elle est partie en croisade"],
+                        correct: 1,
+                        explication: "L'impératrice Théodora a conseillé Justinien et l'a convaincu de rester à Constantinople pour écraser la révolte Nika en 532."
+                    },
+                    {
+                        question: "Qui est le chef suprême de l'Église catholique en Occident ?",
+                        options: ["Le Patriarche de Constantinople", "Le Pape à Rome", "L'empereur byzantin", "Le roi de France"],
+                        correct: 1,
+                        explication: "L'Église catholique a pour chef spirituel le Pape, qui siège à Rome."
+                    },
+                    {
+                        question: "Dans quelle Église les prêtres ont-ils le droit de porter la barbe et de se marier ?",
+                        options: ["L'Église catholique", "L'Église orthodoxe", "Dans les deux Églises", "Dans aucune"],
+                        correct: 1,
+                        explication: "Dans l'Église orthodoxe, les prêtres portent la barbe et peuvent se marier, contrairement au clergé catholique (célibataire et imberbe)."
+                    },
+                    {
+                        question: "Quels missionnaires célèbres ont évangélisé les peuples Slaves (Russes, Bulgares, Serbes) ?",
+                        options: ["Cyrille et Méthode", "Pierre et Paul", "Martin et Patrick", "Augustin et Jérôme"],
+                        correct: 0,
+                        explication: "Les moines Cyrille et Méthode ont évangélisé les Slaves et ont créé l'alphabet cyrillique pour traduire les textes religieux."
+                    },
+                    {
+                        question: "Comment appelle-t-on la séparation officielle entre Église catholique et orthodoxe en 1054 ?",
+                        options: ["La Réforme", "Le Schisme", "Le Traité de Verdun", "L'Excommunication"],
+                        correct: 1,
+                        explication: "En 1054, les désaccords religieux entraînent le Schisme, la séparation définitive entre Église catholique (Occident) et orthodoxe (Orient)."
+                    }
+                ]
+            },
+            {
+                id: "zootopia",
+                emoji: "🦊",
+                matiere: "Anglais",
+                titre: "Zootopia : les quartiers",
+                description: "Vocabulaire anglais des quartiers de Zootopie. Les réponses s'écrivent au clavier.",
+                questions: [
+                    { question: "Le quartier du désert, chaud et sec ?", reponses: ["sahara square"] },
+                    { question: "Le quartier glacé et enneigé ?", reponses: ["tundratown"] },
+                    { question: "Le centre-ville animé avec les gratte-ciels ?", reponses: ["downtown"] },
+                    { question: "La forêt tropicale très humide ?", reponses: ["rainforest district"] },
+                    { question: "Comment dit-on « des gratte-ciels » ?", reponses: ["skyscrapers", "skyscraper"] },
+                    { question: "Comment dit-on « des dunes de sable » ?", reponses: ["sand dunes", "sand dune"] },
+                    { question: "Comment dit-on « une cascade » ?", reponses: ["waterfall"] },
+                    { question: "L'accentuation : quelle est LA syllabe accentuée dans GIRAFFE ? (Tape juste la syllabe)", reponses: ["raffe"] },
+                    { question: "L'accentuation : quelle est LA syllabe accentuée dans ELEPHANT ? (Tape juste la syllabe)", reponses: ["el"] },
+                    { question: "Traduis : « humide »", reponses: ["humid", "wet"] }
+                ]
             }
         ];
 
-        // Pas encore de flashcards : l'onglet affichera un message vide.
+        // Pas de flashcards intégrées : les paquets viennent de la page d'administration.
         const FLASHCARDS = [];
 
         // ================================================================
@@ -261,7 +505,7 @@
         // ================================================================
         const content = document.getElementById("content");
         let activeTab = "quiz";
-        let inQuiz = false; // vrai pendant qu'un quiz est en cours (évite de le remplacer par la liste)
+        let inQuiz = false; // vrai pendant qu'un quiz ou un paquet est ouvert (évite de le remplacer par la liste)
 
         // Petit utilitaire pour créer des éléments sans innerHTML
         function h(tag, props, ...children) {
@@ -271,8 +515,32 @@
                 else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
                 else el.setAttribute(k, v);
             });
-            children.flat().forEach(c => el.append(c));
+            children.flat().forEach(c => { if (c != null) el.append(c); });
             return el;
+        }
+
+        // Mélange de Fisher-Yates sur une copie
+        function shuffle(list) {
+            const a = list.slice();
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        // Compare sans tenir compte de la casse, des accents, de la ponctuation et des espaces en trop
+        function norm(text) {
+            return text.toLowerCase()
+                .normalize("NFD").replace(/[̀-ͯ]/g, "")
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+                .trim()
+                .replace(/\s{2,}/g, " ");
+        }
+
+        function updateCounts() {
+            document.getElementById("count-quiz").textContent = QUIZZES.length;
+            document.getElementById("count-flashcards").textContent = FLASHCARDS.length;
         }
 
         function setTab(tab) {
@@ -301,56 +569,141 @@
                 )));
             } else {
                 content.append(h("h2", {}, "Flashcards"));
-                content.append(h("div", { class: "empty" }, "Aucune flashcard pour le moment. Elles apparaîtront ici."));
+                if (FLASHCARDS.length === 0) {
+                    content.append(h("div", { class: "empty" }, "Aucune flashcard pour le moment. Elles apparaîtront ici."));
+                    return;
+                }
+                content.append(h("div", { class: "grid" }, FLASHCARDS.map(d =>
+                    h("button", { class: "card", onclick: () => startDeck(d) },
+                        h("div", { class: "emoji" }, d.emoji),
+                        h("h3", {}, d.titre),
+                        h("div", { class: "meta" }, `${d.matiere} · ${d.cartes.length} cartes`),
+                        h("p", { class: "desc" }, d.description)
+                    )
+                )));
             }
         }
 
+        // ---------------- Quiz ----------------
         function startQuiz(quiz) {
             inQuiz = true;
             let index = 0;
             let score = 0;
+            const total = quiz.questions.length;
 
             const back = () => h("button", { class: "back", onclick: renderList }, "← Retour à la liste");
 
             function showQuestion() {
                 const q = quiz.questions[index];
-                let answered = false;
+                const scoreEl = h("span", { class: "score" }, `Score : ${score}`);
+                const explication = q.explication
+                    ? h("div", { class: "explication", style: "display:none" }, q.explication)
+                    : null;
                 const next = h("button", { class: "btn", style: "display:none", onclick: () => {
                     index++;
-                    index < quiz.questions.length ? showQuestion() : showResult();
-                } }, index + 1 < quiz.questions.length ? "Question suivante ➔" : "Voir le résultat ➔");
-                const scoreEl = h("span", { class: "score" }, `Score : ${score}`);
-                const buttons = q.options.map((opt, i) =>
-                    h("button", { class: "option", onclick: () => {
-                        if (answered) return;
-                        answered = true;
-                        if (i === q.correct) {
-                            score++;
-                            scoreEl.textContent = `Score : ${score}`;
-                            buttons[i].classList.add("correct");
-                        } else {
-                            buttons[i].classList.add("incorrect");
-                            buttons[q.correct].classList.add("correct");
-                        }
-                        buttons.forEach((b, j) => {
-                            b.disabled = true;
-                            if (j !== i && j !== q.correct) b.classList.add("dim");
-                        });
-                        next.style.display = "block";
-                    } }, opt));
+                    index < total ? showQuestion() : showResult();
+                } }, index + 1 < total ? "Question suivante ➔" : "Voir le résultat ➔");
+                // Appelé quand la question est terminée : montre l'explication et le bouton suivant
+                const reveal = () => {
+                    if (explication) explication.style.display = "block";
+                    next.style.display = "block";
+                    next.focus();
+                };
+                const addPoint = () => { score++; scoreEl.textContent = `Score : ${score}`; };
+                const body = Array.isArray(q.reponses)
+                    ? typedBody(q, addPoint, reveal)
+                    : choiceBody(q, addPoint, reveal);
 
                 content.replaceChildren(h("div", { class: "panel" },
                     back(),
                     h("div", { class: "progress" },
-                        h("span", {}, `Question ${index + 1} / ${quiz.questions.length}`), scoreEl),
+                        h("span", {}, `Question ${index + 1} / ${total}`), scoreEl),
                     h("h3", { class: "question" }, q.question),
-                    h("div", { class: "options" }, buttons),
+                    body,
+                    explication,
                     next
                 ));
             }
 
+            // Question à choix : l'ordre des réponses est mélangé à chaque affichage
+            function choiceBody(q, addPoint, reveal) {
+                let answered = false;
+                const order = shuffle(q.options.map((text, i) => ({ text, ok: i === q.correct })));
+                const buttons = order.map((o, i) =>
+                    h("button", { class: "option", onclick: () => {
+                        if (answered) return;
+                        answered = true;
+                        const good = buttons[order.findIndex(x => x.ok)];
+                        if (o.ok) {
+                            addPoint();
+                            buttons[i].classList.add("correct");
+                        } else {
+                            buttons[i].classList.add("incorrect");
+                            good.classList.add("correct");
+                        }
+                        buttons.forEach(b => {
+                            b.disabled = true;
+                            if (b !== buttons[i] && b !== good) b.classList.add("dim");
+                        });
+                        reveal();
+                    } }, o.text));
+                return h("div", { class: "options" }, buttons);
+            }
+
+            // Question à réponse écrite : on réessaie jusqu'à trouver ; le point n'est donné qu'au premier essai.
+            // Après 3 erreurs, un bouton permet de voir la réponse (sans point).
+            function typedBody(q, addPoint, reveal) {
+                let tries = 0;
+                let done = false;
+                const input = h("input", { type: "text", class: "saisie", placeholder: "Écris ta réponse…",
+                    autocomplete: "off", autocapitalize: "off", spellcheck: "false", "aria-label": "Ta réponse" });
+                const feedback = h("div", { class: "feedback", role: "status" });
+                const check = h("button", { class: "btn", onclick: validate }, "Valider ✔️");
+                const showAnswer = h("button", { class: "btn secondary", style: "display:none", onclick: giveUp }, "Voir la réponse");
+
+                function finish(ok, text) {
+                    done = true;
+                    input.disabled = true;
+                    check.style.display = "none";
+                    showAnswer.style.display = "none";
+                    feedback.className = "feedback " + (ok ? "ok" : "ko");
+                    feedback.textContent = text;
+                    reveal();
+                }
+                function validate() {
+                    if (done) return;
+                    const value = norm(input.value);
+                    if (!value) return;
+                    if (q.reponses.some(r => norm(r) === value)) {
+                        input.classList.remove("input-wrong", "shake");
+                        input.classList.add("input-correct");
+                        if (tries === 0) addPoint();
+                        finish(true, tries === 0
+                            ? "🎉 Bravo ! Bonne réponse !"
+                            : "✅ Bonne réponse, mais sans point : il t'a fallu plusieurs essais.");
+                    } else {
+                        tries++;
+                        input.classList.remove("shake");
+                        void input.offsetWidth; // relance l'animation
+                        input.classList.add("input-wrong", "shake");
+                        feedback.className = "feedback ko";
+                        feedback.textContent = "❌ Oups, essaie encore !";
+                        if (tries >= 3) showAnswer.style.display = "inline-block";
+                        input.select();
+                    }
+                }
+                function giveUp() {
+                    input.classList.add("input-wrong");
+                    finish(false, "La réponse était : " + q.reponses[0]);
+                }
+                input.addEventListener("keydown", e => {
+                    if (e.key === "Enter") { e.preventDefault(); validate(); }
+                });
+                setTimeout(() => input.focus(), 0);
+                return h("div", {}, input, feedback, h("div", { class: "saisie-actions" }, check, showAnswer));
+            }
+
             function showResult() {
-                const total = quiz.questions.length;
                 let emoji, msg;
                 if (score === total) {
                     emoji = "👑"; msg = "Impérial ! Tu connais ce cours sur le bout des doigts !";
@@ -377,27 +730,59 @@
             showQuestion();
         }
 
+        // ---------------- Flashcards ----------------
+        function startDeck(deck) {
+            inQuiz = true;
+            let cards = deck.cartes.slice();
+            let index = 0;
+            let flipped = false;
+
+            const card = h("button", { class: "flashcard", "aria-label": "Retourner la carte", onclick: () => { flipped = !flipped; draw(); } });
+            const counter = h("span", {});
+            const prev = h("button", { class: "btn secondary", onclick: () => go(-1) }, "← Précédente");
+            const next = h("button", { class: "btn", onclick: () => go(1) }, "Suivante →");
+            const mix = h("button", { class: "btn secondary", onclick: () => { cards = shuffle(cards); index = 0; flipped = false; draw(); } }, "🔀 Mélanger");
+
+            function go(delta) { index += delta; flipped = false; draw(); }
+
+            function draw() {
+                const c = cards[index];
+                card.classList.toggle("flipped", flipped);
+                card.replaceChildren(
+                    h("div", { class: "face-label" }, flipped ? "Réponse" : "Question"),
+                    h("div", { class: "face-text" }, flipped ? c.verso : c.recto));
+                counter.textContent = `Carte ${index + 1} / ${cards.length}`;
+                prev.disabled = index === 0;
+                next.disabled = index === cards.length - 1;
+            }
+
+            content.replaceChildren(h("div", { class: "panel" },
+                h("button", { class: "back", onclick: renderList }, "← Retour à la liste"),
+                h("div", { class: "progress" }, h("span", {}, deck.titre), counter),
+                card,
+                h("div", { class: "deck-nav" }, prev, mix, next),
+                h("p", { class: "hint-small" }, "Clique sur la carte pour la retourner.")
+            ));
+            draw();
+        }
+
         // Compteurs dans les onglets + événements
-        document.getElementById("count-quiz").textContent = QUIZZES.length;
-        document.getElementById("count-flashcards").textContent = FLASHCARDS.length;
+        updateCounts();
         document.querySelectorAll(".tab").forEach(b =>
             b.addEventListener("click", () => setTab(b.dataset.tab)));
 
         setTab("quiz");
 
-        // Quiz ajoutés depuis la page d'administration (uniquement une fois déployé dans Apps Script).
-        // Les quiz ci-dessus restent affichés si le serveur ne répond pas.
+        // Quiz et paquets ajoutés depuis la page d'administration (uniquement une fois déployé dans Apps Script).
+        // Ce qui est écrit ci-dessus reste affiché si le serveur ne répond pas.
         if (window.google && google.script && google.script.run) {
-            google.script.run
-                .withSuccessHandler(saved => {
-                    saved.forEach(q => {
-                        const i = QUIZZES.findIndex(x => x.id === q.id);
-                        if (i >= 0) QUIZZES[i] = q; else QUIZZES.push(q);
-                    });
-                    document.getElementById("count-quiz").textContent = QUIZZES.length;
-                    if (activeTab === "quiz" && !inQuiz) renderList();
-                })
-                .getQuizzes();
+            const merge = (target, saved) => saved.forEach(item => {
+                const i = target.findIndex(x => x.id === item.id);
+                if (i >= 0) target[i] = item; else target.push(item);
+            });
+            const refresh = () => { updateCounts(); if (!inQuiz) renderList(); };
+            google.script.run.withSuccessHandler(saved => { merge(QUIZZES, saved); refresh(); }).getQuizzes();
+            google.script.run.withSuccessHandler(saved => { merge(FLASHCARDS, saved); refresh(); }).getDecks();
         }
     </script>
 </body>

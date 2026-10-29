@@ -29,11 +29,11 @@
         section { background: #fff; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.06); padding: 22px; }
         h2 { margin: 0 0 14px; font-size: 1.2rem; }
         label { display: block; font-weight: 600; font-size: .9rem; margin: 12px 0 4px; }
-        input[type=text], input[type=password], textarea {
+        input[type=text], input[type=password], textarea, select {
             width: 100%; padding: 10px 12px; border: 2px solid var(--line); border-radius: 10px;
             font: inherit; background: #f9fafb;
         }
-        input:focus, textarea:focus { outline: none; border-color: var(--blue); background: #fff; }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: var(--blue); background: #fff; }
         textarea { resize: vertical; min-height: 60px; }
         .row { display: grid; grid-template-columns: 1fr 1fr 90px; gap: 12px; }
         .hint { font-size: .8rem; color: var(--muted); margin: 4px 0 0; }
@@ -41,7 +41,8 @@
         .question {
             border: 2px solid var(--line); border-radius: 12px; padding: 14px; margin-top: 14px; background: #fcfcfd;
         }
-        .question-head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; margin-bottom: 6px; }
+        .question-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 700; margin-bottom: 6px; }
+        .question-head select { width: auto; padding: 6px 10px; font-weight: 600; }
         .opt { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
         .opt input[type=radio] { width: 20px; height: 20px; accent-color: var(--green); flex-shrink: 0; }
 
@@ -60,16 +61,16 @@
         .status.err { display: block; background: #fee2e2; color: #991b1b; }
         .status.info { display: block; background: #e0e7ff; color: #3730a3; }
 
-        .quiz-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
-        .quiz-item:first-child { border-top: 0; }
-        .quiz-item .info { flex: 1; min-width: 0; }
-        .quiz-item .info strong { display: block; }
-        .quiz-item .info span { font-size: .85rem; color: var(--muted); }
+        .item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+        .item:first-child { border-top: 0; }
+        .item .info { flex: 1; min-width: 0; }
+        .item .info strong { display: block; }
+        .item .info span { font-size: .85rem; color: var(--muted); }
         .empty { color: var(--muted); }
 
         @media (max-width: 600px) {
             .row { grid-template-columns: 1fr; }
-            .quiz-item { flex-wrap: wrap; }
+            .item { flex-wrap: wrap; }
         }
     </style>
 </head>
@@ -77,7 +78,7 @@
 
     <header class="banner">
         <h1>⚙️ <span>Révision</span> · Administration</h1>
-        <p>Ajoute, modifie ou supprime des quiz</p>
+        <p>Ajoute, modifie ou supprime des quiz et des flashcards</p>
     </header>
 
     <main>
@@ -88,8 +89,9 @@
             <p class="hint">Il est demandé à chaque enregistrement ou suppression. Il se définit dans les propriétés du script (ADMIN_PASSWORD).</p>
         </section>
 
+        <!-- ================= QUIZ ================= -->
         <section>
-            <h2 id="form-title">➕ Nouveau quiz</h2>
+            <h2 id="quiz-form-title">➕ Nouveau quiz</h2>
 
             <label for="titre">Titre</label>
             <input type="text" id="titre" maxlength="120" placeholder="Ex : La Révolution française">
@@ -110,53 +112,88 @@
             </div>
 
             <h2 style="margin-top:22px">Questions</h2>
-            <p class="hint">Remplis au moins 2 réponses par question et coche la bonne avec le bouton rond. Une réponse laissée vide est ignorée.</p>
+            <p class="hint">Choix : remplis au moins 2 réponses et coche la bonne (les réponses sont mélangées à chaque partie, tu peux donc mettre la bonne où tu veux). Réponse écrite : l'élève tape sa réponse au clavier.</p>
             <div id="questions"></div>
 
             <div class="actions">
                 <button class="btn secondary" id="add-question" type="button">+ Ajouter une question</button>
             </div>
             <div class="actions">
-                <button class="btn" id="save" type="button">💾 Enregistrer le quiz</button>
-                <button class="btn secondary" id="reset" type="button">Réinitialiser</button>
+                <button class="btn" id="save-quiz" type="button">💾 Enregistrer le quiz</button>
+                <button class="btn secondary" id="reset-quiz" type="button">Réinitialiser</button>
             </div>
-            <div class="status" id="status" role="status"></div>
+            <div class="status" id="quiz-status" role="status"></div>
         </section>
 
         <section>
             <h2>📋 Quiz enregistrés</h2>
-            <div id="list"><p class="empty">Chargement…</p></div>
+            <div id="quiz-list"><p class="empty">Chargement…</p></div>
+        </section>
+
+        <!-- ================= FLASHCARDS ================= -->
+        <section>
+            <h2 id="deck-form-title">➕ Nouveau paquet de flashcards</h2>
+
+            <label for="deck-titre">Titre</label>
+            <input type="text" id="deck-titre" maxlength="120" placeholder="Ex : Vocabulaire anglais – les animaux">
+
+            <div class="row">
+                <div>
+                    <label for="deck-matiere">Matière</label>
+                    <input type="text" id="deck-matiere" maxlength="40" placeholder="Ex : Anglais">
+                </div>
+                <div>
+                    <label for="deck-description">Description courte</label>
+                    <input type="text" id="deck-description" maxlength="300" placeholder="Ex : 20 mots à connaître">
+                </div>
+                <div>
+                    <label for="deck-emoji">Emoji</label>
+                    <input type="text" id="deck-emoji" maxlength="8" placeholder="🃏">
+                </div>
+            </div>
+
+            <label for="deck-cartes">Cartes</label>
+            <textarea id="deck-cartes" rows="10" placeholder="dog | chien&#10;cat | chat&#10;Quelle est la capitale de l'Empire byzantin ? | Constantinople"></textarea>
+            <p class="hint">Une carte par ligne : le recto, puis le caractère | , puis le verso.</p>
+
+            <div class="actions">
+                <button class="btn" id="save-deck" type="button">💾 Enregistrer le paquet</button>
+                <button class="btn secondary" id="reset-deck" type="button">Réinitialiser</button>
+            </div>
+            <div class="status" id="deck-status" role="status"></div>
+        </section>
+
+        <section>
+            <h2>🃏 Paquets enregistrés</h2>
+            <div id="deck-list"><p class="empty">Chargement…</p></div>
         </section>
     </main>
 
     <script>
         const OPTION_LETTERS = ["A", "B", "C", "D"];
-        let editingId = null;   // id du quiz en cours de modification, null = nouveau
-        let questionCount = 0;  // sert uniquement à donner un name unique aux boutons radio
+        let editingQuizId = null;  // id du quiz en cours de modification, null = nouveau
+        let editingDeckId = null;
+        let questionCount = 0;     // sert uniquement à donner un name unique aux boutons radio
 
         const qList = document.getElementById("questions");
-        const statusEl = document.getElementById("status");
-        const saveBtn = document.getElementById("save");
-
         const hasServer = !!(window.google && google.script && google.script.run);
+        const $ = id => document.getElementById(id);
 
         // ---------- utilitaires ----------
         function h(tag, props, ...children) {
             const el = document.createElement(tag);
             Object.entries(props || {}).forEach(([k, v]) => {
                 if (k === "class") el.className = v;
-                else if (k === "value") el.value = v;
                 else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
                 else el.setAttribute(k, v);
             });
-            children.flat().forEach(c => el.append(c));
+            children.flat().forEach(c => { if (c != null) el.append(c); });
             return el;
         }
-        function showStatus(kind, text) {
-            statusEl.className = "status " + kind;
-            statusEl.textContent = text;
+        function showStatus(el, kind, text) {
+            el.className = "status " + kind;
+            el.textContent = text;
         }
-        // Appel serveur sous forme de promesse
         function server(fn, ...args) {
             return new Promise((resolve, reject) => {
                 if (!hasServer) {
@@ -170,27 +207,54 @@
             });
         }
 
-        // ---------- formulaire ----------
+        // ================= QUIZ =================
         function addQuestion(data) {
             const n = ++questionCount;
+            const typed = !!(data && Array.isArray(data.reponses));
             const block = h("div", { class: "question" });
+
             const title = h("span", {}, "");
+            const type = h("select", { class: "q-type", "aria-label": "Type de question" },
+                h("option", { value: "choice" }, "Choix"),
+                h("option", { value: "typed" }, "Réponse écrite"));
+            type.value = typed ? "typed" : "choice";
             const remove = h("button", { class: "btn danger", type: "button", onclick: () => { block.remove(); renumber(); } }, "Supprimer");
             const text = h("textarea", { class: "q-text", placeholder: "Énoncé de la question" });
             text.value = data ? data.question : "";
-            block.append(h("div", { class: "question-head" }, title, remove), text);
 
+            // Zone « choix »
+            const choiceArea = h("div", { class: "choice-area" });
             OPTION_LETTERS.forEach((letter, i) => {
                 const radio = h("input", { type: "radio", name: "correct-" + n, value: String(i), "aria-label": "Bonne réponse " + letter });
                 const input = h("input", { type: "text", class: "opt-text", maxlength: "150", placeholder: "Réponse " + letter });
-                if (data) {
+                if (data && !typed) {
                     input.value = data.options[i] || "";
                     radio.checked = data.correct === i;
                 } else {
                     radio.checked = i === 0;
                 }
-                block.append(h("div", { class: "opt" }, radio, input));
+                choiceArea.append(h("div", { class: "opt" }, radio, input));
             });
+
+            // Zone « réponse écrite »
+            const typedArea = h("div", { class: "typed-area" },
+                h("label", {}, "Réponses acceptées, séparées par ;"),
+                h("input", { type: "text", class: "typed-text", maxlength: "400", placeholder: "Ex : humid ; wet" }),
+                h("p", { class: "hint" }, "La casse, les accents et la ponctuation sont ignorés."));
+            if (typed) typedArea.querySelector(".typed-text").value = data.reponses.join(" ; ");
+
+            const explication = h("input", { type: "text", class: "q-expl", maxlength: "400", placeholder: "Explication affichée après la réponse (facultatif)" });
+            explication.value = data && data.explication ? data.explication : "";
+
+            const sync = () => {
+                choiceArea.style.display = type.value === "choice" ? "" : "none";
+                typedArea.style.display = type.value === "typed" ? "" : "none";
+            };
+            type.addEventListener("change", sync);
+
+            block.append(h("div", { class: "question-head" }, title, type, remove), text, choiceArea, typedArea,
+                h("label", {}, "Explication"), explication);
+            sync();
             qList.append(block);
             renumber();
         }
@@ -200,123 +264,198 @@
             });
         }
 
-        function collect() {
-            const titre = document.getElementById("titre").value.trim();
+        function collectQuiz() {
+            const titre = $("titre").value.trim();
             if (!titre) throw new Error("Le titre est obligatoire.");
             const blocks = [...qList.children];
             if (blocks.length === 0) throw new Error("Ajoute au moins une question.");
 
             const questions = blocks.map((blk, n) => {
+                const label = "Question " + (n + 1) + " : ";
                 const question = blk.querySelector(".q-text").value.trim();
-                const checked = blk.querySelector("input[type=radio]:checked");
-                const correctRaw = checked ? Number(checked.value) : -1;
-                const options = [];
-                let correct = -1;
-                blk.querySelectorAll(".opt-text").forEach((inp, i) => {
-                    const v = inp.value.trim();
-                    if (!v) return;
-                    if (i === correctRaw) correct = options.length;
-                    options.push(v);
-                });
-                if (!question) throw new Error("Question " + (n + 1) + " : l'énoncé est vide.");
-                if (options.length < 2) throw new Error("Question " + (n + 1) + " : il faut au moins 2 réponses.");
-                if (correct < 0) throw new Error("Question " + (n + 1) + " : la bonne réponse cochée est vide.");
-                return { question, options, correct };
+                if (!question) throw new Error(label + "l'énoncé est vide.");
+                const out = { question };
+
+                if (blk.querySelector(".q-type").value === "typed") {
+                    const reponses = blk.querySelector(".typed-text").value.split(";").map(s => s.trim()).filter(Boolean);
+                    if (reponses.length === 0) throw new Error(label + "indique au moins une réponse acceptée.");
+                    out.reponses = reponses;
+                } else {
+                    const checked = blk.querySelector("input[type=radio]:checked");
+                    const correctRaw = checked ? Number(checked.value) : -1;
+                    const options = [];
+                    let correct = -1;
+                    blk.querySelectorAll(".opt-text").forEach((inp, i) => {
+                        const v = inp.value.trim();
+                        if (!v) return;
+                        if (i === correctRaw) correct = options.length;
+                        options.push(v);
+                    });
+                    if (options.length < 2) throw new Error(label + "il faut au moins 2 réponses.");
+                    if (correct < 0) throw new Error(label + "la bonne réponse cochée est vide.");
+                    out.options = options;
+                    out.correct = correct;
+                }
+                const explication = blk.querySelector(".q-expl").value.trim();
+                if (explication) out.explication = explication;
+                return out;
             });
 
             const quiz = {
                 titre,
-                matiere: document.getElementById("matiere").value.trim() || "Divers",
-                emoji: document.getElementById("emoji").value.trim() || "📘",
-                description: document.getElementById("description").value.trim(),
+                matiere: $("matiere").value.trim() || "Divers",
+                emoji: $("emoji").value.trim() || "📘",
+                description: $("description").value.trim(),
                 questions
             };
-            if (editingId) quiz.id = editingId;
+            if (editingQuizId) quiz.id = editingQuizId;
             return quiz;
         }
 
-        function resetForm() {
-            editingId = null;
-            document.getElementById("form-title").textContent = "➕ Nouveau quiz";
-            ["titre", "matiere", "emoji", "description"].forEach(id => document.getElementById(id).value = "");
+        function resetQuizForm() {
+            editingQuizId = null;
+            $("quiz-form-title").textContent = "➕ Nouveau quiz";
+            ["titre", "matiere", "emoji", "description"].forEach(id => $(id).value = "");
             qList.replaceChildren();
             addQuestion();
         }
 
-        function loadIntoForm(quiz) {
-            editingId = quiz.id;
-            document.getElementById("form-title").textContent = "✏️ Modifier : " + quiz.titre;
-            document.getElementById("titre").value = quiz.titre;
-            document.getElementById("matiere").value = quiz.matiere || "";
-            document.getElementById("emoji").value = quiz.emoji || "";
-            document.getElementById("description").value = quiz.description || "";
+        function loadQuiz(quiz) {
+            editingQuizId = quiz.id;
+            $("quiz-form-title").textContent = "✏️ Modifier : " + quiz.titre;
+            $("titre").value = quiz.titre;
+            $("matiere").value = quiz.matiere || "";
+            $("emoji").value = quiz.emoji || "";
+            $("description").value = quiz.description || "";
             qList.replaceChildren();
             quiz.questions.forEach(addQuestion);
-            statusEl.className = "status";
-            window.scrollTo({ top: 0, behavior: "smooth" });
+            $("quiz-status").className = "status";
+            $("quiz-form-title").scrollIntoView({ behavior: "smooth" });
         }
 
-        // ---------- liste ----------
-        async function refreshList() {
-            const list = document.getElementById("list");
+        // ================= FLASHCARDS =================
+        function collectDeck() {
+            const titre = $("deck-titre").value.trim();
+            if (!titre) throw new Error("Le titre est obligatoire.");
+            const lignes = $("deck-cartes").value.split("\n").map(l => l.trim()).filter(Boolean);
+            if (lignes.length === 0) throw new Error("Ajoute au moins une carte.");
+            const cartes = lignes.map((ligne, i) => {
+                const pos = ligne.indexOf("|");
+                const recto = pos < 0 ? "" : ligne.slice(0, pos).trim();
+                const verso = pos < 0 ? "" : ligne.slice(pos + 1).trim();
+                if (!recto || !verso) throw new Error("Ligne " + (i + 1) + " : écris le recto, puis |, puis le verso.");
+                return { recto, verso };
+            });
+            const deck = {
+                titre,
+                matiere: $("deck-matiere").value.trim() || "Divers",
+                emoji: $("deck-emoji").value.trim() || "🃏",
+                description: $("deck-description").value.trim(),
+                cartes
+            };
+            if (editingDeckId) deck.id = editingDeckId;
+            return deck;
+        }
+
+        function resetDeckForm() {
+            editingDeckId = null;
+            $("deck-form-title").textContent = "➕ Nouveau paquet de flashcards";
+            ["deck-titre", "deck-matiere", "deck-emoji", "deck-description", "deck-cartes"].forEach(id => $(id).value = "");
+        }
+
+        function loadDeck(deck) {
+            editingDeckId = deck.id;
+            $("deck-form-title").textContent = "✏️ Modifier : " + deck.titre;
+            $("deck-titre").value = deck.titre;
+            $("deck-matiere").value = deck.matiere || "";
+            $("deck-emoji").value = deck.emoji || "";
+            $("deck-description").value = deck.description || "";
+            $("deck-cartes").value = deck.cartes.map(c => c.recto + " | " + c.verso).join("\n");
+            $("deck-status").className = "status";
+            $("deck-form-title").scrollIntoView({ behavior: "smooth" });
+        }
+
+        // ================= LISTES =================
+        // kind : "quiz" ou "deck"
+        async function refreshList(kind) {
+            const list = $(kind + "-list");
+            const isQuiz = kind === "quiz";
             if (!hasServer) {
                 list.replaceChildren(h("p", { class: "empty" }, "Mode aperçu : la liste n'est disponible que depuis le script déployé."));
                 return;
             }
             try {
-                const quizzes = await server("getQuizzes");
-                if (quizzes.length === 0) {
-                    list.replaceChildren(h("p", { class: "empty" }, "Aucun quiz ajouté depuis cette page pour le moment."));
+                const items = await server(isQuiz ? "getQuizzes" : "getDecks");
+                if (items.length === 0) {
+                    list.replaceChildren(h("p", { class: "empty" },
+                        isQuiz ? "Aucun quiz ajouté depuis cette page pour le moment." : "Aucun paquet pour le moment."));
                     return;
                 }
-                list.replaceChildren(...quizzes.map(q => h("div", { class: "quiz-item" },
-                    h("div", { class: "emoji" }, q.emoji || "📘"),
+                list.replaceChildren(...items.map(it => h("div", { class: "item" },
+                    h("div", {}, it.emoji || (isQuiz ? "📘" : "🃏")),
                     h("div", { class: "info" },
-                        h("strong", {}, q.titre),
-                        h("span", {}, (q.matiere || "Divers") + " · " + q.questions.length + " questions")),
-                    h("button", { class: "btn secondary small", type: "button", onclick: () => loadIntoForm(q) }, "Modifier"),
-                    h("button", { class: "btn danger", type: "button", onclick: () => removeQuiz(q) }, "Supprimer")
+                        h("strong", {}, it.titre),
+                        h("span", {}, (it.matiere || "Divers") + " · " + (isQuiz ? it.questions.length + " questions" : it.cartes.length + " cartes"))),
+                    h("button", { class: "btn secondary small", type: "button", onclick: () => isQuiz ? loadQuiz(it) : loadDeck(it) }, "Modifier"),
+                    h("button", { class: "btn danger", type: "button", onclick: () => removeItem(kind, it) }, "Supprimer")
                 )));
             } catch (e) {
                 list.replaceChildren(h("p", { class: "empty" }, "Impossible de charger la liste : " + e.message));
             }
         }
 
-        async function removeQuiz(q) {
-            if (!confirm("Supprimer définitivement « " + q.titre + " » ?")) return;
+        async function removeItem(kind, it) {
+            const isQuiz = kind === "quiz";
+            if (!confirm("Supprimer définitivement « " + it.titre + " » ?")) return;
+            const status = $(kind + "-status");
             try {
-                await server("deleteQuiz", document.getElementById("password").value, q.id);
-                if (editingId === q.id) resetForm();
-                showStatus("ok", "Quiz supprimé.");
-                refreshList();
+                await server(isQuiz ? "deleteQuiz" : "deleteDeck", $("password").value, it.id);
+                if (isQuiz && editingQuizId === it.id) resetQuizForm();
+                if (!isQuiz && editingDeckId === it.id) resetDeckForm();
+                showStatus(status, "ok", isQuiz ? "Quiz supprimé." : "Paquet supprimé.");
+                refreshList(kind);
             } catch (e) {
-                showStatus("err", e.message);
+                showStatus(status, "err", e.message);
+            }
+        }
+
+        // Enregistrement commun : collect() lit le formulaire, puis on appelle le serveur
+        async function saveItem(kind) {
+            const isQuiz = kind === "quiz";
+            const status = $(kind + "-status");
+            const btn = $("save-" + kind);
+            let payload;
+            try { payload = isQuiz ? collectQuiz() : collectDeck(); } catch (e) { showStatus(status, "err", e.message); return; }
+            btn.disabled = true;
+            showStatus(status, "info", "Enregistrement…");
+            try {
+                const res = await server(isQuiz ? "saveQuiz" : "saveDeck", $("password").value, payload);
+                if (isQuiz) {
+                    editingQuizId = res.id;
+                    $("quiz-form-title").textContent = "✏️ Modifier : " + payload.titre;
+                } else {
+                    editingDeckId = res.id;
+                    $("deck-form-title").textContent = "✏️ Modifier : " + payload.titre;
+                }
+                showStatus(status, "ok", "Enregistré. Il apparaît maintenant sur la page Révision.");
+                refreshList(kind);
+            } catch (e) {
+                showStatus(status, "err", e.message);
+            } finally {
+                btn.disabled = false;
             }
         }
 
         // ---------- événements ----------
-        document.getElementById("add-question").addEventListener("click", () => addQuestion());
-        document.getElementById("reset").addEventListener("click", () => { resetForm(); statusEl.className = "status"; });
-        saveBtn.addEventListener("click", async () => {
-            let quiz;
-            try { quiz = collect(); } catch (e) { showStatus("err", e.message); return; }
-            saveBtn.disabled = true;
-            showStatus("info", "Enregistrement…");
-            try {
-                const res = await server("saveQuiz", document.getElementById("password").value, quiz);
-                editingId = res.id;
-                document.getElementById("form-title").textContent = "✏️ Modifier : " + quiz.titre;
-                showStatus("ok", "Quiz enregistré. Il apparaît maintenant sur la page Révision.");
-                refreshList();
-            } catch (e) {
-                showStatus("err", e.message);
-            } finally {
-                saveBtn.disabled = false;
-            }
-        });
+        $("add-question").addEventListener("click", () => addQuestion());
+        $("reset-quiz").addEventListener("click", () => { resetQuizForm(); $("quiz-status").className = "status"; });
+        $("save-quiz").addEventListener("click", () => saveItem("quiz"));
+        $("reset-deck").addEventListener("click", () => { resetDeckForm(); $("deck-status").className = "status"; });
+        $("save-deck").addEventListener("click", () => saveItem("deck"));
 
-        resetForm();
-        refreshList();
+        resetQuizForm();
+        refreshList("quiz");
+        refreshList("deck");
     </script>
 </body>
 </html>
