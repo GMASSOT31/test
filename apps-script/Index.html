@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Révision</title>
+    <style>
+        :root {
+            --navy: #1e3a8a;
+            --blue: #3b82f6;
+            --gold: #f5c542;
+            --ink: #1f2937;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --bg: #f3f4f8;
+            --green: #22c55e;
+            --red: #ef4444;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            color: var(--ink);
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Bannière */
+        .banner {
+            background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%);
+            color: #fff;
+            padding: 22px 24px;
+            text-align: center;
+            border-bottom: 4px solid var(--gold);
+        }
+        .banner h1 {
+            margin: 0;
+            font-size: clamp(1.8rem, 5vw, 2.6rem);
+            font-weight: 800;
+            letter-spacing: .04em;
+        }
+        .banner h1 span { color: var(--gold); }
+        .banner p { margin: 6px 0 0; opacity: .9; font-size: 1rem; }
+
+        /* Mise en page */
+        .layout { display: flex; flex: 1; min-height: 0; }
+        .sidebar {
+            width: 220px;
+            flex-shrink: 0;
+            background: #fff;
+            border-right: 1px solid var(--line);
+            padding: 16px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .tab {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 12px 14px;
+            border: 0;
+            border-radius: 10px;
+            background: transparent;
+            font: inherit;
+            font-weight: 600;
+            color: var(--muted);
+            cursor: pointer;
+            text-align: left;
+        }
+        .tab:hover { background: #eef2ff; color: var(--navy); }
+        .tab[aria-selected="true"] { background: var(--navy); color: #fff; }
+        .tab .count {
+            margin-left: auto;
+            font-size: .8rem;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: rgba(0,0,0,.08);
+        }
+        .tab[aria-selected="true"] .count { background: rgba(255,255,255,.25); }
+
+        .content { flex: 1; padding: 28px; min-width: 0; }
+        .content h2 { margin: 0 0 18px; font-size: 1.5rem; }
+
+        /* Liste de cartes */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+        .card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 18px;
+            text-align: left;
+            font: inherit;
+            cursor: pointer;
+            transition: transform .15s, box-shadow .15s;
+        }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(30,58,138,.15); }
+        .card .emoji { font-size: 2rem; }
+        .card h3 { margin: 8px 0 4px; font-size: 1.1rem; color: var(--ink); }
+        .card .meta { font-size: .85rem; color: var(--muted); }
+        .card .desc { margin: 8px 0 0; font-size: .9rem; color: var(--ink); }
+        .empty {
+            background: #fff;
+            border: 2px dashed var(--line);
+            border-radius: 14px;
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--muted);
+        }
+
+        /* Quiz */
+        .panel {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(0,0,0,.08);
+            padding: 28px;
+            max-width: 720px;
+            margin: 0 auto;
+        }
+        .back {
+            border: 0; background: none; font: inherit; font-weight: 600;
+            color: var(--blue); cursor: pointer; padding: 0; margin-bottom: 14px;
+        }
+        .progress { display: flex; justify-content: space-between; font-size: .9rem; font-weight: 600; color: var(--muted); margin-bottom: 18px; }
+        .progress .score { color: var(--blue); }
+        .question { font-size: 1.35rem; font-weight: 700; text-align: center; margin: 0 0 22px; line-height: 1.35; }
+        .options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .option {
+            padding: 14px 16px;
+            border: 2px solid var(--line);
+            border-radius: 12px;
+            background: #f9fafb;
+            font: inherit; font-weight: 600; color: var(--ink);
+            text-align: left; cursor: pointer;
+            transition: transform .15s, border-color .15s, background .15s;
+        }
+        .option:hover:not(:disabled) { transform: translateY(-2px); border-color: #93c5fd; background: #eff6ff; }
+        .option:disabled { cursor: default; }
+        .option.correct { background: var(--green); border-color: #16a34a; color: #fff; }
+        .option.incorrect { background: var(--red); border-color: #dc2626; color: #fff; }
+        .option.dim { opacity: .5; }
+        .btn {
+            display: block; margin: 0 auto; border: 0; border-radius: 999px;
+            padding: 12px 30px; background: var(--blue); color: #fff;
+            font: inherit; font-weight: 700; cursor: pointer;
+        }
+        .btn:hover { background: #2563eb; }
+        .result { text-align: center; }
+        .result .big-emoji { font-size: 4rem; }
+        .result .final { font-size: 3rem; font-weight: 800; color: var(--blue); margin: 6px 0 14px; }
+        .result .msg { font-style: italic; margin-bottom: 22px; }
+        .result .actions { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+        .btn.secondary { background: #fff; color: var(--blue); border: 2px solid var(--blue); }
+        .btn.secondary:hover { background: #eff6ff; }
+
+        /* Mobile : les onglets passent en barre horizontale */
+        @media (max-width: 700px) {
+            .layout { flex-direction: column; }
+            .sidebar { width: 100%; flex-direction: row; border-right: 0; border-bottom: 1px solid var(--line); padding: 10px; }
+            .tab { justify-content: center; }
+            .content { padding: 16px; }
+            .options { grid-template-columns: 1fr; }
+            .panel { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="banner">
+        <h1>📚 <span>Révision</span></h1>
+        <p>Tous tes quiz et flashcards au même endroit</p>
+    </header>
+
+    <div class="layout">
+        <nav class="sidebar" role="tablist" aria-label="Sections">
+            <button class="tab" role="tab" id="tab-quiz" data-tab="quiz">🧠 Quiz <span class="count" id="count-quiz"></span></button>
+            <button class="tab" role="tab" id="tab-flashcards" data-tab="flashcards">🃏 Flashcards <span class="count" id="count-flashcards"></span></button>
+        </nav>
+        <main class="content" id="content" role="tabpanel"></main>
+    </div>
+
+    <script>
+        // ================================================================
+        // DONNÉES : pour ajouter un quiz, copier un bloc dans QUIZZES.
+        // `correct` = position de la bonne réponse dans `options` (0 = la première).
+        // ================================================================
+        const QUIZZES = [
+            {
+                id: "byzance",
+                emoji: "🏰",
+                matiere: "Histoire",
+                titre: "Byzance et l'Europe carolingienne",
+                description: "Justinien, Charlemagne, le schisme de 1054 et la chute de Constantinople.",
+                questions: [
+                    {
+                        question: "Quelles sont les dates qui marquent le début et la fin du Moyen Âge ?",
+                        options: ["476 et 1492", "0 et 1000", "800 et 1453", "527 et 843"],
+                        correct: 0
+                    },
+                    {
+                        question: "Quelle est la capitale de l'Empire byzantin ?",
+                        options: ["Aix-la-Chapelle", "Rome", "Constantinople", "Ravenne"],
+                        correct: 2
+                    },
+                    {
+                        question: "Sous quel empereur l'Empire byzantin a-t-il atteint son apogée (527-565) ?",
+                        options: ["Charlemagne", "Justinien", "Charles Martel", "Louis le Pieux"],
+                        correct: 1
+                    },
+                    {
+                        question: "En quelle année et dans quelle ville Charlemagne a-t-il été sacré empereur ?",
+                        options: ["En 476 à Ravenne", "En 843 à Verdun", "En 1054 à Constantinople", "En 800 à Rome"],
+                        correct: 3
+                    },
+                    {
+                        question: "Où se situe la capitale de l'Empire carolingien ?",
+                        options: ["Paris", "Aix-la-Chapelle", "Lyon", "Marseille"],
+                        correct: 1
+                    },
+                    {
+                        question: "Quelle était la langue officielle de l'Empire byzantin ?",
+                        options: ["Le latin", "Le français", "L'arabe", "Le grec"],
+                        correct: 3
+                    },
+                    {
+                        question: "Comment s'appelle l'épouse de Justinien qui a joué un rôle politique majeur ?",
+                        options: ["Cléopâtre", "Isabelle", "Théodora", "Jeanne"],
+                        correct: 2
+                    },
+                    {
+                        question: "Comment appelle-t-on la séparation définitive en 1054 entre l'Église orthodoxe et catholique ?",
+                        options: ["Le schisme", "La croisade", "L'évangélisation", "L'apogée"],
+                        correct: 0
+                    },
+                    {
+                        question: "Qui est le chef spirituel de l'Église orthodoxe ?",
+                        options: ["Le Pape", "L'Évêque", "Le Missi Dominici", "Le Patriarche"],
+                        correct: 3
+                    },
+                    {
+                        question: "Quel événement marque la fin de l'Empire byzantin en 1453 ?",
+                        options: ["La mort de Justinien", "La prise de Constantinople par les Turcs", "Le traité de Verdun", "Le couronnement de Charlemagne"],
+                        correct: 1
+                    }
+                ]
+            }
+        ];
+
+        // Pas encore de flashcards : l'onglet affichera un message vide.
+        const FLASHCARDS = [];
+
+        // ================================================================
+        // Application
+        // ================================================================
+        const content = document.getElementById("content");
+        let activeTab = "quiz";
+
+        // Petit utilitaire pour créer des éléments sans innerHTML
+        function h(tag, props, ...children) {
+            const el = document.createElement(tag);
+            Object.entries(props || {}).forEach(([k, v]) => {
+                if (k === "class") el.className = v;
+                else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+                else el.setAttribute(k, v);
+            });
+            children.flat().forEach(c => el.append(c));
+            return el;
+        }
+
+        function setTab(tab) {
+            activeTab = tab;
+            document.querySelectorAll(".tab").forEach(b =>
+                b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
+            renderList();
+        }
+
+        function renderList() {
+            content.replaceChildren();
+            if (activeTab === "quiz") {
+                content.append(h("h2", {}, "Quiz"));
+                if (QUIZZES.length === 0) {
+                    content.append(h("div", { class: "empty" }, "Aucun quiz pour le moment."));
+                    return;
+                }
+                content.append(h("div", { class: "grid" }, QUIZZES.map(q =>
+                    h("button", { class: "card", onclick: () => startQuiz(q) },
+                        h("div", { class: "emoji" }, q.emoji),
+                        h("h3", {}, q.titre),
+                        h("div", { class: "meta" }, `${q.matiere} · ${q.questions.length} questions`),
+                        h("p", { class: "desc" }, q.description)
+                    )
+                )));
+            } else {
+                content.append(h("h2", {}, "Flashcards"));
+                content.append(h("div", { class: "empty" }, "Aucune flashcard pour le moment. Elles apparaîtront ici."));
+            }
+        }
+
+        function startQuiz(quiz) {
+            let index = 0;
+            let score = 0;
+
+            const back = () => h("button", { class: "back", onclick: renderList }, "← Retour à la liste");
+
+            function showQuestion() {
+                const q = quiz.questions[index];
+                let answered = false;
+                const next = h("button", { class: "btn", style: "display:none", onclick: () => {
+                    index++;
+                    index < quiz.questions.length ? showQuestion() : showResult();
+                } }, index + 1 < quiz.questions.length ? "Question suivante ➔" : "Voir le résultat ➔");
+                const scoreEl = h("span", { class: "score" }, `Score : ${score}`);
+                const buttons = q.options.map((opt, i) =>
+                    h("button", { class: "option", onclick: () => {
+                        if (answered) return;
+                        answered = true;
+                        if (i === q.correct) {
+                            score++;
+                            scoreEl.textContent = `Score : ${score}`;
+                            buttons[i].classList.add("correct");
+                        } else {
+                            buttons[i].classList.add("incorrect");
+                            buttons[q.correct].classList.add("correct");
+                        }
+                        buttons.forEach((b, j) => {
+                            b.disabled = true;
+                            if (j !== i && j !== q.correct) b.classList.add("dim");
+                        });
+                        next.style.display = "block";
+                    } }, opt));
+
+                content.replaceChildren(h("div", { class: "panel" },
+                    back(),
+                    h("div", { class: "progress" },
+                        h("span", {}, `Question ${index + 1} / ${quiz.questions.length}`), scoreEl),
+                    h("h3", { class: "question" }, q.question),
+                    h("div", { class: "options" }, buttons),
+                    next
+                ));
+            }
+
+            function showResult() {
+                const total = quiz.questions.length;
+                let emoji, msg;
+                if (score === total) {
+                    emoji = "👑"; msg = "Impérial ! Tu connais ce cours sur le bout des doigts !";
+                } else if (score >= total * 0.7) {
+                    emoji = "🛡️"; msg = "Très bon travail ! Tes révisions portent leurs fruits.";
+                } else if (score >= total * 0.5) {
+                    emoji = "📜"; msg = "C'est un bon début, une petite relecture du cours te permettrait d'être parfait.";
+                } else {
+                    emoji = "💪"; msg = "Ne te décourage pas ! Relis tes fiches et relance le quiz, tu vas y arriver !";
+                }
+                content.replaceChildren(h("div", { class: "panel result" },
+                    h("h2", {}, "Quiz terminé !"),
+                    h("div", { class: "big-emoji" }, emoji),
+                    h("p", {}, "Ton score final est de :"),
+                    h("div", { class: "final" }, `${score} / ${total}`),
+                    h("p", { class: "msg" }, msg),
+                    h("div", { class: "actions" },
+                        h("button", { class: "btn", onclick: () => startQuiz(quiz) }, "Rejouer 🔄"),
+                        h("button", { class: "btn secondary", onclick: renderList }, "Retour à la liste")
+                    )
+                ));
+            }
+
+            showQuestion();
+        }
+
+        // Compteurs dans les onglets + événements
+        document.getElementById("count-quiz").textContent = QUIZZES.length;
+        document.getElementById("count-flashcards").textContent = FLASHCARDS.length;
+        document.querySelectorAll(".tab").forEach(b =>
+            b.addEventListener("click", () => setTab(b.dataset.tab)));
+
+        setTab("quiz");
+    </script>
+</body>
+</html>
