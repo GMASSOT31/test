@@ -222,6 +222,8 @@
         .prog-detail { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
         .prog-detail .total { font-size: .85rem; color: var(--muted); margin: 0 0 6px; }
         .prog-detail .detail-actions { margin-top: 8px; }
+        .badges { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+        .fois-admin { font-size: .8rem; font-weight: 800; padding: 2px 10px; border-radius: 999px; background: var(--gold); color: var(--navy); }
     </style>
 </head>
 <body>
@@ -1018,6 +1020,8 @@
                 h("summary", {}, "Classe " + g.label + " · " + g.students.length + " élève" + (g.students.length > 1 ? "s" : "")),
                 g.students.map(s => studentCard(s)))));
         }
+        // Nombre de parties terminées par l'élève sur cette leçon (cumulé : la remise à zéro de la progression n'y touche pas)
+        function foisText(n) { return n ? "🔁 Fait " + n + " fois" : "Pas encore fait"; }
         function bar(pct) { return h("div", { class: "bar", role: "progressbar", "aria-valuenow": String(pct), "aria-valuemin": "0", "aria-valuemax": "100" }, h("span", { style: "width:" + pct + "%" })); }
         // Une ligne par élève : son nom et un bouton « Détails » qui déplie la progression de chaque leçon.
         function studentCard(s) {
@@ -1046,7 +1050,10 @@
                 const aApprendre = l.total - l.sues - l.enCours;
                 const niveau = l.sues === l.total && l.total > 0 ? "✅ Maîtrisée" : (l.sues + l.enCours > 0 ? "En cours" : "Pas commencée");
                 detail.append(h("div", { class: "lesson", "data-quiz": l.id },
-                    h("div", { class: "lesson-title" }, h("strong", {}, (l.emoji || "📘") + " " + l.titre), h("span", { class: "niveau" }, niveau)),
+                    h("div", { class: "lesson-title" }, h("strong", {}, (l.emoji || "📘") + " " + l.titre),
+                        h("span", { class: "badges" },
+                            h("span", { class: "fois-admin", title: l.derniere ? "Dernière partie terminée : " + dateFr(l.derniere) : "" }, foisText(l.fois)),
+                            h("span", { class: "niveau" }, niveau))),
                     bar(pct),
                     h("div", { class: "lesson-detail" },
                         h("span", {}, l.sues + (l.sues > 1 ? " sues" : " sue") + " · " + l.enCours + " en cours · " + aApprendre + " à apprendre · " + l.erreurs + " erreur" + (l.erreurs > 1 ? "s" : "")),
@@ -1058,13 +1065,13 @@
             return detail;
         }
         async function resetProgress(studentId, quizId, label) {
-            if (!confirm("Remettre à zéro " + label + " ? Cette progression sera perdue.")) return;
+            if (!confirm("Remettre à zéro " + label + " ? Cette progression sera perdue (le compteur de parties terminées est conservé).")) return;
             const status = $("prog-status");
             showStatus(status, "info", "Remise à zéro…");
             try {
                 const res = await server("resetProgress", pw(), studentId, quizId);
                 await reload();
-                showStatus(status, "ok", res.supprimes ? "Remise à zéro faite : " + label + "." : "Rien à remettre à zéro : " + label + " n'avait pas de progression.");
+                showStatus(status, "ok", res.supprimes ? "Remise à zéro faite : " + label + ". Le compteur « fait N fois » est conservé." : "Rien à remettre à zéro : " + label + " n'avait pas de progression.");
             } catch (e) {
                 showStatus(status, "err", e.message);
             }

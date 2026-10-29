@@ -102,6 +102,8 @@
             transition: transform .15s, box-shadow .15s;
         }
         .card:hover { transform: translateY(-3px) rotate(-.6deg); box-shadow: 0 8px 0 rgba(15,23,80,.14), 0 16px 32px rgba(30,58,138,.14); }
+        .card { position: relative; }
+        .fois { position: absolute; top: 12px; right: 12px; padding: 3px 10px; border-radius: 999px; background: var(--gold); color: var(--navy); font-size: .75rem; font-weight: 800; box-shadow: var(--sticker); }
         .card .emoji { font-size: 2rem; }
         .card h3 { margin: 8px 0 4px; font-size: 1.1rem; font-weight: 800; color: var(--navy); }
         .card .meta { font-size: .85rem; font-weight: 600; color: var(--muted); }
@@ -439,6 +441,7 @@
         // remettre à zéro. Chaque résultat y est envoyé ; la page la relit à la connexion.
         const MASTERY = 3;
         let progress = {};   // clé = quiz.id + "|" + énoncé  ->  { ok, fails }
+        let doneCounts = {}; // quiz.id -> nombre de parties terminées par cet élève (cumulé)
         let session = null;  // identifiants de l'élève connecté (en mémoire), pour enregistrer ses résultats
 
         // Empreinte courte d'un énoncé (FNV-1a 32 bits) : même calcul que le serveur (qhash_ dans Code.gs)
@@ -458,7 +461,8 @@
         // Envoi des résultats au serveur, un par un et dans l'ordre ; en cas d'échec réseau, 3 essais.
         let saveChain = Promise.resolve();
         function setSync(text) { const el = document.getElementById("sync-status"); if (el) el.textContent = text; }
-        function sendResult(quizId, hash, success) {
+        // Appel serveur en file d'attente (ordre conservé), avec 3 essais en cas de panne réseau.
+        function enqueue(method, ...args) {
             if (!hasServer || !session) return;
             const c = session;
             const attempt = n => new Promise(resolve => google.script.run
@@ -468,9 +472,11 @@
                     if (n < 3 && !/incorrect|Trop d'essais|inaccessible|inconnue/.test(msg)) setTimeout(() => attempt(n + 1).then(resolve), 1000 * n);
                     else { setSync("⚠️ Ta progression n'a pas pu être enregistrée."); resolve(); }
                 })
-                .saveResult(c.classe, c.pseudo, c.pin, quizId, hash, success));
+                [method](c.classe, c.pseudo, c.pin, ...args));
             saveChain = saveChain.then(() => attempt(1));
         }
+        function sendResult(quizId, hash, success) { enqueue("saveResult", quizId, hash, success); }
+        function sendDone(quizId) { enqueue("finishQuiz", quizId); }
         window.revisionFlush = () => saveChain;   // attend la fin des envois en cours (utile aux tests)
         function answerOf(q) {
             if (q.champs) return q.champs.map(c => (c.label ? c.label + " : " : "") + c.reponses[0]).join(" · ");
@@ -572,6 +578,12 @@
             document.getElementById("count-programme").textContent = programmeStats().remaining;
         }
 
+        // Étiquette « fait N fois » : nombre de parties terminées (cumulé, jamais remis à zéro)
+        function foisLabel(quizId) {
+            const n = doneCounts[quizId] || 0;
+            return n === 0 ? "Pas encore fait" : "🔁 Fait " + n + " fois";
+        }
+
         function setTab(tab) {
             activeTab = tab;
             document.querySelectorAll(".tab").forEach(b =>
@@ -590,6 +602,7 @@
                 }
                 content.append(h("div", { class: "grid" }, QUIZZES.map(q =>
                     h("button", { class: "card", onclick: () => startQuiz(q) },
+                        h("span", { class: "fois" }, foisLabel(q.id)),
                         h("div", { class: "emoji" }, q.emoji),
                         h("h3", {}, q.titre),
                         h("div", { class: "meta" }, `${q.matiere} · ${q.questions.length} questions`),
@@ -856,6 +869,8 @@
             }
 
             function showResult() {
+                doneCounts[quiz.id] = (doneCounts[quiz.id] || 0) + 1;   // partie terminée : jusqu'au résultat
+                sendDone(quiz.id);
                 let emoji, msg;
                 if (score === total) {
                     emoji = "👑"; msg = "Impérial ! Tu connais ce cours sur le bout des doigts !";
@@ -970,7 +985,7 @@
         function cleanError(err) { return String(err && err.message ? err.message : err).replace(/^Error:\s*/, ""); }
 
         function showLogin(message) {
-            me = null; session = null; QUIZZES = []; FLASHCARDS = []; progress = {}; inQuiz = false;
+            me = null; session = null; QUIZZES = []; FLASHCARDS = []; progress = {}; doneCounts = {}; inQuiz = false;
             content.replaceChildren();
             $("app").hidden = true;
             $("login").hidden = false;
@@ -987,6 +1002,7 @@
             FLASHCARDS = data.decks;
             session = creds;
             loadProgress(data.progress);
+            doneCounts = data.fois || {};
             try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(creds)); } catch (e) { /* ignoré */ }
             try { localStorage.setItem(LAST_KEY, JSON.stringify({ classe: creds.classe, pseudo: creds.pseudo })); } catch (e) { /* ignoré */ }
             $("login").hidden = true;

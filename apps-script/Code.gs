@@ -26,6 +26,7 @@ function doGet(e) {
 //   deck_<id>     un paquet de flashcards créé depuis l'administration
 //   builtin_assign  à qui est donné chaque quiz intégré (voir Contenu.gs)
 //   prog_<idÉlève>__<idQuiz>  la progression d'un élève dans un quiz (réussites d'affilée par question)
+//   done_<idÉlève>__<idQuiz>  combien de fois l'élève a terminé ce quiz (historique : la remise à zéro de la progression n'y touche pas)
 // Le mot de passe administrateur est la propriété ADMIN_PASSWORD.
 //
 // Séparation des élèves : le serveur ne renvoie à un élève que les quiz et paquets qui lui sont destinés
@@ -36,6 +37,7 @@ var DECK_PREFIX = 'deck_';
 var STUDENT_PREFIX = 'student_';
 var BUILTIN_ASSIGN_KEY = 'builtin_assign';
 var PROGRESS_PREFIX = 'prog_';
+var DONE_PREFIX = 'done_';
 var MASTERY = 3;            // réussites d'affilée pour qu'une question soit sue
 var MAX_QUESTIONS = 50;
 var MAX_CARDS = 150;
@@ -54,15 +56,19 @@ function getStudentData(classe, pseudo, pin) {
   var decks = list_(DECK_PREFIX).filter(function (d) { return isFor_(d, st.id); }).map(withoutPour_);
   var props = PropertiesService.getScriptProperties().getProperties();
   var progress = {};
+  var fois = {};
   quizzes.forEach(function (q) {
     var rec = parseJson_(props[progressKey_(st.id, q.id)]);
     if (rec && rec.q) progress[q.id] = rec.q;
+    var done = parseJson_(props[doneKey_(st.id, q.id)]);
+    if (done && done.n) fois[q.id] = done.n;
   });
   return {
     student: { id: st.id, classe: st.classe, pseudo: st.pseudo },
     quizzes: quizzes.map(withoutPour_),
     decks: decks,
-    progress: progress
+    progress: progress,
+    fois: fois
   };
 }
 
@@ -91,6 +97,25 @@ function saveResult(classe, pseudo, pin, quizId, qhash, success) {
   }
 }
 
+// Enregistre qu'une partie du quiz est terminée (l'élève est allé jusqu'au résultat) : le compteur « fait N fois » augmente.
+function finishQuiz(classe, pseudo, pin, quizId) {
+  var st = authStudent_(classe, pseudo, pin);
+  if (!quizzesOf_(st.id).some(function (q) { return q.id === quizId; })) throw new Error('Quiz inaccessible.');
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var store = PropertiesService.getScriptProperties();
+    var key = doneKey_(st.id, quizId);
+    var rec = parseJson_(store.getProperty(key)) || { n: 0, last: 0 };
+    rec.n += 1;
+    rec.last = Date.now();
+    store.setProperty(key, JSON.stringify(rec));
+    return { n: rec.n };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 // ---------------- Côté administrateur (mot de passe requis pour tout) ----------------
 
 function adminData(password) {
@@ -104,7 +129,7 @@ function adminData(password) {
   students.forEach(function (st) {
     progress[st.id] = allQuizzes
       .filter(function (q) { return quizFor_(q, st.id, assigned); })
-      .map(function (q) { return lessonSummary_(q, parseJson_(props[progressKey_(st.id, q.id)])); });
+      .map(function (q) { return lessonSummary_(q, parseJson_(props[progressKey_(st.id, q.id)]), parseJson_(props[doneKey_(st.id, q.id)])); });
   });
   return {
     students: students.map(publicStudent_),
@@ -166,6 +191,7 @@ function deleteStudent(password, id) {
   var store = PropertiesService.getScriptProperties();
   store.deleteProperty(STUDENT_PREFIX + id);
   deleteProgress_(id, 'all');
+  deleteDone_(id, 'all');
   var assigned = builtinAssign_();
   Object.keys(assigned).forEach(function (k) { assigned[k] = assigned[k].filter(function (x) { return x !== id; }); });
   store.setProperty(BUILTIN_ASSIGN_KEY, JSON.stringify(assigned));
@@ -194,6 +220,7 @@ function deleteQuiz(password, id) {
   checkAdmin_(password);
   remove_(QUIZ_PREFIX, id);
   deleteProgress_('all', id);
+  deleteDone_('all', id);
   return true;
 }
 
@@ -244,6 +271,7 @@ function qhash_(text) {
 }
 
 function progressKey_(studentId, quizId) { return PROGRESS_PREFIX + studentId + '__' + quizId; }
+function doneKey_(studentId, quizId) { return DONE_PREFIX + studentId + '__' + quizId; }
 
 // Le quiz est-il destiné à cet élève ? (quiz intégré attribué, ou quiz créé pour lui)
 function quizFor_(quiz, studentId, assigned) {
@@ -256,7 +284,7 @@ function quizzesOf_(studentId) {
 }
 
 // Résumé d'une leçon pour l'administration : questions sues / en cours / à apprendre, erreurs, dernière activité.
-function lessonSummary_(quiz, rec) {
+function lessonSummary_(quiz, rec, done) {
   var q = (rec && rec.q) || {};
   var sues = 0, enCours = 0, erreurs = 0;
   quiz.questions.forEach(function (question) {
@@ -266,17 +294,22 @@ function lessonSummary_(quiz, rec) {
   });
   return {
     id: quiz.id, titre: quiz.titre, emoji: quiz.emoji, matiere: quiz.matiere,
-    total: quiz.questions.length, sues: sues, enCours: enCours, erreurs: erreurs, maj: (rec && rec.maj) || 0
+    total: quiz.questions.length, sues: sues, enCours: enCours, erreurs: erreurs, maj: (rec && rec.maj) || 0,
+    fois: (done && done.n) || 0, derniere: (done && done.last) || 0
   };
 }
 
 // Supprime la progression d'un élève ('all' = tous) sur une leçon ('all' = toutes). Renvoie le nombre d'enregistrements supprimés.
-function deleteProgress_(studentId, quizId) {
+function deleteProgress_(studentId, quizId) { return deleteByPrefix_(PROGRESS_PREFIX, studentId, quizId); }
+// Idem pour les compteurs de parties (uniquement lors de la suppression d'un élève ou d'un quiz).
+function deleteDone_(studentId, quizId) { return deleteByPrefix_(DONE_PREFIX, studentId, quizId); }
+
+function deleteByPrefix_(prefix, studentId, quizId) {
   var store = PropertiesService.getScriptProperties();
   var n = 0;
   Object.keys(store.getProperties()).forEach(function (k) {
-    if (k.indexOf(PROGRESS_PREFIX) !== 0) return;
-    var parts = k.slice(PROGRESS_PREFIX.length).split('__');
+    if (k.indexOf(prefix) !== 0) return;
+    var parts = k.slice(prefix.length).split('__');
     if ((studentId === 'all' || parts[0] === studentId) && (quizId === 'all' || parts[1] === quizId)) {
       store.deleteProperty(k);
       n++;
