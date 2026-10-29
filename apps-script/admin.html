@@ -170,7 +170,15 @@
 
         /* Barre latérale et contenu */
         .shell { display: flex; gap: 20px; max-width: 1180px; margin: 20px auto 60px; padding: 0 16px; align-items: flex-start; }
-        .sidebar { width: 230px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; position: sticky; top: 12px; }
+        .sidebar { width: 230px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; position: sticky; top: 12px; }
+        .tabs { display: flex; flex-direction: column; gap: 12px; }
+        /* Le mot de passe, une fois connecté, se range sous les onglets de la barre latérale */
+        .lockbar.docked { flex-direction: column; align-items: stretch; gap: 8px; margin: 0; padding: 12px; max-width: none; border-radius: 14px; }
+        .lockbar.docked label { font-size: .85rem; }
+        .lockbar.docked input { width: 100%; max-width: none; min-width: 0; }
+        .lockbar.docked .btn { width: 100%; padding: 8px 12px; font-size: .9rem; }
+        .lockbar.docked .status.inline { display: none; font-size: .85rem; }
+        .lockbar.docked .status.inline.ok, .lockbar.docked .status.inline.err, .lockbar.docked .status.inline.info { display: block; }
         .tab { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border: 0; border-radius: 12px; background: #fff;
                font: inherit; font-weight: 800; color: var(--navy); cursor: pointer; text-align: left; box-shadow: var(--sticker); transition: transform .15s; }
         .tab:nth-child(odd) { transform: rotate(-1deg); }
@@ -202,10 +210,18 @@
         .lesson-detail { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: .85rem; color: var(--muted); margin-bottom: 8px; }
         @media (max-width: 760px) {
             .shell { flex-direction: column; margin-top: 12px; }
-            .sidebar { width: 100%; position: static; flex-direction: row; flex-wrap: wrap; gap: 8px; }
+            .sidebar { width: 100%; position: static; }
+            .tabs { flex-direction: row; flex-wrap: wrap; gap: 8px; }
             .tab { width: auto; flex: 1 1 150px; padding: 10px; font-size: .9rem; transform: none !important; }
             .lockbar input { max-width: none; }
         }
+        /* Programmes de révision : un nom par élève, le détail se déplie */
+        .prog-card.compact { padding: 10px 14px; margin: 8px 0; }
+        .prog-card.compact .prog-head { margin-bottom: 0; }
+        .prog-card.compact .prog-head strong { font-size: 1.05rem; }
+        .prog-detail { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+        .prog-detail .total { font-size: .85rem; color: var(--muted); margin: 0 0 6px; }
+        .prog-detail .detail-actions { margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -236,17 +252,19 @@
       </div>
     </header>
 
-    <div class="lockbar">
+    <div class="lockbar" id="lockbar">
         <label for="password">🔑 Mot de passe administrateur</label>
         <input type="password" id="password" autocomplete="current-password" placeholder="ADMIN_PASSWORD">
         <button class="btn" id="unlock" type="button">Déverrouiller</button>
+        <button class="btn secondary" id="lock" type="button" hidden>🔒 Verrouiller</button>
         <span class="status inline" id="lock-status" role="status"></span>
     </div>
 
     <p class="locked-hint" id="locked-hint">Saisis le mot de passe administrateur pour afficher la gestion. Il se définit dans les propriétés du script (ADMIN_PASSWORD).</p>
 
     <div class="shell" id="admin-area" hidden>
-        <nav class="sidebar" role="tablist" aria-label="Sections de l'administration">
+        <aside class="sidebar">
+        <nav class="tabs" role="tablist" aria-label="Sections de l'administration">
             <button class="tab" role="tab" id="tab-eleve-ajout" data-tab="eleve-ajout">➕ Ajouter un élève</button>
             <button class="tab" role="tab" id="tab-eleves" data-tab="eleves">👥 Liste des élèves <span class="count" id="count-eleves"></span></button>
             <button class="tab" role="tab" id="tab-quiz-ajout" data-tab="quiz-ajout">➕ Ajouter un quiz</button>
@@ -254,6 +272,8 @@
             <button class="tab" role="tab" id="tab-fc-ajout" data-tab="fc-ajout">🃏 Ajouter des flashcards <span class="count" id="count-decks"></span></button>
             <button class="tab" role="tab" id="tab-programmes" data-tab="programmes">📅 Programmes de révision</button>
         </nav>
+        <div id="lock-dock"></div>
+        </aside>
 
         <main class="content">
 
@@ -515,17 +535,42 @@
             DATA = await server("adminData", pw());
             renderAll();
         }
+        // Une fois connecté, la barre du mot de passe se range dans la barre latérale, sous les onglets.
+        function dockLock() {
+            $("lockbar").classList.add("docked");
+            $("lock-dock").append($("lockbar"));
+            $("unlock").textContent = "↻ Actualiser";
+            $("lock").hidden = false;
+        }
+        function undockLock() {
+            const bar = $("lockbar");
+            bar.classList.remove("docked");
+            document.body.insertBefore(bar, $("locked-hint"));
+            $("unlock").textContent = "Déverrouiller";
+            $("lock").hidden = true;
+        }
+        function lockAgain() {
+            $("password").value = "";
+            $("admin-area").hidden = true;
+            $("locked-hint").hidden = false;
+            $("lock-status").className = "status inline";
+            $("lock-status").textContent = "";
+            firstUnlock = true;
+            undockLock();
+        }
         async function unlock() {
             showStatus($("lock-status"), "info", "Vérification…");
             try {
                 await reload();
                 $("admin-area").hidden = false;
                 $("locked-hint").hidden = true;
+                dockLock();
                 showStatus($("lock-status"), "ok", "Déverrouillé.");
                 if (firstUnlock) { firstUnlock = false; go(DATA.students.length ? "eleves" : "eleve-ajout"); }
             } catch (e) {
                 $("admin-area").hidden = true;
                 $("locked-hint").hidden = false;
+                undockLock();
                 showStatus($("lock-status"), "err", e.message);
             }
         }
@@ -583,7 +628,7 @@
                         h("div", { class: "info" },
                             h("strong", {}, s.pseudo),
                             h("span", {}, r.lecons ? r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") + " · " + r.sues + " / " + r.total + " questions sues (" + r.pct + " %)" : "Aucune leçon attribuée")),
-                        h("button", { class: "btn secondary small", type: "button", onclick: () => { progFilter = "s:" + s.id; renderProgrammes(); go("programmes"); } }, "Progression"),
+                        h("button", { class: "btn secondary small", type: "button", onclick: () => { progFilter = "s:" + s.id; openDetails.add(s.id); renderProgrammes(); go("programmes"); } }, "Progression"),
                         h("button", { class: "btn secondary small", type: "button", onclick: () => loadStudent(s) }, "Modifier"),
                         h("button", { class: "btn danger", type: "button", onclick: () => removeStudent(s) }, "Supprimer"));
                 }))));
@@ -958,6 +1003,7 @@
             if (!valid) progFilter = "all";
             sel.value = progFilter;
         }
+        const openDetails = new Set();   // élèves dont le détail est déplié
         function renderProgrammes() {
             renderProgFilter();
             const list = $("prog-list");
@@ -973,29 +1019,43 @@
                 g.students.map(s => studentCard(s)))));
         }
         function bar(pct) { return h("div", { class: "bar", role: "progressbar", "aria-valuenow": String(pct), "aria-valuemin": "0", "aria-valuemax": "100" }, h("span", { style: "width:" + pct + "%" })); }
+        // Une ligne par élève : son nom et un bouton « Détails » qui déplie la progression de chaque leçon.
         function studentCard(s) {
+            const open = openDetails.has(s.id);
+            const card = h("div", { class: "prog-card compact", "data-student": s.id },
+                h("div", { class: "prog-head" },
+                    h("strong", {}, "👤 " + s.pseudo),
+                    h("button", { class: "btn secondary small", type: "button", "aria-expanded": String(open), onclick: () => {
+                        if (openDetails.has(s.id)) openDetails.delete(s.id); else openDetails.add(s.id);
+                        renderProgrammes();
+                    } }, open ? "Masquer" : "Détails")));
+            if (open) card.append(studentDetail(s));
+            return card;
+        }
+        function studentDetail(s) {
             const lessons = (DATA.progress[s.id] || []).slice().sort((a, b) => a.titre.localeCompare(b.titre, "fr", { sensitivity: "base" }));
             const r = lessonsSummary(s.id);
-            return h("div", { class: "prog-card", "data-student": s.id },
-                h("div", { class: "prog-head" },
-                    h("div", { class: "info" },
-                        h("strong", {}, "👤 " + s.pseudo + " · " + s.classe),
-                        h("span", {}, r.lecons ? r.sues + " / " + r.total + " questions sues (" + r.pct + " %) sur " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") : "Aucune leçon attribuée")),
-                    r.lecons ? h("button", { class: "btn danger", type: "button", onclick: () => resetProgress(s.id, "all", "toute la progression de " + s.pseudo) }, "Tout remettre à zéro") : null),
-                lessons.length === 0
-                    ? h("p", { class: "hint" }, "Donne-lui un quiz depuis « Liste des quiz » pour suivre sa progression.")
-                    : lessons.map(l => {
-                        const pct = l.total ? Math.round(l.sues / l.total * 100) : 0;
-                        const aApprendre = l.total - l.sues - l.enCours;
-                        const niveau = l.sues === l.total && l.total > 0 ? "✅ Maîtrisée" : (l.sues + l.enCours > 0 ? "En cours" : "Pas commencée");
-                        return h("div", { class: "lesson", "data-quiz": l.id },
-                            h("div", { class: "lesson-title" }, h("strong", {}, (l.emoji || "📘") + " " + l.titre), h("span", { class: "niveau" }, niveau)),
-                            bar(pct),
-                            h("div", { class: "lesson-detail" },
-                                h("span", {}, l.sues + (l.sues > 1 ? " sues" : " sue") + " · " + l.enCours + " en cours · " + aApprendre + " à apprendre · " + l.erreurs + " erreur" + (l.erreurs > 1 ? "s" : "")),
-                                h("span", {}, l.maj ? "Dernière activité : " + dateFr(l.maj) : "Jamais jouée")),
-                            h("button", { class: "btn secondary small", type: "button", onclick: () => resetProgress(s.id, l.id, "la leçon « " + l.titre + " » de " + s.pseudo) }, "Remettre cette leçon à zéro"));
-                    }));
+            const detail = h("div", { class: "prog-detail" },
+                h("p", { class: "total" }, r.lecons ? r.sues + " / " + r.total + " questions sues (" + r.pct + " %) sur " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") : "Aucune leçon attribuée"));
+            if (lessons.length === 0) {
+                detail.append(h("p", { class: "hint" }, "Donne-lui un quiz depuis « Liste des quiz » pour suivre sa progression."));
+                return detail;
+            }
+            lessons.forEach(l => {
+                const pct = l.total ? Math.round(l.sues / l.total * 100) : 0;
+                const aApprendre = l.total - l.sues - l.enCours;
+                const niveau = l.sues === l.total && l.total > 0 ? "✅ Maîtrisée" : (l.sues + l.enCours > 0 ? "En cours" : "Pas commencée");
+                detail.append(h("div", { class: "lesson", "data-quiz": l.id },
+                    h("div", { class: "lesson-title" }, h("strong", {}, (l.emoji || "📘") + " " + l.titre), h("span", { class: "niveau" }, niveau)),
+                    bar(pct),
+                    h("div", { class: "lesson-detail" },
+                        h("span", {}, l.sues + (l.sues > 1 ? " sues" : " sue") + " · " + l.enCours + " en cours · " + aApprendre + " à apprendre · " + l.erreurs + " erreur" + (l.erreurs > 1 ? "s" : "")),
+                        h("span", {}, l.maj ? "Dernière activité : " + dateFr(l.maj) : "Jamais jouée")),
+                    h("button", { class: "btn secondary small", type: "button", onclick: () => resetProgress(s.id, l.id, "la leçon « " + l.titre + " » de " + s.pseudo) }, "Remettre cette leçon à zéro")));
+            });
+            detail.append(h("div", { class: "detail-actions" },
+                h("button", { class: "btn danger", type: "button", onclick: () => resetProgress(s.id, "all", "toute la progression de " + s.pseudo) }, "Tout remettre à zéro pour " + s.pseudo)));
+            return detail;
         }
         async function resetProgress(studentId, quizId, label) {
             if (!confirm("Remettre à zéro " + label + " ? Cette progression sera perdue.")) return;
@@ -1013,6 +1073,7 @@
         // ---------- événements ----------
         TABS.forEach(t => $("tab-" + t).addEventListener("click", () => go(t)));
         $("unlock").addEventListener("click", unlock);
+        $("lock").addEventListener("click", lockAgain);
         $("password").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); unlock(); } });
         $("save-student").addEventListener("click", saveStudent);
         $("reset-student-form").addEventListener("click", () => { resetStudentForm(); $("student-status").className = "status"; });
