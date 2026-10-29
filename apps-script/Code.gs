@@ -29,6 +29,7 @@ function doGet(e) {
 // Un élément trop gros pour une propriété (9 Ko) est découpé en morceaux : <clé>~0, <clé>~1…
 //   prog_<idÉlève>__<idQuiz>  la progression d'un élève dans un quiz (réussites d'affilée par question)
 //   done_<idÉlève>__<idQuiz>  combien de fois l'élève a terminé ce quiz (historique : la remise à zéro de la progression n'y touche pas)
+//   parcours_<idÉlève>__<idQuiz>  où en est l'élève dans le parcours de révision de cette leçon (voir plus bas)
 // Le mot de passe administrateur est la propriété ADMIN_PASSWORD.
 //
 // Séparation des élèves : le serveur ne renvoie à un élève que les quiz et paquets qui lui sont destinés
@@ -41,6 +42,8 @@ var OVERRIDE_PREFIX = 'override_';   // version modifiée d'un quiz intégré (l
 var BUILTIN_ASSIGN_KEY = 'builtin_assign';
 var PROGRESS_PREFIX = 'prog_';
 var DONE_PREFIX = 'done_';
+var PARCOURS_PREFIX = 'parcours_';
+var PASSAGES = 3;            // passages de quiz à faire avant l'étape suivante
 var MASTERY = 3;            // réussites d'affilée pour qu'une question soit sue
 var MAX_QUESTIONS = 50;
 var MAX_CARDS = 150;
@@ -62,7 +65,9 @@ function getStudentData(classe, pseudo, pin) {
   var props = PropertiesService.getScriptProperties().getProperties();
   var progress = {};
   var fois = {};
+  var parcours = {};
   quizzes.forEach(function (q) {
+    parcours[q.id] = parseJson_(props[parcoursKey_(st.id, q.id)]) || defaultParcours_();
     var rec = parseJson_(props[progressKey_(st.id, q.id)]);
     if (rec && rec.q) progress[q.id] = rec.q;
     var done = parseJson_(props[doneKey_(st.id, q.id)]);
@@ -73,7 +78,8 @@ function getStudentData(classe, pseudo, pin) {
     quizzes: quizzes.map(withoutPour_),
     decks: decks,
     progress: progress,
-    fois: fois
+    fois: fois,
+    parcours: parcours
   };
 }
 
@@ -103,9 +109,29 @@ function saveResult(classe, pseudo, pin, quizId, qhash, success) {
 }
 
 // Enregistre qu'une partie du quiz est terminée (l'élève est allé jusqu'au résultat) : le compteur « fait N fois » augmente.
+//
+// Parcours de révision d'une leçon, par élève :
+//   étape 1 « quiz »     : l'élève fait le quiz PASSAGES fois ; à la fin du dernier passage on passe à l'étape 2 s'il reste des
+//                          questions non sues (3 réussites d'affilée), sinon directement à l'étape 3 ;
+//   étape 2 « cartes »   : il révise les flashcards des questions non sues, puis « C'est bon, j'ai mémorisé » (cardsDone)
+//                          le ramène à l'étape 1 pour PASSAGES nouveaux passages ;
+//   étape 3 « revision » : il apprend le paquet complet sans choix proposés, puis demande la validation d'un adulte (requestValidation) ;
+//   « fini »             : en attente de validation ; « valide » : validé par l'administrateur (validateParcours).
+function defaultParcours_() { return { etape: 'quiz', passages: 0, cycle: 1, maj: 0 }; }
+function parcoursKey_(studentId, quizId) { return PARCOURS_PREFIX + studentId + '__' + quizId; }
+
+// Reste-t-il des questions non sues (moins de MASTERY réussites d'affilée) ?
+function hasUnsued_(quiz, rec) {
+  var q = (rec && rec.q) || {};
+  return quiz.questions.some(function (question) { return (q[qid_(question)] || [0, 0])[0] < MASTERY; });
+}
+
+// Enregistre qu'une partie du quiz est terminée (l'élève est allé jusqu'au résultat) : le compteur « fait N fois » augmente,
+// et, à l'étape 1, le passage compte pour le parcours.
 function finishQuiz(classe, pseudo, pin, quizId) {
   var st = authStudent_(classe, pseudo, pin);
-  if (!quizzesOf_(st.id).some(function (q) { return q.id === quizId; })) throw new Error('Quiz inaccessible.');
+  var quiz = quizzesOf_(st.id).filter(function (q) { return q.id === quizId; })[0];
+  if (!quiz) throw new Error('Quiz inaccessible.');
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -115,7 +141,51 @@ function finishQuiz(classe, pseudo, pin, quizId) {
     rec.n += 1;
     rec.last = Date.now();
     store.setProperty(key, JSON.stringify(rec));
-    return { n: rec.n };
+
+    var pk = parcoursKey_(st.id, quizId);
+    var pc = parseJson_(store.getProperty(pk)) || defaultParcours_();
+    if (pc.etape === 'quiz') {
+      pc.passages = Math.min(PASSAGES, pc.passages + 1);
+      if (pc.passages >= PASSAGES) {
+        pc.etape = hasUnsued_(quiz, parseJson_(store.getProperty(progressKey_(st.id, quizId)))) ? 'cartes' : 'revision';
+      }
+      pc.maj = Date.now();
+      store.setProperty(pk, JSON.stringify(pc));
+    }
+    return { n: rec.n, parcours: pc };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Étape 2 -> étape 1 : « C'est bon, j'ai mémorisé ». L'élève refait PASSAGES passages de quiz.
+function cardsDone(classe, pseudo, pin, quizId) {
+  return moveParcours_(classe, pseudo, pin, quizId, 'cartes', function (pc) {
+    pc.etape = 'quiz'; pc.passages = 0; pc.cycle = (pc.cycle || 1) + 1;
+  });
+}
+
+// Étape 3 -> fini : « Faire valider par un adulte ».
+function requestValidation(classe, pseudo, pin, quizId) {
+  return moveParcours_(classe, pseudo, pin, quizId, 'revision', function (pc) {
+    pc.etape = 'fini'; pc.fini = Date.now();
+  });
+}
+
+function moveParcours_(classe, pseudo, pin, quizId, from, change) {
+  var st = authStudent_(classe, pseudo, pin);
+  if (!quizzesOf_(st.id).some(function (q) { return q.id === quizId; })) throw new Error('Quiz inaccessible.');
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var store = PropertiesService.getScriptProperties();
+    var pk = parcoursKey_(st.id, quizId);
+    var pc = parseJson_(store.getProperty(pk)) || defaultParcours_();
+    if (pc.etape !== from) throw new Error("Cette étape n'est pas en cours.");
+    change(pc);
+    pc.maj = Date.now();
+    store.setProperty(pk, JSON.stringify(pc));
+    return { parcours: pc };
   } finally {
     lock.releaseLock();
   }
@@ -137,7 +207,7 @@ function adminData(password) {
   students.forEach(function (st) {
     progress[st.id] = allQuizzes
       .filter(function (q) { return quizFor_(q, st.id, assigned); })
-      .map(function (q) { return lessonSummary_(q, parseJson_(props[progressKey_(st.id, q.id)]), parseJson_(props[doneKey_(st.id, q.id)])); });
+      .map(function (q) { return lessonSummary_(q, parseJson_(props[progressKey_(st.id, q.id)]), parseJson_(props[doneKey_(st.id, q.id)]), parseJson_(props[parcoursKey_(st.id, q.id)])); });
   });
   return {
     students: students.map(publicStudent_),
@@ -200,6 +270,7 @@ function deleteStudent(password, id) {
   store.deleteProperty(STUDENT_PREFIX + id);
   deleteProgress_(id, 'all');
   deleteDone_(id, 'all');
+  deleteParcours_(id, 'all');
   var assigned = builtinAssign_();
   Object.keys(assigned).forEach(function (k) { assigned[k] = assigned[k].filter(function (x) { return x !== id; }); });
   store.setProperty(BUILTIN_ASSIGN_KEY, JSON.stringify(assigned));
@@ -229,6 +300,7 @@ function deleteQuiz(password, id) {
   remove_(QUIZ_PREFIX, id);
   deleteProgress_('all', id);
   deleteDone_('all', id);
+  deleteParcours_('all', id);
   return true;
 }
 
@@ -287,6 +359,26 @@ function restoreBuiltin(password, quizId) {
   return true;
 }
 
+// Valide le parcours d'un élève sur une leçon (il l'a terminé et demandé la validation d'un adulte).
+function validateParcours(password, studentId, quizId) {
+  checkAdmin_(password);
+  if (!students_().some(function (s) { return s.id === studentId; })) throw new Error('Élève inconnu.');
+  if (!/^[a-z0-9-]{1,60}$/.test(String(quizId))) throw new Error('Identifiant de quiz invalide.');
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var store = PropertiesService.getScriptProperties();
+    var pk = parcoursKey_(studentId, quizId);
+    var pc = parseJson_(store.getProperty(pk));
+    if (!pc || pc.etape !== 'fini') throw new Error("Ce parcours n'attend pas de validation.");
+    pc.etape = 'valide'; pc.valide = Date.now(); pc.maj = pc.valide;
+    store.setProperty(pk, JSON.stringify(pc));
+    return { parcours: pc };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 // Remise à zéro de la progression : pour un élève (id ou 'all') et une leçon (id d'un quiz ou 'all').
 // La progression étant enregistrée sur le serveur, l'élève la retrouve vide à sa prochaine connexion ou actualisation.
 function resetProgress(password, studentId, quizId) {
@@ -295,7 +387,7 @@ function resetProgress(password, studentId, quizId) {
   quizId = quizId || 'all';
   if (studentId !== 'all' && !students_().some(function (s) { return s.id === studentId; })) throw new Error('Élève inconnu.');
   if (quizId !== 'all' && !/^[a-z0-9-]{1,60}$/.test(String(quizId))) throw new Error('Identifiant de quiz invalide.');
-  return { supprimes: deleteProgress_(studentId, quizId) };
+  return { supprimes: deleteProgress_(studentId, quizId) + deleteParcours_(studentId, quizId) };
 }
 
 // ---------------- Fonctions internes (le _ final les rend non appelables depuis les pages) ----------------
@@ -364,7 +456,7 @@ function quizzesOf_(studentId) {
 }
 
 // Résumé d'une leçon pour l'administration : questions sues / en cours / à apprendre, erreurs, dernière activité.
-function lessonSummary_(quiz, rec, done) {
+function lessonSummary_(quiz, rec, done, parcours) {
   var q = (rec && rec.q) || {};
   var sues = 0, enCours = 0, erreurs = 0;
   quiz.questions.forEach(function (question) {
@@ -375,7 +467,8 @@ function lessonSummary_(quiz, rec, done) {
   return {
     id: quiz.id, titre: quiz.titre, emoji: quiz.emoji, matiere: quiz.matiere,
     total: quiz.questions.length, sues: sues, enCours: enCours, erreurs: erreurs, maj: (rec && rec.maj) || 0,
-    fois: (done && done.n) || 0, derniere: (done && done.last) || 0
+    fois: (done && done.n) || 0, derniere: (done && done.last) || 0,
+    parcours: parcours || defaultParcours_()
   };
 }
 
@@ -383,6 +476,8 @@ function lessonSummary_(quiz, rec, done) {
 function deleteProgress_(studentId, quizId) { return deleteByPrefix_(PROGRESS_PREFIX, studentId, quizId); }
 // Idem pour les compteurs de parties (uniquement lors de la suppression d'un élève ou d'un quiz).
 function deleteDone_(studentId, quizId) { return deleteByPrefix_(DONE_PREFIX, studentId, quizId); }
+// Le parcours repart de l'étape 1 (remise à zéro d'une leçon, ou suppression d'un élève ou d'un quiz).
+function deleteParcours_(studentId, quizId) { return deleteByPrefix_(PARCOURS_PREFIX, studentId, quizId); }
 
 function deleteByPrefix_(prefix, studentId, quizId) {
   var store = PropertiesService.getScriptProperties();
