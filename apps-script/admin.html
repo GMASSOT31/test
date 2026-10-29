@@ -137,9 +137,23 @@
 
         @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
         @media (max-width: 600px) {
-            .row { grid-template-columns: 1fr; }
+            .row, .row3 { grid-template-columns: 1fr; }
+            .inline { flex-wrap: wrap; }
             .item { flex-wrap: wrap; }
         }
+        [hidden] { display: none !important; }
+        .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .inline { display: flex; gap: 12px; align-items: center; }
+        .inline input { flex: 1; }
+        .pour { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 6px; }
+        .pour-item { display: inline-flex; align-items: center; gap: 7px; margin: 0; font-weight: 700; font-size: .95rem; cursor: pointer; }
+        .pour-item input { width: 18px; height: 18px; accent-color: var(--blue); cursor: pointer; }
+        .warn { color: #c0264b !important; font-weight: 700; }
+        .builtin { padding: 14px 0; border-top: 1px solid var(--line); }
+        .builtin:first-child { border-top: 0; }
+        .builtin .info strong { display: block; }
+        .builtin .info span { display: block; font-size: .85rem; color: var(--muted); }
+        .item .info span { display: block; }
     </style>
 </head>
 <body>
@@ -174,8 +188,44 @@
         <section>
             <h2>🔑 Mot de passe</h2>
             <label for="password">Mot de passe administrateur</label>
-            <input type="password" id="password" autocomplete="current-password">
-            <p class="hint">Il est demandé à chaque enregistrement ou suppression. Il se définit dans les propriétés du script (ADMIN_PASSWORD).</p>
+            <div class="inline">
+                <input type="password" id="password" autocomplete="current-password">
+                <button class="btn" id="unlock" type="button">Déverrouiller</button>
+            </div>
+            <p class="hint">Il est demandé à chaque enregistrement ou suppression. Il se définit dans les propriétés du script (ADMIN_PASSWORD). Rien n'est affiché tant que la page n'est pas déverrouillée.</p>
+            <div class="status" id="lock-status" role="status"></div>
+        </section>
+
+        <div id="admin-area" hidden>
+
+        <!-- ================= ÉLÈVES ================= -->
+        <section>
+            <h2 id="student-form-title">➕ Nouvel élève</h2>
+            <div class="row3">
+                <div>
+                    <label for="st-classe">Classe</label>
+                    <input type="text" id="st-classe" maxlength="30" placeholder="Ex : 5e B" autocomplete="off">
+                </div>
+                <div>
+                    <label for="st-pseudo">Pseudo</label>
+                    <input type="text" id="st-pseudo" maxlength="30" placeholder="Ex : Léo" autocomplete="off">
+                </div>
+                <div>
+                    <label for="st-pin">PIN</label>
+                    <input type="text" id="st-pin" maxlength="8" inputmode="numeric" placeholder="4 à 8 chiffres" autocomplete="off">
+                </div>
+            </div>
+            <p class="hint">L'élève se connecte avec ces trois informations. Le PIN est enregistré sans pouvoir être relu : note-le pour le lui donner. En modification, laisse le PIN vide pour le conserver.</p>
+            <div class="actions">
+                <button class="btn" id="save-student" type="button">💾 Enregistrer l'élève</button>
+                <button class="btn secondary" id="reset-student-form" type="button">Réinitialiser</button>
+            </div>
+            <div class="status" id="student-status" role="status"></div>
+        </section>
+
+        <section>
+            <h2>👥 Élèves</h2>
+            <div id="student-list"></div>
         </section>
 
         <!-- ================= QUIZ ================= -->
@@ -200,6 +250,10 @@
                 </div>
             </div>
 
+            <label>Pour quels élèves ?</label>
+            <div class="pour" id="quiz-pour"></div>
+            <p class="hint">Seuls les élèves cochés verront ce quiz. Sans destinataire, il reste caché.</p>
+
             <h2 style="margin-top:22px">Questions</h2>
             <p class="hint">Choix : remplis au moins 2 réponses et coche la bonne (les réponses sont mélangées à chaque partie, tu peux donc mettre la bonne où tu veux). Réponse écrite : l'élève tape sa réponse au clavier.</p>
             <div id="questions"></div>
@@ -216,7 +270,13 @@
 
         <section>
             <h2>📋 Quiz enregistrés</h2>
-            <div id="quiz-list"><p class="empty">Chargement…</p></div>
+            <div id="quiz-list"></div>
+        </section>
+
+        <section>
+            <h2>🏛️ Quiz intégrés</h2>
+            <p class="hint">Ces quiz sont fournis avec le site. Coche les élèves qui y ont accès, puis enregistre la ligne.</p>
+            <div id="builtin-list"></div>
         </section>
 
         <!-- ================= FLASHCARDS ================= -->
@@ -241,9 +301,12 @@
                 </div>
             </div>
 
+            <label>Pour quels élèves ?</label>
+            <div class="pour" id="deck-pour"></div>
+
             <label for="deck-cartes">Cartes</label>
             <textarea id="deck-cartes" rows="10" placeholder="dog | chien&#10;cat | chat&#10;Quelle est la capitale de l'Empire byzantin ? | Constantinople"></textarea>
-            <p class="hint">Une carte par ligne : le recto, puis le caractère | , puis le verso.</p>
+            <p class="hint">Une carte par ligne : le recto, puis le caractère | , puis le verso. Chaque quiz a déjà son paquet généré automatiquement ; celui-ci est un paquet en plus.</p>
 
             <div class="actions">
                 <button class="btn" id="save-deck" type="button">💾 Enregistrer le paquet</button>
@@ -254,19 +317,21 @@
 
         <section>
             <h2>🃏 Paquets enregistrés</h2>
-            <div id="deck-list"><p class="empty">Chargement…</p></div>
+            <div id="deck-list"></div>
         </section>
 
         <!-- ================= PROGRAMME DE RÉVISION ================= -->
         <section>
             <h2>📅 Programme de révision</h2>
-            <p class="hint">Seul l'administrateur peut le remettre à zéro : l'élève n'a aucun bouton pour le faire. Toutes les questions redeviennent « à apprendre » (0 / 3) sur chaque appareil, à sa prochaine ouverture de la page Révision.</p>
-            <p id="reset-info" style="margin:12px 0 0;font-weight:600">Chargement…</p>
+            <p class="hint">Seul l'administrateur peut remettre le programme à zéro : l'élève n'a aucun bouton pour le faire. Pour un seul élève, utilise le bouton de sa ligne dans « Élèves ». Ici : tous les élèves à la fois. Les questions redeviennent « à apprendre » (0 / 3) à la prochaine connexion de l'élève.</p>
+            <p id="reset-info" style="margin:12px 0 0;font-weight:600"></p>
             <div class="actions">
-                <button class="btn danger" id="reset-programme" type="button" style="padding:10px 22px">Remettre à zéro le programme de révision</button>
+                <button class="btn danger" id="reset-all" type="button" style="padding:10px 22px">Remettre à zéro le programme de tous les élèves</button>
             </div>
             <div class="status" id="programme-status" role="status"></div>
         </section>
+
+        </div>
     </main>
 
     <script>
@@ -275,7 +340,7 @@
   var phrases = [
     "Ajoute, modifie ou supprime des quiz et des flashcards",
     "Une question courte et claire vaut mieux qu'une longue ✍️",
-    "Pense à ajouter une explication : elle aide à retenir 💡",
+    "Chaque élève ne voit que ses propres quiz 🔒",
     "Le programme de révision se remet à zéro depuis cette page 📅"
   ];
   var el = document.getElementById("rvSub"), i = 0;
@@ -288,13 +353,16 @@
 
     <script>
         const OPTION_LETTERS = ["A", "B", "C", "D"];
-        let editingQuizId = null;  // id du quiz en cours de modification, null = nouveau
+        let DATA = { students: [], quizzes: [], decks: [], builtins: [], resetAll: 0, resets: {} };
+        let editingStudentId = null;
+        let editingQuizId = null;   // id du quiz en cours de modification, null = nouveau
         let editingDeckId = null;
-        let questionCount = 0;     // sert uniquement à donner un name unique aux boutons radio
+        let questionCount = 0;      // sert uniquement à donner un name unique aux boutons radio
 
         const qList = document.getElementById("questions");
         const hasServer = !!(window.google && google.script && google.script.run);
         const $ = id => document.getElementById(id);
+        const pw = () => $("password").value;
 
         // ---------- utilitaires ----------
         function h(tag, props, ...children) {
@@ -314,7 +382,7 @@
         function server(fn, ...args) {
             return new Promise((resolve, reject) => {
                 if (!hasServer) {
-                    reject(new Error("Cette page doit être ouverte depuis le script déployé pour enregistrer."));
+                    reject(new Error("Cette page doit être ouverte depuis le script déployé pour fonctionner."));
                     return;
                 }
                 google.script.run
@@ -323,6 +391,118 @@
                     .withFailureHandler(err => reject(new Error((err && err.message ? err.message : String(err)).replace(/^Error:\s*/, ""))))
                     [fn](...args);
             });
+        }
+        const dateFr = ts => new Date(ts).toLocaleString("fr-FR");
+        const studentName = id => { const s = DATA.students.find(x => x.id === id); return s ? s.pseudo : null; };
+
+        // ---------- déverrouillage et chargement ----------
+        async function reload() {
+            DATA = await server("adminData", pw());
+            renderAll();
+        }
+        async function unlock() {
+            showStatus($("lock-status"), "info", "Vérification…");
+            try {
+                await reload();
+                $("admin-area").hidden = false;
+                showStatus($("lock-status"), "ok", "Déverrouillé.");
+            } catch (e) {
+                $("admin-area").hidden = true;
+                showStatus($("lock-status"), "err", e.message);
+            }
+        }
+
+        function renderAll() {
+            renderStudents();
+            // les cases « Pour quels élèves ? » gardent la sélection en cours quand la liste des élèves change
+            pourBoxes($("quiz-pour"), pourValues($("quiz-pour")));
+            pourBoxes($("deck-pour"), pourValues($("deck-pour")));
+            renderQuizList();
+            renderBuiltins();
+            renderDeckList();
+            renderResetAll();
+        }
+
+        // ---------- cases « Pour quels élèves ? » ----------
+        function pourBoxes(container, selected) {
+            container.replaceChildren();
+            if (DATA.students.length === 0) {
+                container.append(h("p", { class: "hint" }, "Crée d'abord un élève (rubrique « Nouvel élève ») : sans destinataire, un contenu reste caché."));
+                return;
+            }
+            DATA.students.forEach(s => {
+                const cb = h("input", { type: "checkbox", value: s.id });
+                cb.checked = selected.includes(s.id);
+                container.append(h("label", { class: "pour-item" }, cb, s.pseudo + " (" + s.classe + ")"));
+            });
+        }
+        function pourValues(container) { return [...container.querySelectorAll("input:checked")].map(i => i.value); }
+        function pourText(ids) {
+            const names = (ids || []).map(studentName).filter(Boolean);
+            return names.length ? "Pour : " + names.join(", ") : "⚠️ Caché : aucun destinataire";
+        }
+
+        // ================= ÉLÈVES =================
+        function renderStudents() {
+            const list = $("student-list");
+            if (DATA.students.length === 0) {
+                list.replaceChildren(h("p", { class: "empty" }, "Aucun élève pour le moment. Crée le premier ci-dessus."));
+                return;
+            }
+            list.replaceChildren(...DATA.students.map(s => h("div", { class: "item" },
+                h("div", {}, "👤"),
+                h("div", { class: "info" },
+                    h("strong", {}, s.pseudo),
+                    h("span", {}, "Classe " + s.classe + (DATA.resets[s.id] ? " · programme remis à zéro le " + dateFr(DATA.resets[s.id]) : ""))),
+                h("button", { class: "btn secondary small", type: "button", onclick: () => loadStudent(s) }, "Modifier"),
+                h("button", { class: "btn secondary small", type: "button", onclick: () => resetProgramme(s.id, "le programme de " + s.pseudo) }, "Remettre à zéro"),
+                h("button", { class: "btn danger", type: "button", onclick: () => removeStudent(s) }, "Supprimer")
+            )));
+        }
+        function resetStudentForm() {
+            editingStudentId = null;
+            $("student-form-title").textContent = "➕ Nouvel élève";
+            ["st-classe", "st-pseudo", "st-pin"].forEach(id => $(id).value = "");
+        }
+        function loadStudent(s) {
+            editingStudentId = s.id;
+            $("student-form-title").textContent = "✏️ Modifier : " + s.pseudo;
+            $("st-classe").value = s.classe;
+            $("st-pseudo").value = s.pseudo;
+            $("st-pin").value = "";
+            $("student-status").className = "status";
+            $("student-form-title").scrollIntoView({ behavior: "smooth" });
+        }
+        async function saveStudent() {
+            const status = $("student-status");
+            const payload = { classe: $("st-classe").value, pseudo: $("st-pseudo").value, pin: $("st-pin").value };
+            if (editingStudentId) payload.id = editingStudentId;
+            $("save-student").disabled = true;
+            showStatus(status, "info", "Enregistrement…");
+            try {
+                const res = await server("saveStudent", pw(), payload);
+                editingStudentId = res.id;
+                $("st-pin").value = "";
+                await reload();
+                $("student-form-title").textContent = "✏️ Modifier : " + payload.pseudo.trim();
+                showStatus(status, "ok", "Élève enregistré. Il peut se connecter avec sa classe, son pseudo et son PIN.");
+            } catch (e) {
+                showStatus(status, "err", e.message);
+            } finally {
+                $("save-student").disabled = false;
+            }
+        }
+        async function removeStudent(s) {
+            if (!confirm("Supprimer l'élève « " + s.pseudo + " » ? Il n'aura plus accès à rien et sera retiré de tous ses quiz et paquets.")) return;
+            const status = $("student-status");
+            try {
+                await server("deleteStudent", pw(), s.id);
+                if (editingStudentId === s.id) resetStudentForm();
+                await reload();
+                showStatus(status, "ok", "Élève supprimé.");
+            } catch (e) {
+                showStatus(status, "err", e.message);
+            }
         }
 
         // ================= QUIZ =================
@@ -424,6 +604,7 @@
                 matiere: $("matiere").value.trim() || "Divers",
                 emoji: $("emoji").value.trim() || "📘",
                 description: $("description").value.trim(),
+                pour: pourValues($("quiz-pour")),
                 questions
             };
             if (editingQuizId) quiz.id = editingQuizId;
@@ -434,6 +615,7 @@
             editingQuizId = null;
             $("quiz-form-title").textContent = "➕ Nouveau quiz";
             ["titre", "matiere", "emoji", "description"].forEach(id => $(id).value = "");
+            pourBoxes($("quiz-pour"), []);
             qList.replaceChildren();
             addQuestion();
         }
@@ -445,6 +627,7 @@
             $("matiere").value = quiz.matiere || "";
             $("emoji").value = quiz.emoji || "";
             $("description").value = quiz.description || "";
+            pourBoxes($("quiz-pour"), quiz.pour || []);
             qList.replaceChildren();
             quiz.questions.forEach(addQuestion);
             $("quiz-status").className = "status";
@@ -469,6 +652,7 @@
                 matiere: $("deck-matiere").value.trim() || "Divers",
                 emoji: $("deck-emoji").value.trim() || "🃏",
                 description: $("deck-description").value.trim(),
+                pour: pourValues($("deck-pour")),
                 cartes
             };
             if (editingDeckId) deck.id = editingDeckId;
@@ -479,6 +663,7 @@
             editingDeckId = null;
             $("deck-form-title").textContent = "➕ Nouveau paquet de flashcards";
             ["deck-titre", "deck-matiere", "deck-emoji", "deck-description", "deck-cartes"].forEach(id => $(id).value = "");
+            pourBoxes($("deck-pour"), []);
         }
 
         function loadDeck(deck) {
@@ -489,37 +674,29 @@
             $("deck-emoji").value = deck.emoji || "";
             $("deck-description").value = deck.description || "";
             $("deck-cartes").value = deck.cartes.map(c => c.recto + " | " + c.verso).join("\n");
+            pourBoxes($("deck-pour"), deck.pour || []);
             $("deck-status").className = "status";
             $("deck-form-title").scrollIntoView({ behavior: "smooth" });
         }
 
         // ================= LISTES =================
-        // kind : "quiz" ou "deck"
-        async function refreshList(kind) {
-            const list = $(kind + "-list");
+        function renderQuizList() { renderItems($("quiz-list"), DATA.quizzes, "quiz"); }
+        function renderDeckList() { renderItems($("deck-list"), DATA.decks, "deck"); }
+        function renderItems(list, items, kind) {
             const isQuiz = kind === "quiz";
-            if (!hasServer) {
-                list.replaceChildren(h("p", { class: "empty" }, "Mode aperçu : la liste n'est disponible que depuis le script déployé."));
+            if (items.length === 0) {
+                list.replaceChildren(h("p", { class: "empty" }, isQuiz ? "Aucun quiz créé depuis cette page pour le moment." : "Aucun paquet pour le moment."));
                 return;
             }
-            try {
-                const items = await server(isQuiz ? "getQuizzes" : "getDecks");
-                if (items.length === 0) {
-                    list.replaceChildren(h("p", { class: "empty" },
-                        isQuiz ? "Aucun quiz ajouté depuis cette page pour le moment." : "Aucun paquet pour le moment."));
-                    return;
-                }
-                list.replaceChildren(...items.map(it => h("div", { class: "item" },
-                    h("div", {}, it.emoji || (isQuiz ? "📘" : "🃏")),
-                    h("div", { class: "info" },
-                        h("strong", {}, it.titre),
-                        h("span", {}, (it.matiere || "Divers") + " · " + (isQuiz ? it.questions.length + " questions" : it.cartes.length + " cartes"))),
-                    h("button", { class: "btn secondary small", type: "button", onclick: () => isQuiz ? loadQuiz(it) : loadDeck(it) }, "Modifier"),
-                    h("button", { class: "btn danger", type: "button", onclick: () => removeItem(kind, it) }, "Supprimer")
-                )));
-            } catch (e) {
-                list.replaceChildren(h("p", { class: "empty" }, "Impossible de charger la liste : " + e.message));
-            }
+            list.replaceChildren(...items.map(it => h("div", { class: "item" },
+                h("div", {}, it.emoji || (isQuiz ? "📘" : "🃏")),
+                h("div", { class: "info" },
+                    h("strong", {}, it.titre),
+                    h("span", {}, (it.matiere || "Divers") + " · " + (isQuiz ? it.questions.length + " questions" : it.cartes.length + " cartes")),
+                    h("span", { class: (it.pour || []).length ? "" : "warn" }, pourText(it.pour))),
+                h("button", { class: "btn secondary small", type: "button", onclick: () => isQuiz ? loadQuiz(it) : loadDeck(it) }, "Modifier"),
+                h("button", { class: "btn danger", type: "button", onclick: () => removeItem(kind, it) }, "Supprimer")
+            )));
         }
 
         async function removeItem(kind, it) {
@@ -527,11 +704,11 @@
             if (!confirm("Supprimer définitivement « " + it.titre + " » ?")) return;
             const status = $(kind + "-status");
             try {
-                await server(isQuiz ? "deleteQuiz" : "deleteDeck", $("password").value, it.id);
+                await server(isQuiz ? "deleteQuiz" : "deleteDeck", pw(), it.id);
                 if (isQuiz && editingQuizId === it.id) resetQuizForm();
                 if (!isQuiz && editingDeckId === it.id) resetDeckForm();
+                await reload();
                 showStatus(status, "ok", isQuiz ? "Quiz supprimé." : "Paquet supprimé.");
-                refreshList(kind);
             } catch (e) {
                 showStatus(status, "err", e.message);
             }
@@ -547,7 +724,7 @@
             btn.disabled = true;
             showStatus(status, "info", "Enregistrement…");
             try {
-                const res = await server(isQuiz ? "saveQuiz" : "saveDeck", $("password").value, payload);
+                const res = await server(isQuiz ? "saveQuiz" : "saveDeck", pw(), payload);
                 if (isQuiz) {
                     editingQuizId = res.id;
                     $("quiz-form-title").textContent = "✏️ Modifier : " + payload.titre;
@@ -555,8 +732,10 @@
                     editingDeckId = res.id;
                     $("deck-form-title").textContent = "✏️ Modifier : " + payload.titre;
                 }
-                showStatus(status, "ok", "Enregistré. Il apparaît maintenant sur la page Révision.");
-                refreshList(kind);
+                await reload();
+                showStatus(status, "ok", payload.pour.length
+                    ? "Enregistré. Il apparaît chez les élèves choisis."
+                    : "Enregistré, mais sans destinataire : il reste caché. Coche au moins un élève pour le montrer.");
             } catch (e) {
                 showStatus(status, "err", e.message);
             } finally {
@@ -564,41 +743,60 @@
             }
         }
 
+        // ================= QUIZ INTÉGRÉS =================
+        function renderBuiltins() {
+            const list = $("builtin-list");
+            list.replaceChildren(...DATA.builtins.map(q => {
+                const boxes = h("div", { class: "pour" });
+                pourBoxes(boxes, q.pour || []);
+                const status = h("span", { class: "hint", role: "status" });
+                const save = h("button", { class: "btn secondary small", type: "button", onclick: async () => {
+                    status.textContent = "Enregistrement…";
+                    try {
+                        await server("setBuiltinAssign", pw(), q.id, pourValues(boxes));
+                        await reload();
+                    } catch (e) { status.textContent = e.message; }
+                } }, "Enregistrer l'accès");
+                return h("div", { class: "builtin", "data-id": q.id },
+                    h("div", { class: "info" },
+                        h("strong", {}, (q.emoji || "📘") + " " + q.titre),
+                        h("span", {}, q.matiere + " · " + q.questions + " questions"),
+                        h("span", { class: (q.pour || []).length ? "" : "warn" }, pourText(q.pour))),
+                    boxes, h("div", { class: "actions", style: "margin-top:8px" }, save, status));
+            }));
+        }
+
+        // ================= PROGRAMME DE RÉVISION =================
+        function renderResetAll() {
+            $("reset-info").textContent = DATA.resetAll ? "Dernière remise à zéro générale : " + dateFr(DATA.resetAll) : "Aucune remise à zéro générale pour le moment.";
+        }
+        async function resetProgramme(target, label) {
+            if (!confirm("Remettre à zéro " + label + " ? Toute la progression sera perdue.")) return;
+            const status = target === "all" ? $("programme-status") : $("student-status");
+            showStatus(status, "info", "Remise à zéro…");
+            try {
+                await server("resetProgramme", pw(), target);
+                await reload();
+                showStatus(status, "ok", "Remise à zéro enregistrée. Chaque élève concerné repart de 0 à sa prochaine connexion.");
+            } catch (e) {
+                showStatus(status, "err", e.message);
+            }
+        }
+
         // ---------- événements ----------
+        $("unlock").addEventListener("click", unlock);
+        $("password").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); unlock(); } });
+        $("save-student").addEventListener("click", saveStudent);
+        $("reset-student-form").addEventListener("click", () => { resetStudentForm(); $("student-status").className = "status"; });
         $("add-question").addEventListener("click", () => addQuestion());
         $("reset-quiz").addEventListener("click", () => { resetQuizForm(); $("quiz-status").className = "status"; });
         $("save-quiz").addEventListener("click", () => saveItem("quiz"));
         $("reset-deck").addEventListener("click", () => { resetDeckForm(); $("deck-status").className = "status"; });
         $("save-deck").addEventListener("click", () => saveItem("deck"));
-
-        // ================= PROGRAMME DE RÉVISION =================
-        async function refreshReset() {
-            const el = $("reset-info");
-            if (!hasServer) { el.textContent = "Mode aperçu : disponible uniquement depuis le script déployé."; return; }
-            try {
-                const ts = await server("getProgrammeReset");
-                el.textContent = ts ? "Dernière remise à zéro : " + new Date(ts).toLocaleString("fr-FR") : "Jamais remis à zéro.";
-            } catch (e) {
-                el.textContent = "Impossible de lire l'état : " + e.message;
-            }
-        }
-        $("reset-programme").addEventListener("click", async () => {
-            if (!confirm("Remettre à zéro le programme de révision ? Toute la progression de l'élève sera perdue.")) return;
-            const status = $("programme-status");
-            showStatus(status, "info", "Remise à zéro…");
-            try {
-                await server("resetProgramme", $("password").value);
-                showStatus(status, "ok", "Programme remis à zéro. L'élève repart de 0 à sa prochaine ouverture de la page.");
-                refreshReset();
-            } catch (e) {
-                showStatus(status, "err", e.message);
-            }
-        });
+        $("reset-all").addEventListener("click", () => resetProgramme("all", "le programme de TOUS les élèves"));
 
         resetQuizForm();
-        refreshList("quiz");
-        refreshList("deck");
-        refreshReset();
+        resetDeckForm();
     </script>
 </body>
 </html>
