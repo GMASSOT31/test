@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz : Byzance et l'Europe carolingienne</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Fond dégradé évoquant l'or byzantin et le bleu royal */
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            min-height: 100vh;
+        }
+        .option-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .option-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .option-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        /* Couleurs pour les réponses */
+        .correct {
+            background-color: #22c55e !important; /* Vert */
+            color: white !important;
+            border-color: #16a34a !important;
+        }
+        .incorrect {
+            background-color: #ef4444 !important; /* Rouge */
+            color: white !important;
+            border-color: #dc2626 !important;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+
+    <!-- Conteneur principal du Quiz -->
+    <div id="quiz-container" class="bg-white rounded-2xl shadow-2xl p-6 md:p-10 w-full max-w-2xl transition-all">
+        
+        <!-- En-tête -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold text-gray-800 mb-2">Quiz Historique 🏰</h1>
+            <p class="text-gray-500 font-medium">Byzance et l'Europe carolingienne</p>
+        </div>
+
+        <!-- Section de progression -->
+        <div class="flex justify-between items-center mb-6 text-sm font-semibold text-gray-400">
+            <span id="question-tracker">Question 1 / 10</span>
+            <span id="score-tracker" class="text-blue-500">Score : 0</span>
+        </div>
+
+        <!-- La Question -->
+        <div class="mb-8">
+            <h2 id="question-text" class="text-xl md:text-2xl font-bold text-gray-800 leading-snug text-center">
+                Chargement de la question...
+            </h2>
+        </div>
+
+        <!-- Les Options -->
+        <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <!-- Les boutons seront injectés ici par JavaScript -->
+        </div>
+
+        <!-- Bouton Suivant -->
+        <div class="flex justify-center">
+            <button id="next-btn" class="hidden bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all transform hover:scale-105" onclick="nextQuestion()">
+                Question suivante ➔
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Écran de résultat (Caché au départ) -->
+    <div id="result-container" class="hidden bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center transition-all">
+        <h2 class="text-4xl font-extrabold mb-4 text-gray-800">Quiz Terminé !</h2>
+        
+        <div class="text-6xl mb-6">
+            <span id="emoji-result">🏆</span>
+        </div>
+        
+        <p class="text-xl text-gray-600 mb-2">Ton score final est de :</p>
+        <p id="final-score" class="text-5xl font-extrabold text-blue-600 mb-6">0 / 10</p>
+        
+        <p id="feedback-message" class="text-lg font-medium text-gray-700 mb-8 italic">
+            Message d'encouragement ici.
+        </p>
+
+        <button onclick="restartQuiz()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all transform hover:scale-105 w-full">
+            Rejouer 🔄
+        </button>
+    </div>
+
+    <script>
+        // 1. Les données du Quiz (Les 10 questions)
+        const quizData = [
+            {
+                question: "Quelles sont les dates qui marquent le début et la fin du Moyen Âge ?",
+                options: ["476 et 1492", "0 et 1000", "800 et 1453", "527 et 843"],
+                correct: 0
+            },
+            {
+                question: "Quelle est la capitale de l'Empire byzantin ?",
+                options: ["Aix-la-Chapelle", "Rome", "Constantinople", "Ravenne"],
+                correct: 2
+            },
+            {
+                question: "Sous quel empereur l'Empire byzantin a-t-il atteint son apogée (527-565) ?",
+                options: ["Charlemagne", "Justinien", "Charles Martel", "Louis le Pieux"],
+                correct: 1
+            },
+            {
+                question: "En quelle année et dans quelle ville Charlemagne a-t-il été sacré empereur ?",
+                options: ["En 476 à Ravenne", "En 843 à Verdun", "En 1054 à Constantinople", "En 800 à Rome"],
+                correct: 3
+            },
+            {
+                question: "Où se situe la capitale de l'Empire carolingien ?",
+                options: ["Paris", "Aix-la-Chapelle", "Lyon", "Marseille"],
+                correct: 1
+            },
+            {
+                question: "Quelle était la langue officielle de l'Empire byzantin ?",
+                options: ["Le latin", "Le français", "L'arabe", "Le grec"],
+                correct: 3
+            },
+            {
+                question: "Comment s'appelle l'épouse de Justinien qui a joué un rôle politique majeur ?",
+                options: ["Cléopâtre", "Isabelle", "Théodora", "Jeanne"],
+                correct: 2
+            },
+            {
+                question: "Comment appelle-t-on la séparation définitive en 1054 entre l'Église orthodoxe et catholique ?",
+                options: ["Le schisme", "La croisade", "L'évangélisation", "L'apogée"],
+                correct: 0
+            },
+            {
+                question: "Qui est le chef spirituel de l'Église orthodoxe ?",
+                options: ["Le Pape", "L'Évêque", "Le Missi Dominici", "Le Patriarche"],
+                correct: 3
+            },
+            {
+                question: "Quel événement marque la fin de l'Empire byzantin en 1453 ?",
+                options: ["La mort de Justinien", "La prise de Constantinople par les Turcs", "Le traité de Verdun", "Le couronnement de Charlemagne"],
+                correct: 1
+            }
+        ];
+
+        // 2. Variables d'état du jeu
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let hasAnswered = false;
+
+        // 3. Éléments du DOM
+        const questionText = document.getElementById("question-text");
+        const optionsContainer = document.getElementById("options-container");
+        const nextBtn = document.getElementById("next-btn");
+        const questionTracker = document.getElementById("question-tracker");
+        const scoreTracker = document.getElementById("score-tracker");
+        
+        const quizContainer = document.getElementById("quiz-container");
+        const resultContainer = document.getElementById("result-container");
+        const finalScore = document.getElementById("final-score");
+        const feedbackMessage = document.getElementById("feedback-message");
+        const emojiResult = document.getElementById("emoji-result");
+
+        // 4. Fonctions du jeu
+
+        // Charger une question
+        function loadQuestion() {
+            hasAnswered = false;
+            nextBtn.classList.add("hidden");
+            
+            const currentQuestion = quizData[currentQuestionIndex];
+            questionText.innerText = currentQuestion.question;
+            questionTracker.innerText = `Question ${currentQuestionIndex + 1} / ${quizData.length}`;
+            
+            // Vider les options précédentes
+            optionsContainer.innerHTML = "";
+
+            // Créer les boutons d'options
+            currentQuestion.options.forEach((option, index) => {
+                const button = document.createElement("button");
+                button.innerText = option;
+                // Classes de base pour le bouton (style Tailwind)
+                button.className = "option-btn w-full text-left bg-gray-50 border-2 border-gray-200 text-gray-700 font-semibold py-4 px-6 rounded-xl hover:bg-blue-50 hover:border-blue-300 focus:outline-none";
+                
+                // Événement au clic
+                button.onclick = () => selectAnswer(index, button);
+                
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        // Gérer la sélection d'une réponse
+        function selectAnswer(selectedIndex, selectedButton) {
+            if (hasAnswered) return; // Empêche de cliquer plusieurs fois
+            hasAnswered = true;
+
+            const currentQuestion = quizData[currentQuestionIndex];
+            const isCorrect = selectedIndex === currentQuestion.correct;
+            
+            const allButtons = optionsContainer.children;
+
+            if (isCorrect) {
+                score++;
+                scoreTracker.innerText = `Score : ${score}`;
+                selectedButton.classList.add("correct");
+            } else {
+                selectedButton.classList.add("incorrect");
+                // Mettre en surbrillance la bonne réponse
+                allButtons[currentQuestion.correct].classList.add("correct");
+            }
+
+            // Désactiver tous les boutons après la réponse
+            for (let i = 0; i < allButtons.length; i++) {
+                allButtons[i].disabled = true;
+                allButtons[i].classList.remove("hover:bg-blue-50", "hover:border-blue-300");
+                if (i !== selectedIndex && i !== currentQuestion.correct) {
+                    allButtons[i].classList.add("opacity-50");
+                }
+            }
+
+            // Afficher le bouton suivant
+            nextBtn.classList.remove("hidden");
+        }
+
+        // Passer à la question suivante
+        function nextQuestion() {
+            currentQuestionIndex++;
+            
+            if (currentQuestionIndex < quizData.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        // Afficher l'écran de fin
+        function showResults() {
+            quizContainer.classList.add("hidden");
+            resultContainer.classList.remove("hidden");
+            
+            finalScore.innerText = `${score} / ${quizData.length}`;
+
+            // Messages et Emojis selon le score
+            if (score === quizData.length) {
+                emojiResult.innerText = "👑";
+                feedbackMessage.innerText = "Impérial ! Tu connais ce cours sur le bout des doigts, digne d'un véritable Basileus !";
+                feedbackMessage.classList.add("text-green-600");
+            } else if (score >= 7) {
+                emojiResult.innerText = "🛡️";
+                feedbackMessage.innerText = "Très bon travail ! Tes révisions portent leurs fruits.";
+                feedbackMessage.classList.add("text-blue-600");
+            } else if (score >= 5) {
+                emojiResult.innerText = "📜";
+                feedbackMessage.innerText = "C'est un bon début, mais une petite relecture du cours te permettrait d'être parfait.";
+                feedbackMessage.classList.add("text-yellow-600");
+            } else {
+                emojiResult.innerText = "💪";
+                feedbackMessage.innerText = "Ne te décourage pas ! Relis bien tes fiches et relance le quiz, tu vas y arriver !";
+                feedbackMessage.classList.add("text-red-600");
+            }
+        }
+
+        // Recommencer le quiz
+        function restartQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            scoreTracker.innerText = `Score : ${score}`;
+            
+            resultContainer.classList.add("hidden");
+            quizContainer.classList.remove("hidden");
+            
+            // Réinitialiser les couleurs du message
+            feedbackMessage.className = "text-lg font-medium mb-8 italic";
+            
+            loadQuestion();
+        }
+
+        // Démarrer le quiz au chargement de la page
+        loadQuestion();
+
+    </script>
+</body>
+</html>
