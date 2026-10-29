@@ -191,6 +191,8 @@
         .flashcard.flipped { background: #eff6ff; border-color: var(--blue); }
         .face-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
         .face-text { font-size: 1.5rem; font-weight: 700; text-align: center; line-height: 1.35; color: var(--ink); }
+        .learn-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 16px; }
+        .learn-actions .btn { margin: 0; }
         .deck-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 16px; }
         .deck-nav .btn { margin: 0; }
         .btn:disabled { opacity: .5; cursor: default; }
@@ -218,6 +220,7 @@
         <nav class="sidebar" role="tablist" aria-label="Sections">
             <button class="tab" role="tab" id="tab-quiz" data-tab="quiz">🧠 Quiz <span class="count" id="count-quiz"></span></button>
             <button class="tab" role="tab" id="tab-flashcards" data-tab="flashcards">🃏 Flashcards <span class="count" id="count-flashcards"></span></button>
+            <button class="tab" role="tab" id="tab-programme" data-tab="programme">📅 Programme <span class="count" id="count-programme"></span></button>
         </nav>
         <main class="content" id="content" role="tabpanel"></main>
     </div>
@@ -507,6 +510,37 @@
         let activeTab = "quiz";
         let inQuiz = false; // vrai pendant qu'un quiz ou un paquet est ouvert (évite de le remplacer par la liste)
 
+        // ---------------- Questions ratées (programme de révision) ----------------
+        // Mémorisées dans le navigateur de l'élève (localStorage) : elles restent d'une visite à l'autre,
+        // sur cet appareil. Si le navigateur refuse le stockage, la liste vit le temps de la page.
+        const FAILS_KEY = "revision-a-apprendre-v1";
+        let fails = (() => {
+            try {
+                const v = JSON.parse(localStorage.getItem(FAILS_KEY));
+                return v && typeof v === "object" && !Array.isArray(v) ? v : {};
+            } catch (e) { return {}; }
+        })();
+        function persistFails() {
+            try { localStorage.setItem(FAILS_KEY, JSON.stringify(fails)); } catch (e) { /* stockage indisponible */ }
+        }
+        function answerOf(q) { return Array.isArray(q.reponses) ? q.reponses[0] : q.options[q.correct]; }
+        function recordFail(quiz, q) {
+            const key = quiz.id + "|" + q.question;
+            const old = fails[key];
+            fails[key] = { quiz: quiz.titre, recto: q.question, verso: answerOf(q), fails: (old ? old.fails : 0) + 1, date: Date.now() };
+            persistFails();
+            updateCounts();
+        }
+        function forgetFail(key) { delete fails[key]; persistFails(); updateCounts(); }
+        // Les questions les plus souvent ratées d'abord
+        function failEntries() {
+            return Object.entries(fails).map(([key, v]) => ({ ...v, key })).sort((a, b) => b.fails - a.fails || a.date - b.date);
+        }
+        function learnDeck(entries) {
+            return { titre: "Flashcards à apprendre",
+                cartes: entries.map(e => ({ recto: e.recto, verso: e.verso, key: e.key, quiz: e.quiz })) };
+        }
+
         // Petit utilitaire pour créer des éléments sans innerHTML
         function h(tag, props, ...children) {
             const el = document.createElement(tag);
@@ -558,6 +592,7 @@
         function updateCounts() {
             document.getElementById("count-quiz").textContent = QUIZZES.length;
             document.getElementById("count-flashcards").textContent = allDecks().length;
+            document.getElementById("count-programme").textContent = Object.keys(fails).length;
         }
 
         function setTab(tab) {
@@ -584,6 +619,8 @@
                         h("p", { class: "desc" }, q.description)
                     )
                 )));
+            } else if (activeTab === "programme") {
+                renderProgramme();
             } else {
                 content.append(h("h2", {}, "Flashcards"));
                 const decks = allDecks();
@@ -628,9 +665,12 @@
                     next.focus();
                 };
                 const addPoint = () => { score++; scoreEl.textContent = `Score : ${score}`; };
+                // Une question ratée (mauvais choix, ou 1re erreur sur une réponse écrite) entre dans le programme de révision
+                let flagged = false;
+                const fail = () => { if (!flagged) { flagged = true; recordFail(quiz, q); } };
                 const body = Array.isArray(q.reponses)
-                    ? typedBody(q, addPoint, reveal)
-                    : choiceBody(q, addPoint, reveal);
+                    ? typedBody(q, addPoint, fail, reveal)
+                    : choiceBody(q, addPoint, fail, reveal);
 
                 content.replaceChildren(h("div", { class: "panel" },
                     back(),
@@ -644,7 +684,7 @@
             }
 
             // Question à choix : l'ordre des réponses est mélangé à chaque affichage
-            function choiceBody(q, addPoint, reveal) {
+            function choiceBody(q, addPoint, fail, reveal) {
                 let answered = false;
                 const order = shuffle(q.options.map((text, i) => ({ text, ok: i === q.correct })));
                 const buttons = order.map((o, i) =>
@@ -656,6 +696,7 @@
                             addPoint();
                             buttons[i].classList.add("correct");
                         } else {
+                            fail();
                             buttons[i].classList.add("incorrect");
                             good.classList.add("correct");
                         }
@@ -670,7 +711,7 @@
 
             // Question à réponse écrite : on réessaie jusqu'à trouver ; le point n'est donné qu'au premier essai.
             // Après 3 erreurs, un bouton permet de voir la réponse (sans point).
-            function typedBody(q, addPoint, reveal) {
+            function typedBody(q, addPoint, fail, reveal) {
                 let tries = 0;
                 let done = false;
                 const input = h("input", { type: "text", class: "saisie", placeholder: "Écris ta réponse…",
@@ -701,6 +742,7 @@
                             : "✅ Bonne réponse, mais sans point : il t'a fallu plusieurs essais.");
                     } else {
                         tries++;
+                        fail();
                         input.classList.remove("shake");
                         void input.offsetWidth; // relance l'animation
                         input.classList.add("input-wrong", "shake");
@@ -748,8 +790,39 @@
             showQuestion();
         }
 
+        // ---------------- Programme de révision ----------------
+        function renderProgramme() {
+            content.append(h("h2", {}, "Programme de révision"));
+            const entries = failEntries();
+            if (entries.length === 0) {
+                content.append(h("div", { class: "empty" },
+                    "🎉 Rien à apprendre pour le moment. Les questions que tu rates dans les quiz apparaîtront ici sous forme de flashcards."));
+                return;
+            }
+            const parQuiz = {};
+            entries.forEach(e => { parQuiz[e.quiz] = (parQuiz[e.quiz] || 0) + 1; });
+            const resume = Object.entries(parQuiz).map(([titre, n]) => `${titre} : ${n}`).join(" · ");
+            content.append(h("div", { class: "grid" },
+                h("button", { class: "card", onclick: () => startDeck(learnDeck(entries), true) },
+                    h("div", { class: "emoji" }, "🃏"),
+                    h("h3", {}, "Flashcards à apprendre"),
+                    h("div", { class: "meta" }, `${entries.length} carte${entries.length > 1 ? "s" : ""} issue${entries.length > 1 ? "s" : ""} de tes erreurs`),
+                    h("p", { class: "desc" }, resume)
+                )));
+            content.append(h("p", { class: "hint-small" },
+                h("button", { class: "back", onclick: () => {
+                    if (!confirm("Effacer toute la liste des cartes à apprendre ?")) return;
+                    fails = {};
+                    persistFails();
+                    updateCounts();
+                    renderList();
+                } }, "Effacer ma liste")));
+        }
+
         // ---------------- Flashcards ----------------
-        function startDeck(deck) {
+        // learn = true : paquet « à apprendre ». Chaque carte peut être marquée « Je la sais » (elle sort du programme)
+        // ou « À revoir plus tard » (elle passe à la fin).
+        function startDeck(deck, learn) {
             inQuiz = true;
             let cards = deck.cartes.slice();
             let index = 0;
@@ -760,6 +833,20 @@
             const prev = h("button", { class: "btn secondary", onclick: () => go(-1) }, "← Précédente");
             const next = h("button", { class: "btn", onclick: () => go(1) }, "Suivante →");
             const mix = h("button", { class: "btn secondary", onclick: () => { cards = shuffle(cards); index = 0; flipped = false; draw(); } }, "🔀 Mélanger");
+            const later = h("button", { class: "btn secondary", onclick: () => {
+                cards.push(cards.splice(index, 1)[0]);
+                flipped = false;
+                draw();
+            } }, "🔁 À revoir plus tard");
+            const known = h("button", { class: "btn", onclick: () => {
+                forgetFail(cards[index].key);
+                cards.splice(index, 1);
+                if (cards.length === 0) { allLearned(); return; }
+                if (index >= cards.length) index = cards.length - 1;
+                flipped = false;
+                draw();
+            } }, "✅ Je la sais");
+            const learnActions = h("div", { class: "learn-actions" }, later, known);
 
             function go(delta) { index += delta; flipped = false; draw(); }
 
@@ -767,19 +854,33 @@
                 const c = cards[index];
                 card.classList.toggle("flipped", flipped);
                 card.replaceChildren(
-                    h("div", { class: "face-label" }, flipped ? "Réponse" : "Question"),
+                    h("div", { class: "face-label" }, (flipped ? "Réponse" : "Question") + (learn && c.quiz ? " · " + c.quiz : "")),
                     h("div", { class: "face-text" }, flipped ? c.verso : c.recto));
                 counter.textContent = `Carte ${index + 1} / ${cards.length}`;
                 prev.disabled = index === 0;
                 next.disabled = index === cards.length - 1;
+                if (learn) learnActions.style.display = flipped ? "flex" : "none";
+            }
+
+            function allLearned() {
+                content.replaceChildren(h("div", { class: "panel result" },
+                    h("div", { class: "big-emoji" }, "🎉"),
+                    h("h2", {}, "Bravo !"),
+                    h("p", { class: "msg" }, "Tu as appris toutes tes flashcards."),
+                    h("div", { class: "actions" },
+                        h("button", { class: "btn", onclick: renderList }, "Retour au programme"))
+                ));
             }
 
             content.replaceChildren(h("div", { class: "panel" },
-                h("button", { class: "back", onclick: renderList }, "← Retour à la liste"),
+                h("button", { class: "back", onclick: renderList }, learn ? "← Retour au programme" : "← Retour à la liste"),
                 h("div", { class: "progress" }, h("span", {}, deck.titre), counter),
                 card,
+                learn ? learnActions : null,
                 h("div", { class: "deck-nav" }, prev, mix, next),
-                h("p", { class: "hint-small" }, "Clique sur la carte pour la retourner.")
+                h("p", { class: "hint-small" }, learn
+                    ? "Clique sur la carte pour voir la réponse, puis dis si tu la sais."
+                    : "Clique sur la carte pour la retourner.")
             ));
             draw();
         }
