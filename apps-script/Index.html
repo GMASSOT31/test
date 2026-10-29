@@ -223,6 +223,9 @@
         .flashcard.flipped { background: #fff6dc; box-shadow: 0 6px 0 #e0b040, 0 14px 30px rgba(30,58,138,.10); }
         .face-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--violet); font-weight: 800; }
         .face-text { font-size: 1.5rem; font-weight: 800; text-align: center; line-height: 1.35; color: var(--navy); }
+        .auto-next { height: 5px; width: 0; max-width: 220px; margin: 14px auto 0; border-radius: 999px; background: linear-gradient(90deg, var(--gold), var(--pink)); animation: auto-next linear forwards; }
+        @keyframes auto-next { from { width: 0; } to { width: 220px; } }
+        @media (prefers-reduced-motion: reduce) { .auto-next { animation: none; width: 220px; } }
         .mastery-line { margin-top: 8px; font-size: .9rem; font-weight: 700; color: var(--violet); text-align: center; }
         .explication + .mastery-line, .mastery-line + .explication { margin-top: 0; }
         .progress-panel { margin-bottom: 0; }
@@ -699,10 +702,18 @@
                 const explication = q.explication
                     ? h("div", { class: "explication", style: "display:none" }, q.explication)
                     : null;
-                const next = h("button", { class: "btn", style: "display:none", onclick: () => {
+                // Passage à la question suivante (une seule fois, que ce soit par le bouton ou automatiquement)
+                let advanced = false;
+                const goNext = () => {
+                    if (advanced) return;
+                    advanced = true;
                     index++;
                     index < total ? showQuestion() : showResult();
-                } }, index + 1 < total ? "Question suivante ➔" : "Voir le résultat ➔");
+                };
+                const next = h("button", { class: "btn", style: "display:none", onclick: goNext },
+                    index + 1 < total ? "Question suivante ➔" : "Voir le résultat ➔");
+                // Barre qui se remplit pendant l'attente avant le passage automatique
+                const autoBar = h("div", { class: "auto-next", style: "display:none", "aria-hidden": "true" });
                 // Appelé quand la question est terminée : montre l'explication et le bouton suivant
                 // Le résultat de la question compte une seule fois pour le programme de révision :
                 // réussite (bon choix, ou réponse écrite du premier coup) ou échec (mauvais choix, 1re erreur).
@@ -726,6 +737,17 @@
                     if (explication) explication.style.display = "block";
                     next.style.display = "block";
                     next.focus();
+                    // Bonne réponse du premier coup : on passe seul à la question suivante après un court instant
+                    // (le temps de voir le vert et sa progression ; plus long s'il y a une explication ou si la question devient sue).
+                    // Après une erreur, l'élève lit l'explication et clique lui-même.
+                    // window.revisionAutoNext = false désactive ce comportement (tests).
+                    if (succeeded && window.revisionAutoNext !== false) {
+                        const delay = (level >= MASTERY || explication) ? 1800 : 1000;
+                        autoBar.style.animationDuration = delay + "ms";
+                        autoBar.style.display = "block";
+                        // si l'élève a quitté la question (retour aux leçons…), le bouton n'est plus dans la page : on ne fait rien
+                        setTimeout(() => { if (next.isConnected) goNext(); }, delay);
+                    }
                 };
                 const addPoint = () => { score++; scoreEl.textContent = `Score : ${score}`; settle(true); };
                 const fail = () => settle(false);
@@ -747,7 +769,8 @@
                     body,
                     progressLine,
                     explication,
-                    next
+                    next,
+                    autoBar
                 ));
             }
 
