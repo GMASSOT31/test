@@ -180,6 +180,13 @@
         .saisie:focus { outline: none; border-color: var(--blue); }
         .saisie.input-correct { border-color: #1fbf7a; background: #effff7; color: #07402a; }
         .saisie.input-wrong { border-color: #e0558a; background: #fff0f6; color: #5a0a2a; }
+        .panel-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+        .panel-top .back { margin-bottom: 0; }
+        .quiz-link { padding: 5px 14px; border-radius: 999px; background: var(--gold); color: var(--navy); font-weight: 800; font-size: .85rem; text-decoration: none; box-shadow: var(--sticker); }
+        .quiz-link:hover { transform: translateY(-2px); }
+        .champ-row { display: grid; grid-template-columns: minmax(120px, 38%) 1fr; gap: 10px; align-items: center; margin-bottom: 10px; }
+        .champ-label { font-weight: 800; font-size: .9rem; color: var(--navy); }
+        .saisie.champ { padding: 10px 12px; font-size: 1rem; border-width: 2px; }
         .feedback { min-height: 28px; margin: 12px 0; font-weight: 800; }
         .feedback.ok { color: #0f8a52; }
         .feedback.ko { color: #c0264b; }
@@ -241,6 +248,7 @@
             .content { padding: 16px; }
             .options { grid-template-columns: 1fr; }
             .panel { padding: 20px; }
+            .champ-row { grid-template-columns: 1fr; gap: 4px; }
         }
         @media (prefers-reduced-motion: reduce) {
             .tab, .card, .btn, .option { transition: none; }
@@ -442,7 +450,10 @@
             if (!progressKey) return;
             try { localStorage.setItem(progressKey, JSON.stringify(progress)); } catch (e) { /* stockage indisponible */ }
         }
-        function answerOf(q) { return Array.isArray(q.reponses) ? q.reponses[0] : q.options[q.correct]; }
+        function answerOf(q) {
+            if (q.champs) return q.champs.map(c => (c.label ? c.label + " : " : "") + c.reponses[0]).join(" · ");
+            return Array.isArray(q.reponses) ? q.reponses[0] : q.options[q.correct];
+        }
         function keyOf(quiz, q) { return quiz.id + "|" + q.question; }
         function progressOf(quiz, q) { return progress[keyOf(quiz, q)] || { ok: 0, fails: 0 }; }
         // Enregistre le résultat d'une question et renvoie le nombre de réussites d'affilée
@@ -511,11 +522,18 @@
                 description: "Cartes générées depuis le quiz : la question au recto, la réponse au verso.",
                 cartes: q.questions.map(x => ({
                     recto: x.question,
-                    verso: Array.isArray(x.reponses) ? x.reponses[0] : x.options[x.correct]
+                    verso: answerOf(x)
                 }))
             }));
         }
         function allDecks() { return decksFromQuizzes().concat(FLASHCARDS); }
+
+        // Deux réponses sont identiques si elles le sont une fois normalisées, avec ou sans espaces
+        function sameAnswer(a, b) {
+            const x = norm(a), y = norm(b);
+            return x === y || x.replace(/\s/g, "") === y.replace(/\s/g, "");
+        }
+        function matches(value, accepted) { return accepted.some(r => sameAnswer(r, value)); }
 
         function updateCounts() {
             document.getElementById("count-quiz").textContent = QUIZZES.length;
@@ -612,12 +630,17 @@
                 };
                 const addPoint = () => { score++; scoreEl.textContent = `Score : ${score}`; settle(true); };
                 const fail = () => settle(false);
-                const body = Array.isArray(q.reponses)
-                    ? typedBody(q, addPoint, fail, reveal)
-                    : choiceBody(q, addPoint, fail, reveal);
+                const body = q.champs
+                    ? fieldsBody(q, addPoint, fail, reveal)
+                    : Array.isArray(q.reponses)
+                        ? typedBody(q, addPoint, fail, reveal)
+                        : choiceBody(q, addPoint, fail, reveal);
 
+                const lien = quiz.lien && /^https?:\/\//.test(quiz.lien.url || "")
+                    ? h("a", { class: "quiz-link", href: quiz.lien.url, target: "_blank", rel: "noopener noreferrer" }, "🎧 " + (quiz.lien.texte || "Ouvrir le lien"))
+                    : null;
                 content.replaceChildren(h("div", { class: "panel" },
-                    back(),
+                    h("div", { class: "panel-top" }, back(), lien),
                     h("div", { class: "progress" },
                         h("span", {}, `Question ${index + 1} / ${total}`), scoreEl),
                     h("h3", { class: "question" }, q.question),
@@ -678,7 +701,7 @@
                     if (done) return;
                     const value = norm(input.value);
                     if (!value) return;
-                    if (q.reponses.some(r => norm(r) === value)) {
+                    if (matches(input.value, q.reponses)) {
                         input.classList.remove("input-wrong", "shake");
                         input.classList.add("input-correct");
                         if (tries === 0) addPoint();
@@ -706,6 +729,99 @@
                 });
                 setTimeout(() => input.focus(), 0);
                 return h("div", {}, input, feedback, h("div", { class: "saisie-actions" }, check, showAnswer));
+            }
+
+            // Question à plusieurs champs à remplir : q.champs = [{ label, reponses: [réponses acceptées], groupe? }].
+            // q.libre : l'ordre des champs n'a pas d'importance. groupe : seuls les champs d'un même groupe sont interchangeables.
+            // Chaque champ est validé séparément : les bons se verrouillent en vert, les autres restent à corriger.
+            // Le point n'est donné que si tout est juste du premier coup ; après 3 validations ratées, « Voir la réponse ».
+            function fieldsBody(q, addPoint, fail, reveal) {
+                let tries = 0;
+                let done = false;
+                const gid = (ch, i) => ch.groupe || (q.libre ? "_" : "#" + i);
+                const keys = [...new Set(q.champs.map(gid))];
+                const rows = q.champs.map(ch => ({
+                    ch, locked: false, used: -1,
+                    input: h("input", { type: "text", class: "saisie champ", autocomplete: "off", autocapitalize: "off", spellcheck: "false", "aria-label": ch.label || "Réponse" })
+                }));
+                const rowKey = i => gid(q.champs[i], i);
+                const freeExpected = k => q.champs.map((c, i) => i).filter(i => rowKey(i) === k && !rows.some(r => r.locked && r.used === i));
+
+                // Associe au mieux les saisies d'un groupe aux réponses attendues (peu de champs : essai exhaustif)
+                function bestMatch(inputs, expected) {
+                    let best = [];
+                    (function go(i, taken, cur) {
+                        if (cur.length + (inputs.length - i) <= best.length) return;
+                        if (i === inputs.length) { best = cur.slice(); return; }
+                        for (const e of expected) {
+                            if (taken.has(e) || !matches(inputs[i].value, q.champs[e].reponses)) continue;
+                            taken.add(e); cur.push([inputs[i].row, e]);
+                            go(i + 1, taken, cur);
+                            cur.pop(); taken.delete(e);
+                        }
+                        go(i + 1, taken, cur);
+                    })(0, new Set(), []);
+                    return best;
+                }
+
+                const feedback = h("div", { class: "feedback", role: "status" });
+                const check = h("button", { class: "btn", onclick: validate }, "Valider ✔️");
+                const showAnswer = h("button", { class: "btn secondary", style: "display:none", onclick: giveUp }, "Voir la réponse");
+
+                function finish(success, text) {
+                    done = true;
+                    rows.forEach(r => { r.input.disabled = true; });
+                    check.style.display = "none";
+                    showAnswer.style.display = "none";
+                    feedback.className = "feedback " + (success ? "ok" : "ko");
+                    feedback.textContent = text;
+                    reveal();
+                }
+                function validate() {
+                    if (done) return;
+                    if (!rows.some(r => !r.locked && norm(r.input.value))) return;
+                    keys.forEach(k => {
+                        const inputs = rows.map((row, i) => ({ row, i }))
+                            .filter(x => rowKey(x.i) === k && !x.row.locked && norm(x.row.input.value))
+                            .map(x => ({ row: x.row, value: x.row.input.value }));
+                        bestMatch(inputs, freeExpected(k)).forEach(([row, e]) => {
+                            row.locked = true; row.used = e; row.input.disabled = true;
+                            row.input.classList.remove("input-wrong", "shake");
+                            row.input.classList.add("input-correct");
+                        });
+                    });
+                    const pending = rows.filter(r => !r.locked);
+                    if (pending.length === 0) {
+                        if (tries === 0) addPoint();
+                        finish(true, tries === 0 ? "🎉 Bravo ! Tout est juste !" : "✅ Tout est juste, mais sans point : il t'a fallu plusieurs essais.");
+                        return;
+                    }
+                    tries++;
+                    fail();
+                    pending.forEach(r => { r.input.classList.remove("shake"); void r.input.offsetWidth; r.input.classList.add("input-wrong", "shake"); });
+                    feedback.className = "feedback ko";
+                    feedback.textContent = `❌ ${pending.length} champ${pending.length > 1 ? "s" : ""} à corriger : les bonnes réponses restent en vert.`;
+                    if (tries >= 3) showAnswer.style.display = "inline-block";
+                    pending[0].input.focus();
+                }
+                function giveUp() {
+                    keys.forEach(k => {
+                        const free = freeExpected(k);
+                        rows.filter((r, i) => rowKey(i) === k && !r.locked).forEach((r, j) => {
+                            r.input.value = q.champs[free[j]].reponses[0];
+                            r.locked = true; r.used = free[j];
+                            r.input.classList.add("input-wrong");
+                        });
+                    });
+                    finish(false, "Voici les bonnes réponses (en rose).");
+                }
+                rows.forEach(r => r.input.addEventListener("keydown", e => {
+                    if (e.key === "Enter") { e.preventDefault(); validate(); }
+                }));
+                setTimeout(() => rows[0].input.focus(), 0);
+                return h("div", {},
+                    rows.map(r => h("label", { class: "champ-row" }, h("span", { class: "champ-label" }, r.ch.label || ""), r.input)),
+                    feedback, h("div", { class: "saisie-actions" }, check, showAnswer));
             }
 
             function showResult() {

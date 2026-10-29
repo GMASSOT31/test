@@ -520,5 +520,669 @@ var BUILTIN_QUIZZES = [
         ]
       }
     ]
+  },
+  {
+    "id": "musique-carnaval",
+    "emoji": "🎼",
+    "matiere": "Musique",
+    "titre": "Musique descriptive : Le Carnaval des animaux (5ᵉ)",
+    "description": "40 questions : Le Carnaval des animaux, Camille Saint-Saëns, les 4 paramètres du son, les nuances et l'analyse de 6 extraits.",
+    "lien": {
+      "texte": "Écouter les extraits sonores (Padlet / Digipad)"
+    },
+    "questions": [
+      {
+        "question": "Quelle est la définition exacte de la musique descriptive ?",
+        "options": [
+          "Une musique sans instruments accompagnant un texte poétique.",
+          "Genre musical dans lequel le compositeur imite des éléments non musicaux à l'aide d'un orchestre symphonique.",
+          "Une musique jouée uniquement au piano pour illustrer un film muet."
+        ],
+        "correct": 1
+      },
+      {
+        "question": "Le Carnaval des animaux est qualifié par le compositeur de « ______ zoologique ».",
+        "reponses": [
+          "fantaisie",
+          "grande fantaisie"
+        ]
+      },
+      {
+        "question": "En quelle année Le Carnaval des animaux a-t-il été composé ?",
+        "options": [
+          "1786",
+          "1886",
+          "1921"
+        ],
+        "correct": 1
+      },
+      {
+        "question": "À quelle période du siècle cette œuvre appartient-elle ?",
+        "options": [
+          "Début du 19ᵉ siècle",
+          "Milieu du 19ᵉ siècle",
+          "Fin du 19ᵉ siècle"
+        ],
+        "correct": 2
+      },
+      {
+        "question": "Pour quelle occasion festive cette œuvre a-t-elle été composée à l'origine ? Concert de ______.",
+        "reponses": [
+          "mardi gras"
+        ]
+      },
+      {
+        "question": "Quel était le but principal du compositeur en écrivant cette œuvre ?",
+        "options": [
+          "Faire pleurer",
+          "Faire rire",
+          "Composer une hymne religieuse"
+        ],
+        "correct": 1
+      },
+      {
+        "question": "Pourquoi Saint-Saëns a-t-il interdit l'exécution publique du Carnaval des animaux de son vivant ?",
+        "options": [
+          "Il la trouvait trop difficile à jouer pour les orchestres.",
+          "Il craignait pour sa réputation de membre de l'Académie des beaux-arts.",
+          "Le ministre de la Culture l'avait censurée."
+        ],
+        "correct": 1
+      },
+      {
+        "question": "Quelle est la seule pièce du Carnaval des animaux qui n'a pas été censurée par Saint-Saëns de son vivant ? Le ______.",
+        "reponses": [
+          "cygne",
+          "le cygne"
+        ]
+      },
+      {
+        "question": "Combien de tableaux (petites pièces musicales) comporte au total Le Carnaval des animaux ?",
+        "options": [
+          "6 tableaux",
+          "10 tableaux",
+          "14 tableaux"
+        ],
+        "correct": 2
+      },
+      {
+        "question": "À quelle autre œuvre musicale célèbre (composée par Prokofiev) Le Carnaval des animaux est-il comparé pour sa grande popularité ? ______ et le loup.",
+        "reponses": [
+          "pierre"
+        ]
+      },
+      {
+        "question": "Dans quelle ville Camille Saint-Saëns est-il né en 1835 ?",
+        "reponses": [
+          "paris"
+        ]
+      },
+      {
+        "question": "Où et de quelle maladie est mort Camille Saint-Saëns en 1921 ?",
+        "champs": [
+          {
+            "label": "Mort à",
+            "reponses": [
+              "alger"
+            ]
+          },
+          {
+            "label": "d'une",
+            "reponses": [
+              "pneumonie",
+              "une pneumonie"
+            ]
+          }
+        ]
+      },
+      {
+        "question": "Quels sont les trois métiers / rôles musicaux qu'exerçait Camille Saint-Saëns ?",
+        "options": [
+          "Pianiste, organiste et compositeur",
+          "Violoncelliste, chef d'orchestre et chanteur",
+          "Flûtiste, violoniste et éditeur"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "À quelle époque musicale Camille Saint-Saëns appartient-il ?",
+        "options": [
+          "Époque baroque",
+          "Époque classique",
+          "Époque post-romantique"
+        ],
+        "correct": 2
+      },
+      {
+        "question": "Combien d'opéras Camille Saint-Saëns a-t-il écrits au total ? ______ opéras.",
+        "reponses": [
+          "12",
+          "douze"
+        ]
+      },
+      {
+        "question": "Quel est le titre de l'opéra le plus connu composé par Camille Saint-Saëns ?",
+        "options": [
+          "Carmen",
+          "Samson et Dalila",
+          "La Flûte enchantée"
+        ],
+        "correct": 1
+      },
+      {
+        "question": "En 1908, quelle place particulière occupe Saint-Saëns dans l'histoire du cinéma (7ᵉ art) ?",
+        "options": [
+          "Il est le premier à avoir réalisé un film muet.",
+          "Il est le tout premier compositeur de renom à composer une musique spécialement pour un film.",
+          "Il a inventé l'enregistrement du son sur bobine."
+        ],
+        "correct": 1
+      },
+      {
+        "question": "Quel est le titre du film de 1908 dont Saint-Saëns a composé la musique ? L'______ du duc de Guise.",
+        "reponses": [
+          "assassinat",
+          "l'assassinat"
+        ]
+      },
+      {
+        "question": "Comment appelle-t-on l'ensemble des 4 paramètres du son ?",
+        "options": [
+          "La carte d'identité du son",
+          "La vitesse de la musique",
+          "Le solfège rythmique"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Le timbre se définit comme la sonorité spécifique de chaque ______ ou ______.",
+        "libre": true,
+        "champs": [
+          {
+            "label": "Réponse 1",
+            "reponses": [
+              "voix"
+            ]
+          },
+          {
+            "label": "Réponse 2",
+            "reponses": [
+              "instrument"
+            ]
+          }
+        ]
+      },
+      {
+        "question": "De quoi dépend la hauteur d'une note dans l'échelle musicale ?",
+        "options": [
+          "Du volume des enceintes",
+          "Du nombre de vibrations",
+          "De la durée de la note"
+        ],
+        "correct": 1
+      },
+      {
+        "question": "Quelles sont les trois catégories de hauteur d'un son ?",
+        "libre": true,
+        "champs": [
+          {
+            "label": "Catégorie 1",
+            "reponses": [
+              "aigu",
+              "aiguë"
+            ]
+          },
+          {
+            "label": "Catégorie 2",
+            "reponses": [
+              "médium"
+            ]
+          },
+          {
+            "label": "Catégorie 3",
+            "reponses": [
+              "grave"
+            ]
+          }
+        ]
+      },
+      {
+        "question": "Quelle est la définition exacte de la nuance en musique ?",
+        "options": [
+          "La durée pendant laquelle on entend un son.",
+          "Le volume sonore de la musique.",
+          "La couleur de l'instrument joué."
+        ],
+        "correct": 1
+      },
+      {
+        "question": "La durée est le laps de temps pendant lequel on entend un son. Donne les trois exemples de durée du cours.",
+        "libre": true,
+        "champs": [
+          {
+            "label": "Durée 1",
+            "reponses": [
+              "lent"
+            ]
+          },
+          {
+            "label": "Durée 2",
+            "reponses": [
+              "modéré"
+            ]
+          },
+          {
+            "label": "Durée 3",
+            "reponses": [
+              "rapide"
+            ]
+          }
+        ]
+      },
+      {
+        "question": "Nuances en italien : donne le terme en italien et la traduction en français de pp, p et mp.",
+        "champs": [
+          {
+            "label": "pp : terme italien",
+            "reponses": [
+              "pianissimo"
+            ]
+          },
+          {
+            "label": "pp : traduction",
+            "reponses": [
+              "très doucement",
+              "très doux"
+            ]
+          },
+          {
+            "label": "p : terme italien",
+            "reponses": [
+              "piano"
+            ]
+          },
+          {
+            "label": "p : traduction",
+            "reponses": [
+              "doucement",
+              "doux"
+            ]
+          },
+          {
+            "label": "mp : terme italien",
+            "reponses": [
+              "mezzo piano"
+            ]
+          },
+          {
+            "label": "mp : traduction",
+            "reponses": [
+              "assez doux",
+              "assez doucement"
+            ]
+          }
+        ]
+      },
+      {
+        "question": "Nuances en italien (suite) : complète pour mf, f et ff.",
+        "champs": [
+          {
+            "label": "mf : terme italien",
+            "reponses": [
+              "mezzo forte"
+            ]
+          },
+          {
+            "label": "mf : traduction",
+            "reponses": [
+              "assez fort",
+              "assez fortement"
+            ]
+          },
+          {
+            "label": "f : terme italien",
+            "reponses": [
+              "forte"
+            ]
+          },
+          {
+            "label": "f : traduction",
+            "reponses": [
+              "fort",
+              "fortement"
+            ]
+          },
+          {
+            "label": "ff : terme italien",
+            "reponses": [
+              "fortissimo"
+            ]
+          },
+          {
+            "label": "ff : traduction",
+            "reponses": [
+              "très fort",
+              "très fortement"
+            ]
+          }
+        ]
+      },
+      {
+        "question": "Que signifient les variations de nuance indiquées par les symboles < (crescendo) et > (decrescendo) ?",
+        "options": [
+          "Crescendo = devenir de plus en plus fort ; Decrescendo = devenir de plus en plus doux.",
+          "Crescendo = jouer de plus en plus vite ; Decrescendo = jouer de plus en plus lent.",
+          "Crescendo = aller vers l'aigu ; Decrescendo = aller vers le grave."
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Ordonne ces 6 nuances de la plus douce (volume le plus bas) à la plus forte (volume le plus haut) : f, pp, mf, p, ff, mp.",
+        "reponses": [
+          "pp < p < mp < mf < f < ff",
+          "pp p mp mf f ff"
+        ]
+      },
+      {
+        "question": "🎧 Le Lion : quel instrument (timbre) est utilisé par Saint-Saëns pour imiter le rugissement du Lion ?",
+        "options": [
+          "La contrebasse",
+          "Le piano",
+          "La flûte traversière"
+        ],
+        "correct": 1
+      },
+      {
+        "question": "🎧 Le Lion : complète les paramètres musicaux de la pièce.",
+        "champs": [
+          {
+            "label": "Hauteur",
+            "reponses": [
+              "très grave"
+            ]
+          },
+          {
+            "label": "Nuance",
+            "reponses": [
+              "mp < f > mp"
+            ]
+          },
+          {
+            "label": "Durée",
+            "reponses": [
+              "très rapide"
+            ]
+          },
+          {
+            "label": "Mode de jeu",
+            "reponses": [
+              "legato"
+            ]
+          }
+        ]
+      },
+      {
+        "question": "🎧 Les Tortues : quelle est la particularité animale mise en musique dans la pièce des Tortues ?",
+        "options": [
+          "Le galop rapide",
+          "La nage lente",
+          "Le rugissement"
+        ],
+        "correct": 1
+      },
+      {
+        "question": "🎧 Les Tortues : complète les paramètres musicaux.",
+        "champs": [
+          {
+            "label": "Timbre",
+            "reponses": [
+              "orchestre de cordes",
+              "orchestre à cordes",
+              "cordes",
+              "les cordes"
+            ]
+          },
+          {
+            "label": "Hauteur",
+            "reponses": [
+              "médium/grave",
+              "médium et grave",
+              "grave/médium"
+            ]
+          },
+          {
+            "label": "Nuance",
+            "reponses": [
+              "mezzo piano",
+              "mp"
+            ]
+          },
+          {
+            "label": "Durée",
+            "reponses": [
+              "lent"
+            ]
+          },
+          {
+            "label": "Mode de jeu",
+            "reponses": [
+              "legato"
+            ]
+          }
+        ]
+      },
+      {
+        "question": "🎧 L'Éléphant : quel instrument à cordes (timbre) est choisi pour représenter les pas lourds de l'Éléphant ?",
+        "options": [
+          "Le violoncelle",
+          "La contrebasse",
+          "Le violon"
+        ],
+        "correct": 1
+      },
+      {
+        "question": "🎧 L'Éléphant : complète les paramètres musicaux.",
+        "champs": [
+          {
+            "label": "Hauteur",
+            "reponses": [
+              "grave"
+            ]
+          },
+          {
+            "label": "Nuance",
+            "reponses": [
+              "mezzo forte",
+              "mf"
+            ]
+          },
+          {
+            "label": "Durée",
+            "reponses": [
+              "modéré"
+            ]
+          },
+          {
+            "label": "Mode de jeu",
+            "reponses": [
+              "staccato"
+            ]
+          }
+        ]
+      },
+      {
+        "question": "🎧 Personnages à longues oreilles (les ânes) : quels instruments et quel mode de jeu imitent le braiement de l'âne ?",
+        "options": [
+          "Deux violons jouant en glissando et legato",
+          "Une contrebasse jouant staccato",
+          "Une flûte traversière et un piano"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "🎧 Personnages à longues oreilles (les ânes) : complète l'analyse.",
+        "champs": [
+          {
+            "label": "Particularité : le …",
+            "reponses": [
+              "braiement",
+              "cri"
+            ]
+          },
+          {
+            "label": "Hauteur de « Hi »",
+            "reponses": [
+              "aigu",
+              "aiguë"
+            ]
+          },
+          {
+            "label": "Hauteur de « Han »",
+            "reponses": [
+              "grave"
+            ]
+          },
+          {
+            "label": "Nuance",
+            "reponses": [
+              "forte",
+              "f"
+            ]
+          },
+          {
+            "label": "Durée de « hin »",
+            "reponses": [
+              "rapide"
+            ]
+          },
+          {
+            "label": "Durée de « han »",
+            "reponses": [
+              "lent"
+            ]
+          }
+        ]
+      },
+      {
+        "question": "🎧 La Volière (les oiseaux) : quels sont les timbres (instruments) employés dans La Volière ?",
+        "options": [
+          "La flûte traversière et les cordes",
+          "Le piano et le violoncelle",
+          "La contrebasse seule"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "🎧 La Volière (les oiseaux) : complète l'analyse.",
+        "champs": [
+          {
+            "label": "Particularité 1 : le …",
+            "reponses": [
+              "chant"
+            ]
+          },
+          {
+            "label": "Particularité 2 : le … des ailes",
+            "reponses": [
+              "battement"
+            ]
+          },
+          {
+            "label": "Hauteur 1",
+            "reponses": [
+              "aigu",
+              "aiguë"
+            ]
+          },
+          {
+            "label": "Hauteur 2",
+            "reponses": [
+              "médium/grave",
+              "médium et grave",
+              "grave/médium"
+            ]
+          },
+          {
+            "label": "Nuance 1",
+            "reponses": [
+              "mezzo forte",
+              "mf"
+            ]
+          },
+          {
+            "label": "Nuance 2",
+            "reponses": [
+              "pianissimo",
+              "pp"
+            ]
+          },
+          {
+            "label": "Mode de jeu 1",
+            "reponses": [
+              "legato"
+            ]
+          },
+          {
+            "label": "Mode de jeu 2",
+            "reponses": [
+              "staccato"
+            ]
+          }
+        ]
+      },
+      {
+        "question": "🎧 Le Cygne : quel instrument soliste incarne la grâce du Cygne ?",
+        "options": [
+          "Le violoncelle",
+          "La contrebasse",
+          "La flûte traversière"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "🎧 Le Cygne : complète l'analyse.",
+        "champs": [
+          {
+            "label": "Particularité : la …",
+            "reponses": [
+              "grâce"
+            ]
+          },
+          {
+            "label": "Hauteur",
+            "reponses": [
+              "médium"
+            ]
+          },
+          {
+            "label": "Nuance",
+            "reponses": [
+              "mezzo forte",
+              "mf"
+            ]
+          },
+          {
+            "label": "Durée",
+            "reponses": [
+              "modéré"
+            ]
+          },
+          {
+            "label": "Mode de jeu 1",
+            "reponses": [
+              "legato"
+            ],
+            "groupe": "modes"
+          },
+          {
+            "label": "Mode de jeu 2",
+            "reponses": [
+              "vibrato"
+            ],
+            "groupe": "modes"
+          }
+        ]
+      }
+    ]
   }
 ];
