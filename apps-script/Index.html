@@ -191,8 +191,11 @@
         .flashcard.flipped { background: #eff6ff; border-color: var(--blue); }
         .face-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
         .face-text { font-size: 1.5rem; font-weight: 700; text-align: center; line-height: 1.35; color: var(--ink); }
-        .learn-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 16px; }
-        .learn-actions .btn { margin: 0; }
+        .mastery-line { margin-top: 8px; font-size: .9rem; font-weight: 600; color: var(--blue); text-align: center; }
+        .explication + .mastery-line, .mastery-line + .explication { margin-top: 0; }
+        .progress-panel { margin-bottom: 0; }
+        .bar { height: 12px; border-radius: 999px; background: #e5e7eb; overflow: hidden; margin: 8px 0 4px; }
+        .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--blue), var(--green)); transition: width .4s; }
         .deck-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 16px; }
         .deck-nav .btn { margin: 0; }
         .btn:disabled { opacity: .5; cursor: default; }
@@ -510,36 +513,49 @@
         let activeTab = "quiz";
         let inQuiz = false; // vrai pendant qu'un quiz ou un paquet est ouvert (évite de le remplacer par la liste)
 
-        // ---------------- Questions ratées (programme de révision) ----------------
-        // Mémorisées dans le navigateur de l'élève (localStorage) : elles restent d'une visite à l'autre,
-        // sur cet appareil. Si le navigateur refuse le stockage, la liste vit le temps de la page.
-        const FAILS_KEY = "revision-a-apprendre-v1";
-        let fails = (() => {
+        // ---------------- Programme de révision : progression par question ----------------
+        // Au départ, TOUTES les questions sont à apprendre. Une question est « sue » après MASTERY réussites
+        // d'affilée dans les quiz ; une erreur la remet à 0. Les réussites comptent aussi quand l'élève rejoue un quiz.
+        // Réussite = bonne réponse (pour une réponse écrite : du premier coup).
+        // La progression est mémorisée dans le navigateur de l'élève (localStorage), donc propre à son appareil.
+        // Si le navigateur refuse le stockage, elle vit le temps de la page.
+        const MASTERY = 3;
+        const PROGRESS_KEY = "revision-programme-v2";
+        let progress = (() => {
             try {
-                const v = JSON.parse(localStorage.getItem(FAILS_KEY));
+                const v = JSON.parse(localStorage.getItem(PROGRESS_KEY));
                 return v && typeof v === "object" && !Array.isArray(v) ? v : {};
             } catch (e) { return {}; }
         })();
-        function persistFails() {
-            try { localStorage.setItem(FAILS_KEY, JSON.stringify(fails)); } catch (e) { /* stockage indisponible */ }
+        function persistProgress() {
+            try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)); } catch (e) { /* stockage indisponible */ }
         }
         function answerOf(q) { return Array.isArray(q.reponses) ? q.reponses[0] : q.options[q.correct]; }
-        function recordFail(quiz, q) {
-            const key = quiz.id + "|" + q.question;
-            const old = fails[key];
-            fails[key] = { quiz: quiz.titre, recto: q.question, verso: answerOf(q), fails: (old ? old.fails : 0) + 1, date: Date.now() };
-            persistFails();
+        function keyOf(quiz, q) { return quiz.id + "|" + q.question; }
+        function progressOf(quiz, q) { return progress[keyOf(quiz, q)] || { ok: 0, fails: 0 }; }
+        // Enregistre le résultat d'une question et renvoie le nombre de réussites d'affilée
+        function recordResult(quiz, q, success) {
+            const cur = progressOf(quiz, q);
+            const ok = success ? Math.min(MASTERY, cur.ok + 1) : 0;
+            progress[keyOf(quiz, q)] = { ok, fails: cur.fails + (success ? 0 : 1) };
+            persistProgress();
             updateCounts();
+            return ok;
         }
-        function forgetFail(key) { delete fails[key]; persistFails(); updateCounts(); }
-        // Les questions les plus souvent ratées d'abord
-        function failEntries() {
-            return Object.entries(fails).map(([key, v]) => ({ ...v, key })).sort((a, b) => b.fails - a.fails || a.date - b.date);
+        // Questions pas encore sues, les plus ratées d'abord, puis les moins avancées
+        function programmeCards() {
+            const out = [];
+            QUIZZES.forEach(quiz => quiz.questions.forEach(q => {
+                const p = progressOf(quiz, q);
+                if (p.ok < MASTERY) out.push({ recto: q.question, verso: answerOf(q), quiz: quiz.titre, ok: p.ok, fails: p.fails });
+            }));
+            return out.sort((x, y) => y.fails - x.fails || x.ok - y.ok);
         }
-        function learnDeck(entries) {
-            return { titre: "Flashcards à apprendre",
-                cartes: entries.map(e => ({ recto: e.recto, verso: e.verso, key: e.key, quiz: e.quiz })) };
+        function programmeStats() {
+            const total = QUIZZES.reduce((n, quiz) => n + quiz.questions.length, 0);
+            return { total, remaining: programmeCards().length };
         }
+        function masteryDots(ok) { return "●".repeat(ok) + "○".repeat(MASTERY - ok); }
 
         // Petit utilitaire pour créer des éléments sans innerHTML
         function h(tag, props, ...children) {
@@ -592,7 +608,7 @@
         function updateCounts() {
             document.getElementById("count-quiz").textContent = QUIZZES.length;
             document.getElementById("count-flashcards").textContent = allDecks().length;
-            document.getElementById("count-programme").textContent = Object.keys(fails).length;
+            document.getElementById("count-programme").textContent = programmeStats().remaining;
         }
 
         function setTab(tab) {
@@ -659,15 +675,31 @@
                     index < total ? showQuestion() : showResult();
                 } }, index + 1 < total ? "Question suivante ➔" : "Voir le résultat ➔");
                 // Appelé quand la question est terminée : montre l'explication et le bouton suivant
+                // Le résultat de la question compte une seule fois pour le programme de révision :
+                // réussite (bon choix, ou réponse écrite du premier coup) ou échec (mauvais choix, 1re erreur).
+                let settled = false;
+                let succeeded = false;
+                let level = 0;
+                const settle = success => {
+                    if (settled) return;
+                    settled = true;
+                    succeeded = success;
+                    level = recordResult(quiz, q, success);
+                };
+                const progressLine = h("div", { class: "mastery-line", style: "display:none" });
                 const reveal = () => {
+                    progressLine.textContent = !succeeded
+                        ? `↩️ Cette question repart à 0 / ${MASTERY} : on la revoit !`
+                        : level >= MASTERY
+                            ? `🎉 Question sue ! ${MASTERY} réussites d'affilée.`
+                            : `📈 Cette question : ${masteryDots(level)} ${level} / ${MASTERY} réussites d'affilée.`;
+                    progressLine.style.display = "block";
                     if (explication) explication.style.display = "block";
                     next.style.display = "block";
                     next.focus();
                 };
-                const addPoint = () => { score++; scoreEl.textContent = `Score : ${score}`; };
-                // Une question ratée (mauvais choix, ou 1re erreur sur une réponse écrite) entre dans le programme de révision
-                let flagged = false;
-                const fail = () => { if (!flagged) { flagged = true; recordFail(quiz, q); } };
+                const addPoint = () => { score++; scoreEl.textContent = `Score : ${score}`; settle(true); };
+                const fail = () => settle(false);
                 const body = Array.isArray(q.reponses)
                     ? typedBody(q, addPoint, fail, reveal)
                     : choiceBody(q, addPoint, fail, reveal);
@@ -678,6 +710,7 @@
                         h("span", {}, `Question ${index + 1} / ${total}`), scoreEl),
                     h("h3", { class: "question" }, q.question),
                     body,
+                    progressLine,
                     explication,
                     next
                 ));
@@ -793,35 +826,43 @@
         // ---------------- Programme de révision ----------------
         function renderProgramme() {
             content.append(h("h2", {}, "Programme de révision"));
-            const entries = failEntries();
-            if (entries.length === 0) {
-                content.append(h("div", { class: "empty" },
-                    "🎉 Rien à apprendre pour le moment. Les questions que tu rates dans les quiz apparaîtront ici sous forme de flashcards."));
-                return;
+            const { total, remaining } = programmeStats();
+            const sues = total - remaining;
+            const pct = total ? Math.round(sues / total * 100) : 0;
+
+            content.append(h("div", { class: "panel progress-panel" },
+                h("div", { class: "progress" }, h("span", {}, "Questions sues"), h("span", { class: "score" }, `${sues} / ${total}`)),
+                h("div", { class: "bar", role: "progressbar", "aria-valuenow": String(pct), "aria-valuemin": "0", "aria-valuemax": "100" },
+                    h("span", { style: `width:${pct}%` })),
+                h("p", { class: "hint-small" }, `Une question est sue après ${MASTERY} réussites d'affilée dans les quiz. Une erreur la remet à 0.`)));
+
+            if (remaining === 0) {
+                content.append(h("div", { class: "empty", style: "margin-top:16px" }, "🎉 Bravo, tu sais toutes tes questions !"));
+            } else {
+                const cards = programmeCards();
+                const restantes = {};
+                cards.forEach(c => { restantes[c.quiz] = (restantes[c.quiz] || 0) + 1; });
+                const resume = Object.entries(restantes).map(([titre, n]) => `${titre} : ${n}`).join(" · ");
+                content.append(h("div", { class: "grid", style: "margin-top:16px" },
+                    h("button", { class: "card", onclick: () => startDeck({ titre: "Flashcards à apprendre", cartes: programmeCards() }, true) },
+                        h("div", { class: "emoji" }, "🃏"),
+                        h("h3", {}, "Flashcards à apprendre"),
+                        h("div", { class: "meta" }, `${remaining} carte${remaining > 1 ? "s" : ""} restante${remaining > 1 ? "s" : ""}`),
+                        h("p", { class: "desc" }, resume)
+                    )));
             }
-            const parQuiz = {};
-            entries.forEach(e => { parQuiz[e.quiz] = (parQuiz[e.quiz] || 0) + 1; });
-            const resume = Object.entries(parQuiz).map(([titre, n]) => `${titre} : ${n}`).join(" · ");
-            content.append(h("div", { class: "grid" },
-                h("button", { class: "card", onclick: () => startDeck(learnDeck(entries), true) },
-                    h("div", { class: "emoji" }, "🃏"),
-                    h("h3", {}, "Flashcards à apprendre"),
-                    h("div", { class: "meta" }, `${entries.length} carte${entries.length > 1 ? "s" : ""} issue${entries.length > 1 ? "s" : ""} de tes erreurs`),
-                    h("p", { class: "desc" }, resume)
-                )));
             content.append(h("p", { class: "hint-small" },
                 h("button", { class: "back", onclick: () => {
-                    if (!confirm("Effacer toute la liste des cartes à apprendre ?")) return;
-                    fails = {};
-                    persistFails();
+                    if (!confirm("Recommencer le programme à zéro ? Toutes les questions redeviennent à apprendre.")) return;
+                    progress = {};
+                    persistProgress();
                     updateCounts();
                     renderList();
-                } }, "Effacer ma liste")));
+                } }, "Recommencer le programme")));
         }
 
         // ---------------- Flashcards ----------------
-        // learn = true : paquet « à apprendre ». Chaque carte peut être marquée « Je la sais » (elle sort du programme)
-        // ou « À revoir plus tard » (elle passe à la fin).
+        // learn = true : paquet « à apprendre » (cartes pas encore sues). Chaque carte montre sa progression.
         function startDeck(deck, learn) {
             inQuiz = true;
             let cards = deck.cartes.slice();
@@ -833,20 +874,6 @@
             const prev = h("button", { class: "btn secondary", onclick: () => go(-1) }, "← Précédente");
             const next = h("button", { class: "btn", onclick: () => go(1) }, "Suivante →");
             const mix = h("button", { class: "btn secondary", onclick: () => { cards = shuffle(cards); index = 0; flipped = false; draw(); } }, "🔀 Mélanger");
-            const later = h("button", { class: "btn secondary", onclick: () => {
-                cards.push(cards.splice(index, 1)[0]);
-                flipped = false;
-                draw();
-            } }, "🔁 À revoir plus tard");
-            const known = h("button", { class: "btn", onclick: () => {
-                forgetFail(cards[index].key);
-                cards.splice(index, 1);
-                if (cards.length === 0) { allLearned(); return; }
-                if (index >= cards.length) index = cards.length - 1;
-                flipped = false;
-                draw();
-            } }, "✅ Je la sais");
-            const learnActions = h("div", { class: "learn-actions" }, later, known);
 
             function go(delta) { index += delta; flipped = false; draw(); }
 
@@ -855,31 +882,20 @@
                 card.classList.toggle("flipped", flipped);
                 card.replaceChildren(
                     h("div", { class: "face-label" }, (flipped ? "Réponse" : "Question") + (learn && c.quiz ? " · " + c.quiz : "")),
-                    h("div", { class: "face-text" }, flipped ? c.verso : c.recto));
+                    h("div", { class: "face-text" }, flipped ? c.verso : c.recto),
+                    learn ? h("div", { class: "mastery-line" }, `${masteryDots(c.ok)} ${c.ok} / ${MASTERY} réussites d'affilée`) : null);
                 counter.textContent = `Carte ${index + 1} / ${cards.length}`;
                 prev.disabled = index === 0;
                 next.disabled = index === cards.length - 1;
-                if (learn) learnActions.style.display = flipped ? "flex" : "none";
-            }
-
-            function allLearned() {
-                content.replaceChildren(h("div", { class: "panel result" },
-                    h("div", { class: "big-emoji" }, "🎉"),
-                    h("h2", {}, "Bravo !"),
-                    h("p", { class: "msg" }, "Tu as appris toutes tes flashcards."),
-                    h("div", { class: "actions" },
-                        h("button", { class: "btn", onclick: renderList }, "Retour au programme"))
-                ));
             }
 
             content.replaceChildren(h("div", { class: "panel" },
                 h("button", { class: "back", onclick: renderList }, learn ? "← Retour au programme" : "← Retour à la liste"),
                 h("div", { class: "progress" }, h("span", {}, deck.titre), counter),
                 card,
-                learn ? learnActions : null,
                 h("div", { class: "deck-nav" }, prev, mix, next),
                 h("p", { class: "hint-small" }, learn
-                    ? "Clique sur la carte pour voir la réponse, puis dis si tu la sais."
+                    ? `Relis ces cartes, puis rejoue les quiz : une question est sue après ${MASTERY} réussites d'affilée.`
                     : "Clique sur la carte pour la retourner.")
             ));
             draw();
