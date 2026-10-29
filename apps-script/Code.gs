@@ -25,7 +25,7 @@ function doGet(e) {
 //   quiz_<id>     un quiz créé depuis l'administration
 //   deck_<id>     un paquet de flashcards créé depuis l'administration
 //   builtin_assign  à qui est donné chaque quiz intégré (voir Contenu.gs)
-//   programme_reset / reset_<id>  dates de remise à zéro du programme de révision
+//   prog_<idÉlève>__<idQuiz>  la progression d'un élève dans un quiz (réussites d'affilée par question)
 // Le mot de passe administrateur est la propriété ADMIN_PASSWORD.
 //
 // Séparation des élèves : le serveur ne renvoie à un élève que les quiz et paquets qui lui sont destinés
@@ -35,8 +35,8 @@ var QUIZ_PREFIX = 'quiz_';
 var DECK_PREFIX = 'deck_';
 var STUDENT_PREFIX = 'student_';
 var BUILTIN_ASSIGN_KEY = 'builtin_assign';
-var RESET_KEY = 'programme_reset';
-var RESET_STUDENT_PREFIX = 'reset_';
+var PROGRESS_PREFIX = 'prog_';
+var MASTERY = 3;            // réussites d'affilée pour qu'une question soit sue
 var MAX_QUESTIONS = 50;
 var MAX_CARDS = 150;
 var MAX_FIELDS = 12;       // champs maximum dans une question à plusieurs champs
@@ -50,37 +50,70 @@ var LOCK_SECONDS = 300;     // durée du blocage (5 minutes)
 // Connexion + données de l'élève en un seul appel. Les identifiants sont revérifiés à chaque appel.
 function getStudentData(classe, pseudo, pin) {
   var st = authStudent_(classe, pseudo, pin);
-  var assigned = builtinAssign_();
-  var quizzes = BUILTIN_QUIZZES
-    .filter(function (q) { return (assigned[q.id] || []).indexOf(st.id) >= 0; })
-    .concat(list_(QUIZ_PREFIX).filter(function (q) { return isFor_(q, st.id); }))
-    .map(withoutPour_);
+  var quizzes = quizzesOf_(st.id);
   var decks = list_(DECK_PREFIX).filter(function (d) { return isFor_(d, st.id); }).map(withoutPour_);
-  var props = PropertiesService.getScriptProperties();
-  var reset = Math.max(Number(props.getProperty(RESET_KEY)) || 0, Number(props.getProperty(RESET_STUDENT_PREFIX + st.id)) || 0);
-  return { student: { id: st.id, classe: st.classe, pseudo: st.pseudo }, quizzes: quizzes, decks: decks, reset: reset };
+  var props = PropertiesService.getScriptProperties().getProperties();
+  var progress = {};
+  quizzes.forEach(function (q) {
+    var rec = parseJson_(props[progressKey_(st.id, q.id)]);
+    if (rec && rec.q) progress[q.id] = rec.q;
+  });
+  return {
+    student: { id: st.id, classe: st.classe, pseudo: st.pseudo },
+    quizzes: quizzes.map(withoutPour_),
+    decks: decks,
+    progress: progress
+  };
+}
+
+// Enregistre le résultat d'une question : réussite => une réussite de plus (3 = sue), erreur => retour à 0.
+// Les identifiants sont revérifiés ; seul un quiz auquel l'élève a accès, et une question qui en fait partie, sont acceptés.
+function saveResult(classe, pseudo, pin, quizId, qhash, success) {
+  var st = authStudent_(classe, pseudo, pin);
+  var quiz = quizzesOf_(st.id).filter(function (q) { return q.id === quizId; })[0];
+  if (!quiz) throw new Error('Quiz inaccessible.');
+  if (!/^[0-9a-f]{8}$/.test(String(qhash)) || !quiz.questions.some(function (q) { return qhash_(q.question) === qhash; })) {
+    throw new Error('Question inconnue.');
+  }
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var store = PropertiesService.getScriptProperties();
+    var key = progressKey_(st.id, quizId);
+    var rec = parseJson_(store.getProperty(key)) || { q: {}, maj: 0 };
+    var cur = rec.q[qhash] || [0, 0];
+    rec.q[qhash] = success === true ? [Math.min(MASTERY, cur[0] + 1), cur[1]] : [0, cur[1] + 1];
+    rec.maj = Date.now();
+    store.setProperty(key, JSON.stringify(rec));
+    return { ok: rec.q[qhash][0], fails: rec.q[qhash][1] };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // ---------------- Côté administrateur (mot de passe requis pour tout) ----------------
 
 function adminData(password) {
   checkAdmin_(password);
-  var props = PropertiesService.getScriptProperties();
-  var all = props.getProperties();
+  var props = PropertiesService.getScriptProperties().getProperties();
   var assigned = builtinAssign_();
-  var resets = {};
-  Object.keys(all).forEach(function (k) {
-    if (k.indexOf(RESET_STUDENT_PREFIX) === 0) resets[k.slice(RESET_STUDENT_PREFIX.length)] = Number(all[k]) || 0;
+  var students = students_();
+  var customQuizzes = list_(QUIZ_PREFIX);
+  var allQuizzes = BUILTIN_QUIZZES.concat(customQuizzes);
+  var progress = {};
+  students.forEach(function (st) {
+    progress[st.id] = allQuizzes
+      .filter(function (q) { return quizFor_(q, st.id, assigned); })
+      .map(function (q) { return lessonSummary_(q, parseJson_(props[progressKey_(st.id, q.id)])); });
   });
   return {
-    students: students_().map(publicStudent_),
-    quizzes: list_(QUIZ_PREFIX),
+    students: students.map(publicStudent_),
+    quizzes: customQuizzes,
     decks: list_(DECK_PREFIX),
     builtins: BUILTIN_QUIZZES.map(function (q) {
       return { id: q.id, titre: q.titre, emoji: q.emoji, matiere: q.matiere, questions: q.questions.length, pour: assigned[q.id] || [] };
     }),
-    resetAll: Number(all[RESET_KEY]) || 0,
-    resets: resets
+    progress: progress
   };
 }
 
@@ -132,7 +165,7 @@ function deleteStudent(password, id) {
   if (!/^[a-z0-9-]{1,60}$/.test(String(id))) throw new Error('Identifiant invalide.');
   var store = PropertiesService.getScriptProperties();
   store.deleteProperty(STUDENT_PREFIX + id);
-  store.deleteProperty(RESET_STUDENT_PREFIX + id);
+  deleteProgress_(id, 'all');
   var assigned = builtinAssign_();
   Object.keys(assigned).forEach(function (k) { assigned[k] = assigned[k].filter(function (x) { return x !== id; }); });
   store.setProperty(BUILTIN_ASSIGN_KEY, JSON.stringify(assigned));
@@ -159,7 +192,9 @@ function saveDeck(password, deck) {
 
 function deleteQuiz(password, id) {
   checkAdmin_(password);
-  return remove_(QUIZ_PREFIX, id);
+  remove_(QUIZ_PREFIX, id);
+  deleteProgress_('all', id);
+  return true;
 }
 
 function deleteDeck(password, id) {
@@ -177,25 +212,78 @@ function setBuiltinAssign(password, quizId, pour) {
   return { pour: assigned[quizId] };
 }
 
-// Remise à zéro du programme de révision : target = 'all' ou l'id d'un élève.
-// La progression est enregistrée sur l'appareil de l'élève, l'administrateur ne peut donc pas l'effacer directement :
-// il enregistre la date ici, et l'appareil repart de 0 à la prochaine connexion de l'élève si cette date est plus récente.
-function resetProgramme(password, target) {
+// Remise à zéro de la progression : pour un élève (id ou 'all') et une leçon (id d'un quiz ou 'all').
+// La progression étant enregistrée sur le serveur, l'élève la retrouve vide à sa prochaine connexion ou actualisation.
+function resetProgress(password, studentId, quizId) {
   checkAdmin_(password);
-  var ts = Date.now();
-  var store = PropertiesService.getScriptProperties();
-  if (!target || target === 'all') {
-    store.setProperty(RESET_KEY, String(ts));
-  } else {
-    if (!students_().some(function (s) { return s.id === target; })) throw new Error('Élève inconnu.');
-    store.setProperty(RESET_STUDENT_PREFIX + target, String(ts));
-  }
-  return { reset: ts };
+  studentId = studentId || 'all';
+  quizId = quizId || 'all';
+  if (studentId !== 'all' && !students_().some(function (s) { return s.id === studentId; })) throw new Error('Élève inconnu.');
+  if (quizId !== 'all' && !/^[a-z0-9-]{1,60}$/.test(String(quizId))) throw new Error('Identifiant de quiz invalide.');
+  return { supprimes: deleteProgress_(studentId, quizId) };
 }
 
 // ---------------- Fonctions internes (le _ final les rend non appelables depuis les pages) ----------------
 
 function students_() { return list_(STUDENT_PREFIX); }
+
+function parseJson_(raw) {
+  try { return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+}
+
+// Empreinte courte d'un énoncé (FNV-1a 32 bits) : identifie une question dans la progression.
+// Le même calcul existe dans la page élève (Index.html) : les deux doivent rester identiques.
+function qhash_(text) {
+  var h = 0x811c9dc5;
+  var t = String(text);
+  for (var i = 0; i < t.length; i++) {
+    h ^= t.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return ('0000000' + (h >>> 0).toString(16)).slice(-8);
+}
+
+function progressKey_(studentId, quizId) { return PROGRESS_PREFIX + studentId + '__' + quizId; }
+
+// Le quiz est-il destiné à cet élève ? (quiz intégré attribué, ou quiz créé pour lui)
+function quizFor_(quiz, studentId, assigned) {
+  return quiz.pour ? isFor_(quiz, studentId) : (assigned[quiz.id] || []).indexOf(studentId) >= 0;
+}
+
+function quizzesOf_(studentId) {
+  var assigned = builtinAssign_();
+  return BUILTIN_QUIZZES.concat(list_(QUIZ_PREFIX)).filter(function (q) { return quizFor_(q, studentId, assigned); });
+}
+
+// Résumé d'une leçon pour l'administration : questions sues / en cours / à apprendre, erreurs, dernière activité.
+function lessonSummary_(quiz, rec) {
+  var q = (rec && rec.q) || {};
+  var sues = 0, enCours = 0, erreurs = 0;
+  quiz.questions.forEach(function (question) {
+    var r = q[qhash_(question.question)] || [0, 0];
+    if (r[0] >= MASTERY) sues++; else if (r[0] > 0) enCours++;
+    erreurs += r[1];
+  });
+  return {
+    id: quiz.id, titre: quiz.titre, emoji: quiz.emoji, matiere: quiz.matiere,
+    total: quiz.questions.length, sues: sues, enCours: enCours, erreurs: erreurs, maj: (rec && rec.maj) || 0
+  };
+}
+
+// Supprime la progression d'un élève ('all' = tous) sur une leçon ('all' = toutes). Renvoie le nombre d'enregistrements supprimés.
+function deleteProgress_(studentId, quizId) {
+  var store = PropertiesService.getScriptProperties();
+  var n = 0;
+  Object.keys(store.getProperties()).forEach(function (k) {
+    if (k.indexOf(PROGRESS_PREFIX) !== 0) return;
+    var parts = k.slice(PROGRESS_PREFIX.length).split('__');
+    if ((studentId === 'all' || parts[0] === studentId) && (quizId === 'all' || parts[1] === quizId)) {
+      store.deleteProperty(k);
+      n++;
+    }
+  });
+  return n;
+}
 
 function publicStudent_(s) { return { id: s.id, classe: s.classe, pseudo: s.pseudo, ajoute: s.ajoute }; }
 

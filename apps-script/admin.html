@@ -87,7 +87,6 @@
       @media (max-width: 560px) { .rv-float { display: none; } .rv-banner { padding-top: 10px; } }
       @media (prefers-reduced-motion: reduce) { .rv-float, .rv-track, .rv-dot { animation: none; } }
 
-        main { max-width: 820px; margin: 0 auto; padding: 24px 16px 60px; display: grid; gap: 20px; }
         section { background: #fff; border-radius: 18px; box-shadow: var(--soft); padding: 22px; }
         h2 { margin: 0 0 14px; font-size: 1.25rem; font-weight: 900; letter-spacing: -.3px; color: var(--navy); }
         label { display: block; font-weight: 700; font-size: .9rem; margin: 12px 0 4px; }
@@ -135,7 +134,7 @@
         .item .info span { font-size: .85rem; color: var(--muted); }
         .empty { color: var(--muted); }
 
-        @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+        @media (prefers-reduced-motion: reduce) { .btn, .tab { transition: none; } .tab:nth-child(odd), .tab:nth-child(even) { transform: none; } }
         @media (max-width: 600px) {
             .row, .row2, .row3 { grid-template-columns: 1fr; }
             .field-row { grid-template-columns: 1fr 1fr; }
@@ -160,6 +159,53 @@
         .fields-rows { display: grid; gap: 8px; margin: 8px 0; }
         .field-row { display: grid; grid-template-columns: 1fr 1.6fr .8fr auto; gap: 8px; align-items: center; }
         .field-row .btn { padding: 6px 12px; }
+        /* Barre du mot de passe */
+        .lockbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; max-width: 1180px; margin: 16px auto 0; padding: 12px 16px; background: #fff; border-radius: 16px; box-shadow: var(--soft); }
+        .lockbar label { margin: 0; font-weight: 800; color: var(--navy); }
+        .lockbar input { width: auto; flex: 1; min-width: 180px; max-width: 320px; }
+        .lockbar .btn { padding: 9px 20px; }
+        .status.inline { display: none; margin: 0; padding: 7px 12px; }
+        .status.inline.ok, .status.inline.err, .status.inline.info { display: inline-block; }
+        .locked-hint { max-width: 1180px; margin: 22px auto; padding: 0 16px; color: var(--muted); font-weight: 600; text-align: center; }
+
+        /* Barre latérale et contenu */
+        .shell { display: flex; gap: 20px; max-width: 1180px; margin: 20px auto 60px; padding: 0 16px; align-items: flex-start; }
+        .sidebar { width: 230px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; position: sticky; top: 12px; }
+        .tab { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border: 0; border-radius: 12px; background: #fff;
+               font: inherit; font-weight: 800; color: var(--navy); cursor: pointer; text-align: left; box-shadow: var(--sticker); transition: transform .15s; }
+        .tab:nth-child(odd) { transform: rotate(-1deg); }
+        .tab:nth-child(even) { transform: rotate(1deg); }
+        .tab:hover { transform: rotate(0) translateY(-2px) scale(1.03); }
+        .tab[aria-selected="true"] { background: var(--gold); transform: rotate(0) scale(1.03); }
+        .tab .count { margin-left: auto; font-size: .8rem; padding: 2px 9px; border-radius: 999px; background: var(--navy); color: #fff; }
+        .tab .count:empty { display: none; }
+        .tab:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+        .content { flex: 1; min-width: 0; }
+        .pane { display: grid; gap: 20px; }
+
+        /* Listes par classe */
+        details.classe { margin-top: 14px; }
+        details.classe:first-of-type { margin-top: 4px; }
+        details.classe > summary { cursor: pointer; font-weight: 900; color: var(--navy); padding: 8px 12px; background: #eef2ff; border-radius: 10px; list-style-position: inside; }
+        details.classe[open] > summary { margin-bottom: 6px; }
+
+        /* Progression */
+        .bar { height: 12px; border-radius: 999px; background: #e8ecf8; overflow: hidden; margin: 8px 0 6px; }
+        .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--pink)); transition: width .4s; }
+        .prog-card { border: 2px solid var(--line); border-radius: 14px; padding: 14px; margin: 12px 0; background: #fafbff; }
+        .prog-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+        .prog-head .info strong { display: block; font-size: 1.05rem; }
+        .prog-head .info span { font-size: .85rem; color: var(--muted); }
+        .lesson { padding: 12px 0; border-top: 1px solid var(--line); }
+        .lesson-title { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+        .niveau { font-size: .8rem; font-weight: 800; padding: 2px 10px; border-radius: 999px; background: #eef2ff; color: var(--navy); }
+        .lesson-detail { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: .85rem; color: var(--muted); margin-bottom: 8px; }
+        @media (max-width: 760px) {
+            .shell { flex-direction: column; margin-top: 12px; }
+            .sidebar { width: 100%; position: static; flex-direction: row; flex-wrap: wrap; gap: 8px; }
+            .tab { width: auto; flex: 1 1 150px; padding: 10px; font-size: .9rem; transform: none !important; }
+            .lockbar input { max-width: none; }
+        }
     </style>
 </head>
 <body>
@@ -190,166 +236,193 @@
       </div>
     </header>
 
-    <main>
-        <section>
-            <h2>🔑 Mot de passe</h2>
-            <label for="password">Mot de passe administrateur</label>
-            <div class="inline">
-                <input type="password" id="password" autocomplete="current-password">
-                <button class="btn" id="unlock" type="button">Déverrouiller</button>
-            </div>
-            <p class="hint">Il est demandé à chaque enregistrement ou suppression. Il se définit dans les propriétés du script (ADMIN_PASSWORD). Rien n'est affiché tant que la page n'est pas déverrouillée.</p>
-            <div class="status" id="lock-status" role="status"></div>
-        </section>
+    <div class="lockbar">
+        <label for="password">🔑 Mot de passe administrateur</label>
+        <input type="password" id="password" autocomplete="current-password" placeholder="ADMIN_PASSWORD">
+        <button class="btn" id="unlock" type="button">Déverrouiller</button>
+        <span class="status inline" id="lock-status" role="status"></span>
+    </div>
 
-        <div id="admin-area" hidden>
+    <p class="locked-hint" id="locked-hint">Saisis le mot de passe administrateur pour afficher la gestion. Il se définit dans les propriétés du script (ADMIN_PASSWORD).</p>
 
-        <!-- ================= ÉLÈVES ================= -->
-        <section>
-            <h2 id="student-form-title">➕ Nouvel élève</h2>
-            <div class="row3">
-                <div>
-                    <label for="st-classe">Classe</label>
-                    <input type="text" id="st-classe" maxlength="30" placeholder="Ex : 5e B" autocomplete="off">
+    <div class="shell" id="admin-area" hidden>
+        <nav class="sidebar" role="tablist" aria-label="Sections de l'administration">
+            <button class="tab" role="tab" id="tab-eleve-ajout" data-tab="eleve-ajout">➕ Ajouter un élève</button>
+            <button class="tab" role="tab" id="tab-eleves" data-tab="eleves">👥 Liste des élèves <span class="count" id="count-eleves"></span></button>
+            <button class="tab" role="tab" id="tab-quiz-ajout" data-tab="quiz-ajout">➕ Ajouter un quiz</button>
+            <button class="tab" role="tab" id="tab-quiz-liste" data-tab="quiz-liste">📋 Liste des quiz <span class="count" id="count-quiz"></span></button>
+            <button class="tab" role="tab" id="tab-fc-ajout" data-tab="fc-ajout">🃏 Ajouter des flashcards <span class="count" id="count-decks"></span></button>
+            <button class="tab" role="tab" id="tab-programmes" data-tab="programmes">📅 Programmes de révision</button>
+        </nav>
+
+        <main class="content">
+
+        <!-- ================= AJOUTER UN ÉLÈVE ================= -->
+        <div class="pane" id="pane-eleve-ajout" role="tabpanel" aria-labelledby="tab-eleve-ajout">
+            <section>
+                <h2 id="student-form-title">➕ Nouvel élève</h2>
+                <div class="row3">
+                    <div>
+                        <label for="st-classe">Classe</label>
+                        <input type="text" id="st-classe" maxlength="30" placeholder="Ex : 5e B" autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="st-pseudo">Pseudo</label>
+                        <input type="text" id="st-pseudo" maxlength="30" placeholder="Ex : Léo" autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="st-pin">PIN</label>
+                        <input type="text" id="st-pin" maxlength="8" inputmode="numeric" placeholder="4 à 8 chiffres" autocomplete="off">
+                    </div>
                 </div>
-                <div>
-                    <label for="st-pseudo">Pseudo</label>
-                    <input type="text" id="st-pseudo" maxlength="30" placeholder="Ex : Léo" autocomplete="off">
+                <p class="hint">L'élève se connecte avec ces trois informations. Le PIN est enregistré sans pouvoir être relu : note-le pour le lui donner. En modification, laisse le PIN vide pour le conserver.</p>
+                <div class="actions">
+                    <button class="btn" id="save-student" type="button">💾 Enregistrer l'élève</button>
+                    <button class="btn secondary" id="reset-student-form" type="button">Réinitialiser</button>
                 </div>
-                <div>
-                    <label for="st-pin">PIN</label>
-                    <input type="text" id="st-pin" maxlength="8" inputmode="numeric" placeholder="4 à 8 chiffres" autocomplete="off">
-                </div>
-            </div>
-            <p class="hint">L'élève se connecte avec ces trois informations. Le PIN est enregistré sans pouvoir être relu : note-le pour le lui donner. En modification, laisse le PIN vide pour le conserver.</p>
-            <div class="actions">
-                <button class="btn" id="save-student" type="button">💾 Enregistrer l'élève</button>
-                <button class="btn secondary" id="reset-student-form" type="button">Réinitialiser</button>
-            </div>
-            <div class="status" id="student-status" role="status"></div>
-        </section>
-
-        <section>
-            <h2>👥 Élèves</h2>
-            <div id="student-list"></div>
-        </section>
-
-        <!-- ================= QUIZ ================= -->
-        <section>
-            <h2 id="quiz-form-title">➕ Nouveau quiz</h2>
-
-            <label for="titre">Titre</label>
-            <input type="text" id="titre" maxlength="120" placeholder="Ex : La Révolution française">
-
-            <div class="row">
-                <div>
-                    <label for="matiere">Matière</label>
-                    <input type="text" id="matiere" maxlength="40" placeholder="Ex : Histoire">
-                </div>
-                <div>
-                    <label for="description">Description courte</label>
-                    <input type="text" id="description" maxlength="300" placeholder="Ex : 1789, la Terreur, Napoléon…">
-                </div>
-                <div>
-                    <label for="emoji">Emoji</label>
-                    <input type="text" id="emoji" maxlength="8" placeholder="📘">
-                </div>
-            </div>
-
-            <div class="row2">
-                <div>
-                    <label for="lien-texte">Lien utile pendant le quiz (facultatif) : texte du bouton</label>
-                    <input type="text" id="lien-texte" maxlength="60" placeholder="Ex : Écouter les extraits sonores">
-                </div>
-                <div>
-                    <label for="lien-url">Adresse du lien</label>
-                    <input type="text" id="lien-url" maxlength="300" placeholder="https://…">
-                </div>
-            </div>
-
-            <label>Pour quels élèves ?</label>
-            <div class="pour" id="quiz-pour"></div>
-            <p class="hint">Seuls les élèves cochés verront ce quiz. Sans destinataire, il reste caché.</p>
-
-            <h2 style="margin-top:22px">Questions</h2>
-            <p class="hint">Choix : remplis au moins 2 réponses et coche la bonne (les réponses sont mélangées à chaque partie, tu peux donc mettre la bonne où tu veux). Réponse écrite : l'élève tape sa réponse au clavier.</p>
-            <div id="questions"></div>
-
-            <div class="actions">
-                <button class="btn secondary" id="add-question" type="button">+ Ajouter une question</button>
-            </div>
-            <div class="actions">
-                <button class="btn" id="save-quiz" type="button">💾 Enregistrer le quiz</button>
-                <button class="btn secondary" id="reset-quiz" type="button">Réinitialiser</button>
-            </div>
-            <div class="status" id="quiz-status" role="status"></div>
-        </section>
-
-        <section>
-            <h2>📋 Quiz enregistrés</h2>
-            <div id="quiz-list"></div>
-        </section>
-
-        <section>
-            <h2>🏛️ Quiz intégrés</h2>
-            <p class="hint">Ces quiz sont fournis avec le site. Coche les élèves qui y ont accès, puis enregistre la ligne.</p>
-            <div id="builtin-list"></div>
-        </section>
-
-        <!-- ================= FLASHCARDS ================= -->
-        <section>
-            <h2 id="deck-form-title">➕ Nouveau paquet de flashcards</h2>
-
-            <label for="deck-titre">Titre</label>
-            <input type="text" id="deck-titre" maxlength="120" placeholder="Ex : Vocabulaire anglais – les animaux">
-
-            <div class="row">
-                <div>
-                    <label for="deck-matiere">Matière</label>
-                    <input type="text" id="deck-matiere" maxlength="40" placeholder="Ex : Anglais">
-                </div>
-                <div>
-                    <label for="deck-description">Description courte</label>
-                    <input type="text" id="deck-description" maxlength="300" placeholder="Ex : 20 mots à connaître">
-                </div>
-                <div>
-                    <label for="deck-emoji">Emoji</label>
-                    <input type="text" id="deck-emoji" maxlength="8" placeholder="🃏">
-                </div>
-            </div>
-
-            <label>Pour quels élèves ?</label>
-            <div class="pour" id="deck-pour"></div>
-
-            <label for="deck-cartes">Cartes</label>
-            <textarea id="deck-cartes" rows="10" placeholder="dog | chien&#10;cat | chat&#10;Quelle est la capitale de l'Empire byzantin ? | Constantinople"></textarea>
-            <p class="hint">Une carte par ligne : le recto, puis le caractère | , puis le verso. Chaque quiz a déjà son paquet généré automatiquement ; celui-ci est un paquet en plus.</p>
-
-            <div class="actions">
-                <button class="btn" id="save-deck" type="button">💾 Enregistrer le paquet</button>
-                <button class="btn secondary" id="reset-deck" type="button">Réinitialiser</button>
-            </div>
-            <div class="status" id="deck-status" role="status"></div>
-        </section>
-
-        <section>
-            <h2>🃏 Paquets enregistrés</h2>
-            <div id="deck-list"></div>
-        </section>
-
-        <!-- ================= PROGRAMME DE RÉVISION ================= -->
-        <section>
-            <h2>📅 Programme de révision</h2>
-            <p class="hint">Seul l'administrateur peut remettre le programme à zéro : l'élève n'a aucun bouton pour le faire. Pour un seul élève, utilise le bouton de sa ligne dans « Élèves ». Ici : tous les élèves à la fois. Les questions redeviennent « à apprendre » (0 / 3) à la prochaine connexion de l'élève.</p>
-            <p id="reset-info" style="margin:12px 0 0;font-weight:600"></p>
-            <div class="actions">
-                <button class="btn danger" id="reset-all" type="button" style="padding:10px 22px">Remettre à zéro le programme de tous les élèves</button>
-            </div>
-            <div class="status" id="programme-status" role="status"></div>
-        </section>
-
+                <div class="status" id="student-status" role="status"></div>
+            </section>
         </div>
-    </main>
+
+        <!-- ================= LISTE DES ÉLÈVES ================= -->
+        <div class="pane" id="pane-eleves" role="tabpanel" aria-labelledby="tab-eleves" hidden>
+            <section>
+                <h2>👥 Liste des élèves</h2>
+                <div class="status" id="eleves-status" role="status"></div>
+                <div id="student-list"></div>
+            </section>
+        </div>
+
+        <!-- ================= AJOUTER UN QUIZ ================= -->
+        <div class="pane" id="pane-quiz-ajout" role="tabpanel" aria-labelledby="tab-quiz-ajout" hidden>
+            <section>
+                <h2 id="quiz-form-title">➕ Nouveau quiz</h2>
+
+                <label for="titre">Titre</label>
+                <input type="text" id="titre" maxlength="120" placeholder="Ex : La Révolution française">
+
+                <div class="row">
+                    <div>
+                        <label for="matiere">Matière</label>
+                        <input type="text" id="matiere" maxlength="40" placeholder="Ex : Histoire">
+                    </div>
+                    <div>
+                        <label for="description">Description courte</label>
+                        <input type="text" id="description" maxlength="300" placeholder="Ex : 1789, la Terreur, Napoléon…">
+                    </div>
+                    <div>
+                        <label for="emoji">Emoji</label>
+                        <input type="text" id="emoji" maxlength="8" placeholder="📘">
+                    </div>
+                </div>
+
+                <div class="row2">
+                    <div>
+                        <label for="lien-texte">Lien utile pendant le quiz (facultatif) : texte du bouton</label>
+                        <input type="text" id="lien-texte" maxlength="60" placeholder="Ex : Écouter les extraits sonores">
+                    </div>
+                    <div>
+                        <label for="lien-url">Adresse du lien</label>
+                        <input type="text" id="lien-url" maxlength="300" placeholder="https://…">
+                    </div>
+                </div>
+
+                <label>Pour quels élèves ?</label>
+                <div class="pour" id="quiz-pour"></div>
+                <p class="hint">Seuls les élèves cochés verront ce quiz. Sans destinataire, il reste caché.</p>
+
+                <h2 style="margin-top:22px">Questions</h2>
+                <p class="hint">Choix : remplis au moins 2 réponses et coche la bonne (les réponses sont mélangées à chaque partie, tu peux donc mettre la bonne où tu veux). Réponse écrite : l'élève tape sa réponse au clavier. Plusieurs champs : un champ par blanc à remplir.</p>
+                <div id="questions"></div>
+
+                <div class="actions">
+                    <button class="btn secondary" id="add-question" type="button">+ Ajouter une question</button>
+                </div>
+                <div class="actions">
+                    <button class="btn" id="save-quiz" type="button">💾 Enregistrer le quiz</button>
+                    <button class="btn secondary" id="reset-quiz" type="button">Réinitialiser</button>
+                </div>
+                <div class="status" id="quiz-status" role="status"></div>
+            </section>
+        </div>
+
+        <!-- ================= LISTE DES QUIZ ================= -->
+        <div class="pane" id="pane-quiz-liste" role="tabpanel" aria-labelledby="tab-quiz-liste" hidden>
+            <section>
+                <h2>📋 Quiz créés depuis l'administration</h2>
+                <div class="status" id="quizlist-status" role="status"></div>
+                <div id="quiz-list"></div>
+            </section>
+            <section>
+                <h2>🏛️ Quiz intégrés</h2>
+                <p class="hint">Ces quiz sont fournis avec le site. Coche les élèves qui y ont accès, puis enregistre la ligne.</p>
+                <div id="builtin-list"></div>
+            </section>
+        </div>
+
+        <!-- ================= AJOUTER DES FLASHCARDS ================= -->
+        <div class="pane" id="pane-fc-ajout" role="tabpanel" aria-labelledby="tab-fc-ajout" hidden>
+            <section>
+                <h2 id="deck-form-title">➕ Nouveau paquet de flashcards</h2>
+
+                <label for="deck-titre">Titre</label>
+                <input type="text" id="deck-titre" maxlength="120" placeholder="Ex : Vocabulaire anglais – les animaux">
+
+                <div class="row">
+                    <div>
+                        <label for="deck-matiere">Matière</label>
+                        <input type="text" id="deck-matiere" maxlength="40" placeholder="Ex : Anglais">
+                    </div>
+                    <div>
+                        <label for="deck-description">Description courte</label>
+                        <input type="text" id="deck-description" maxlength="300" placeholder="Ex : 20 mots à connaître">
+                    </div>
+                    <div>
+                        <label for="deck-emoji">Emoji</label>
+                        <input type="text" id="deck-emoji" maxlength="8" placeholder="🃏">
+                    </div>
+                </div>
+
+                <label>Pour quels élèves ?</label>
+                <div class="pour" id="deck-pour"></div>
+
+                <label for="deck-cartes">Cartes</label>
+                <textarea id="deck-cartes" rows="10" placeholder="dog | chien&#10;cat | chat&#10;Quelle est la capitale de l'Empire byzantin ? | Constantinople"></textarea>
+                <p class="hint">Une carte par ligne : le recto, puis le caractère | , puis le verso. Chaque quiz a déjà son paquet généré automatiquement ; celui-ci est un paquet en plus.</p>
+
+                <div class="actions">
+                    <button class="btn" id="save-deck" type="button">💾 Enregistrer le paquet</button>
+                    <button class="btn secondary" id="reset-deck" type="button">Réinitialiser</button>
+                </div>
+                <div class="status" id="deck-status" role="status"></div>
+            </section>
+            <section>
+                <h2>🃏 Paquets enregistrés</h2>
+                <div id="deck-list"></div>
+            </section>
+        </div>
+
+        <!-- ================= PROGRAMMES DE RÉVISION ================= -->
+        <div class="pane" id="pane-programmes" role="tabpanel" aria-labelledby="tab-programmes" hidden>
+            <section>
+                <h2>📅 Programmes de révision</h2>
+                <p class="hint">Pour chaque élève et chaque leçon : questions sues (3 réussites d'affilée), en cours et à apprendre. Seul l'administrateur peut remettre une progression à zéro, leçon par leçon, pour un élève précis ou pour tous. L'élève retrouve sa leçon vide à sa prochaine connexion ou actualisation.</p>
+                <label for="prog-filtre">Afficher</label>
+                <select id="prog-filtre"></select>
+                <div class="status" id="prog-status" role="status"></div>
+                <div id="prog-list"></div>
+            </section>
+            <section>
+                <h2>⚠️ Remise à zéro générale</h2>
+                <p class="hint">Efface toute la progression de tous les élèves, sur toutes les leçons. À utiliser en dernier recours.</p>
+                <div class="actions">
+                    <button class="btn danger" id="reset-all" type="button" style="padding:10px 22px">Tout remettre à zéro pour tous les élèves</button>
+                </div>
+            </section>
+        </div>
+
+        </main>
+    </div>
 
     <script>
 (function () {
@@ -358,7 +431,7 @@
     "Ajoute, modifie ou supprime des quiz et des flashcards",
     "Une question courte et claire vaut mieux qu'une longue ✍️",
     "Chaque élève ne voit que ses propres quiz 🔒",
-    "Le programme de révision se remet à zéro depuis cette page 📅"
+    "Suis la progression de chaque élève, leçon par leçon 📅"
   ];
   var el = document.getElementById("rvSub"), i = 0;
   if (el) setInterval(function () {
@@ -370,18 +443,20 @@
 
     <script>
         const OPTION_LETTERS = ["A", "B", "C", "D"];
-        let DATA = { students: [], quizzes: [], decks: [], builtins: [], resetAll: 0, resets: {} };
+        const TABS = ["eleve-ajout", "eleves", "quiz-ajout", "quiz-liste", "fc-ajout", "programmes"];
+        let DATA = { students: [], quizzes: [], decks: [], builtins: [], progress: {} };
         let editingStudentId = null;
         let editingQuizId = null;   // id du quiz en cours de modification, null = nouveau
         let editingDeckId = null;
         let questionCount = 0;      // sert uniquement à donner un name unique aux boutons radio
+        let progFilter = "all";     // « all », « c:<classe> » ou « s:<idÉlève> »
+        let firstUnlock = true;
 
         const qList = document.getElementById("questions");
         const hasServer = !!(window.google && google.script && google.script.run);
         const $ = id => document.getElementById(id);
         const pw = () => $("password").value;
 
-        // ---------- utilitaires ----------
         function h(tag, props, ...children) {
             const el = document.createElement(tag);
             Object.entries(props || {}).forEach(([k, v]) => {
@@ -412,6 +487,29 @@
         const dateFr = ts => new Date(ts).toLocaleString("fr-FR");
         const studentName = id => { const s = DATA.students.find(x => x.id === id); return s ? s.pseudo : null; };
 
+        // ---------- onglets ----------
+        function go(tab) {
+            TABS.forEach(t => {
+                $("pane-" + t).hidden = t !== tab;
+                $("tab-" + t).setAttribute("aria-selected", String(t === tab));
+            });
+            window.scrollTo({ top: 0 });
+        }
+
+        // ---------- élèves rangés par classe (comme à la connexion : la casse et les espaces ne comptent pas) ----------
+        const classKey = c => String(c).trim().toLowerCase();
+        function groupByClass(students) {
+            const map = new Map();
+            students.forEach(s => {
+                const k = classKey(s.classe);
+                if (!map.has(k)) map.set(k, { key: k, label: s.classe, students: [] });
+                map.get(k).students.push(s);
+            });
+            const groups = [...map.values()].sort((a, b) => a.label.localeCompare(b.label, "fr", { numeric: true, sensitivity: "base" }));
+            groups.forEach(g => g.students.sort((a, b) => a.pseudo.localeCompare(b.pseudo, "fr", { sensitivity: "base" })));
+            return groups;
+        }
+
         // ---------- déverrouillage et chargement ----------
         async function reload() {
             DATA = await server("adminData", pw());
@@ -422,14 +520,20 @@
             try {
                 await reload();
                 $("admin-area").hidden = false;
+                $("locked-hint").hidden = true;
                 showStatus($("lock-status"), "ok", "Déverrouillé.");
+                if (firstUnlock) { firstUnlock = false; go(DATA.students.length ? "eleves" : "eleve-ajout"); }
             } catch (e) {
                 $("admin-area").hidden = true;
+                $("locked-hint").hidden = false;
                 showStatus($("lock-status"), "err", e.message);
             }
         }
 
         function renderAll() {
+            $("count-eleves").textContent = DATA.students.length;
+            $("count-quiz").textContent = DATA.quizzes.length + DATA.builtins.length;
+            $("count-decks").textContent = DATA.decks.length;
             renderStudents();
             // les cases « Pour quels élèves ? » gardent la sélection en cours quand la liste des élèves change
             pourBoxes($("quiz-pour"), pourValues($("quiz-pour")));
@@ -437,10 +541,9 @@
             renderQuizList();
             renderBuiltins();
             renderDeckList();
-            renderResetAll();
+            renderProgrammes();
         }
 
-        // ---------- cases « Pour quels élèves ? » ----------
         function pourBoxes(container, selected) {
             container.replaceChildren();
             if (DATA.students.length === 0) {
@@ -460,21 +563,30 @@
         }
 
         // ================= ÉLÈVES =================
+        function lessonsSummary(id) {
+            const l = DATA.progress[id] || [];
+            const total = l.reduce((n, x) => n + x.total, 0), sues = l.reduce((n, x) => n + x.sues, 0);
+            return { lecons: l.length, total, sues, pct: total ? Math.round(sues / total * 100) : 0 };
+        }
         function renderStudents() {
             const list = $("student-list");
             if (DATA.students.length === 0) {
-                list.replaceChildren(h("p", { class: "empty" }, "Aucun élève pour le moment. Crée le premier ci-dessus."));
+                list.replaceChildren(h("p", { class: "empty" }, "Aucun élève pour le moment. Utilise « Ajouter un élève »."));
                 return;
             }
-            list.replaceChildren(...DATA.students.map(s => h("div", { class: "item" },
-                h("div", {}, "👤"),
-                h("div", { class: "info" },
-                    h("strong", {}, s.pseudo),
-                    h("span", {}, "Classe " + s.classe + (DATA.resets[s.id] ? " · programme remis à zéro le " + dateFr(DATA.resets[s.id]) : ""))),
-                h("button", { class: "btn secondary small", type: "button", onclick: () => loadStudent(s) }, "Modifier"),
-                h("button", { class: "btn secondary small", type: "button", onclick: () => resetProgramme(s.id, "le programme de " + s.pseudo) }, "Remettre à zéro"),
-                h("button", { class: "btn danger", type: "button", onclick: () => removeStudent(s) }, "Supprimer")
-            )));
+            list.replaceChildren(...groupByClass(DATA.students).map(g => h("details", { class: "classe", open: "" },
+                h("summary", {}, "Classe " + g.label + " · " + g.students.length + " élève" + (g.students.length > 1 ? "s" : "")),
+                g.students.map(s => {
+                    const r = lessonsSummary(s.id);
+                    return h("div", { class: "item" },
+                        h("div", {}, "👤"),
+                        h("div", { class: "info" },
+                            h("strong", {}, s.pseudo),
+                            h("span", {}, r.lecons ? r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") + " · " + r.sues + " / " + r.total + " questions sues (" + r.pct + " %)" : "Aucune leçon attribuée")),
+                        h("button", { class: "btn secondary small", type: "button", onclick: () => { progFilter = "s:" + s.id; renderProgrammes(); go("programmes"); } }, "Progression"),
+                        h("button", { class: "btn secondary small", type: "button", onclick: () => loadStudent(s) }, "Modifier"),
+                        h("button", { class: "btn danger", type: "button", onclick: () => removeStudent(s) }, "Supprimer"));
+                }))));
         }
         function resetStudentForm() {
             editingStudentId = null;
@@ -488,7 +600,7 @@
             $("st-pseudo").value = s.pseudo;
             $("st-pin").value = "";
             $("student-status").className = "status";
-            $("student-form-title").scrollIntoView({ behavior: "smooth" });
+            go("eleve-ajout");
         }
         async function saveStudent() {
             const status = $("student-status");
@@ -497,12 +609,12 @@
             $("save-student").disabled = true;
             showStatus(status, "info", "Enregistrement…");
             try {
-                const res = await server("saveStudent", pw(), payload);
-                editingStudentId = res.id;
-                $("st-pin").value = "";
+                await server("saveStudent", pw(), payload);
+                resetStudentForm();
                 await reload();
-                $("student-form-title").textContent = "✏️ Modifier : " + payload.pseudo.trim();
-                showStatus(status, "ok", "Élève enregistré. Il peut se connecter avec sa classe, son pseudo et son PIN.");
+                status.className = "status";
+                showStatus($("eleves-status"), "ok", "Élève enregistré : « " + payload.pseudo.trim() + " » peut se connecter avec sa classe, son pseudo et son PIN.");
+                go("eleves");
             } catch (e) {
                 showStatus(status, "err", e.message);
             } finally {
@@ -510,11 +622,12 @@
             }
         }
         async function removeStudent(s) {
-            if (!confirm("Supprimer l'élève « " + s.pseudo + " » ? Il n'aura plus accès à rien et sera retiré de tous ses quiz et paquets.")) return;
-            const status = $("student-status");
+            if (!confirm("Supprimer l'élève « " + s.pseudo + " » ? Il n'aura plus accès à rien, sa progression sera effacée et il sera retiré de tous ses quiz et paquets.")) return;
+            const status = $("eleves-status");
             try {
                 await server("deleteStudent", pw(), s.id);
                 if (editingStudentId === s.id) resetStudentForm();
+                if (progFilter === "s:" + s.id) progFilter = "all";
                 await reload();
                 showStatus(status, "ok", "Élève supprimé.");
             } catch (e) {
@@ -607,7 +720,6 @@
                 blk.querySelector(".question-head span").textContent = "Question " + (i + 1);
             });
         }
-
         function collectQuiz() {
             const titre = $("titre").value.trim();
             if (!titre) throw new Error("Le titre est obligatoire.");
@@ -676,7 +788,6 @@
             if (editingQuizId) quiz.id = editingQuizId;
             return quiz;
         }
-
         function resetQuizForm() {
             editingQuizId = null;
             $("quiz-form-title").textContent = "➕ Nouveau quiz";
@@ -685,7 +796,6 @@
             qList.replaceChildren();
             addQuestion();
         }
-
         function loadQuiz(quiz) {
             editingQuizId = quiz.id;
             $("quiz-form-title").textContent = "✏️ Modifier : " + quiz.titre;
@@ -699,7 +809,7 @@
             qList.replaceChildren();
             quiz.questions.forEach(addQuestion);
             $("quiz-status").className = "status";
-            $("quiz-form-title").scrollIntoView({ behavior: "smooth" });
+            go("quiz-ajout");
         }
 
         // ================= FLASHCARDS =================
@@ -726,14 +836,12 @@
             if (editingDeckId) deck.id = editingDeckId;
             return deck;
         }
-
         function resetDeckForm() {
             editingDeckId = null;
             $("deck-form-title").textContent = "➕ Nouveau paquet de flashcards";
             ["deck-titre", "deck-matiere", "deck-emoji", "deck-description", "deck-cartes"].forEach(id => $(id).value = "");
             pourBoxes($("deck-pour"), []);
         }
-
         function loadDeck(deck) {
             editingDeckId = deck.id;
             $("deck-form-title").textContent = "✏️ Modifier : " + deck.titre;
@@ -744,7 +852,7 @@
             $("deck-cartes").value = deck.cartes.map(c => c.recto + " | " + c.verso).join("\n");
             pourBoxes($("deck-pour"), deck.pour || []);
             $("deck-status").className = "status";
-            $("deck-form-title").scrollIntoView({ behavior: "smooth" });
+            go("fc-ajout");
         }
 
         // ================= LISTES =================
@@ -753,7 +861,7 @@
         function renderItems(list, items, kind) {
             const isQuiz = kind === "quiz";
             if (items.length === 0) {
-                list.replaceChildren(h("p", { class: "empty" }, isQuiz ? "Aucun quiz créé depuis cette page pour le moment." : "Aucun paquet pour le moment."));
+                list.replaceChildren(h("p", { class: "empty" }, isQuiz ? "Aucun quiz créé depuis l'administration pour le moment. Utilise « Ajouter un quiz »." : "Aucun paquet pour le moment."));
                 return;
             }
             list.replaceChildren(...items.map(it => h("div", { class: "item" },
@@ -769,8 +877,8 @@
 
         async function removeItem(kind, it) {
             const isQuiz = kind === "quiz";
-            if (!confirm("Supprimer définitivement « " + it.titre + " » ?")) return;
-            const status = $(kind + "-status");
+            if (!confirm("Supprimer définitivement « " + it.titre + " »" + (isQuiz ? " et la progression des élèves sur ce quiz" : "") + " ?")) return;
+            const status = isQuiz ? $("quizlist-status") : $("deck-status");
             try {
                 await server(isQuiz ? "deleteQuiz" : "deleteDeck", pw(), it.id);
                 if (isQuiz && editingQuizId === it.id) resetQuizForm();
@@ -792,18 +900,21 @@
             btn.disabled = true;
             showStatus(status, "info", "Enregistrement…");
             try {
-                const res = await server(isQuiz ? "saveQuiz" : "saveDeck", pw(), payload);
-                if (isQuiz) {
-                    editingQuizId = res.id;
-                    $("quiz-form-title").textContent = "✏️ Modifier : " + payload.titre;
-                } else {
-                    editingDeckId = res.id;
-                    $("deck-form-title").textContent = "✏️ Modifier : " + payload.titre;
-                }
-                await reload();
-                showStatus(status, "ok", payload.pour.length
+                await server(isQuiz ? "saveQuiz" : "saveDeck", pw(), payload);
+                const msg = payload.pour.length
                     ? "Enregistré. Il apparaît chez les élèves choisis."
-                    : "Enregistré, mais sans destinataire : il reste caché. Coche au moins un élève pour le montrer.");
+                    : "Enregistré, mais sans destinataire : il reste caché. Coche au moins un élève pour le montrer.";
+                if (isQuiz) {
+                    resetQuizForm();
+                    status.className = "status";
+                    await reload();
+                    showStatus($("quizlist-status"), "ok", "Quiz « " + payload.titre + " » : " + msg);
+                    go("quiz-liste");
+                } else {
+                    resetDeckForm();
+                    await reload();
+                    showStatus(status, "ok", "Paquet « " + payload.titre + " » : " + msg);
+                }
             } catch (e) {
                 showStatus(status, "err", e.message);
             } finally {
@@ -834,24 +945,73 @@
             }));
         }
 
-        // ================= PROGRAMME DE RÉVISION =================
-        function renderResetAll() {
-            $("reset-info").textContent = DATA.resetAll ? "Dernière remise à zéro générale : " + dateFr(DATA.resetAll) : "Aucune remise à zéro générale pour le moment.";
+        // ================= PROGRAMMES DE RÉVISION =================
+        function renderProgFilter() {
+            const sel = $("prog-filtre");
+            const groups = groupByClass(DATA.students);
+            sel.replaceChildren(
+                h("option", { value: "all" }, "Tous les élèves"),
+                ...groups.map(g => h("optgroup", { label: "Classe " + g.label },
+                    h("option", { value: "c:" + g.key }, "Toute la classe " + g.label),
+                    g.students.map(s => h("option", { value: "s:" + s.id }, "👤 " + s.pseudo)))));
+            const valid = [...sel.options].some(o => o.value === progFilter);
+            if (!valid) progFilter = "all";
+            sel.value = progFilter;
         }
-        async function resetProgramme(target, label) {
-            if (!confirm("Remettre à zéro " + label + " ? Toute la progression sera perdue.")) return;
-            const status = target === "all" ? $("programme-status") : $("student-status");
+        function renderProgrammes() {
+            renderProgFilter();
+            const list = $("prog-list");
+            let groups = groupByClass(DATA.students);
+            if (progFilter.startsWith("c:")) groups = groups.filter(g => "c:" + g.key === progFilter);
+            if (progFilter.startsWith("s:")) groups = groups.map(g => ({ ...g, students: g.students.filter(s => "s:" + s.id === progFilter) })).filter(g => g.students.length);
+            if (groups.length === 0) {
+                list.replaceChildren(h("p", { class: "empty" }, "Aucun élève à afficher."));
+                return;
+            }
+            list.replaceChildren(...groups.map(g => h("details", { class: "classe", open: "" },
+                h("summary", {}, "Classe " + g.label + " · " + g.students.length + " élève" + (g.students.length > 1 ? "s" : "")),
+                g.students.map(s => studentCard(s)))));
+        }
+        function bar(pct) { return h("div", { class: "bar", role: "progressbar", "aria-valuenow": String(pct), "aria-valuemin": "0", "aria-valuemax": "100" }, h("span", { style: "width:" + pct + "%" })); }
+        function studentCard(s) {
+            const lessons = (DATA.progress[s.id] || []).slice().sort((a, b) => a.titre.localeCompare(b.titre, "fr", { sensitivity: "base" }));
+            const r = lessonsSummary(s.id);
+            return h("div", { class: "prog-card", "data-student": s.id },
+                h("div", { class: "prog-head" },
+                    h("div", { class: "info" },
+                        h("strong", {}, "👤 " + s.pseudo + " · " + s.classe),
+                        h("span", {}, r.lecons ? r.sues + " / " + r.total + " questions sues (" + r.pct + " %) sur " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") : "Aucune leçon attribuée")),
+                    r.lecons ? h("button", { class: "btn danger", type: "button", onclick: () => resetProgress(s.id, "all", "toute la progression de " + s.pseudo) }, "Tout remettre à zéro") : null),
+                lessons.length === 0
+                    ? h("p", { class: "hint" }, "Donne-lui un quiz depuis « Liste des quiz » pour suivre sa progression.")
+                    : lessons.map(l => {
+                        const pct = l.total ? Math.round(l.sues / l.total * 100) : 0;
+                        const aApprendre = l.total - l.sues - l.enCours;
+                        const niveau = l.sues === l.total && l.total > 0 ? "✅ Maîtrisée" : (l.sues + l.enCours > 0 ? "En cours" : "Pas commencée");
+                        return h("div", { class: "lesson", "data-quiz": l.id },
+                            h("div", { class: "lesson-title" }, h("strong", {}, (l.emoji || "📘") + " " + l.titre), h("span", { class: "niveau" }, niveau)),
+                            bar(pct),
+                            h("div", { class: "lesson-detail" },
+                                h("span", {}, l.sues + (l.sues > 1 ? " sues" : " sue") + " · " + l.enCours + " en cours · " + aApprendre + " à apprendre · " + l.erreurs + " erreur" + (l.erreurs > 1 ? "s" : "")),
+                                h("span", {}, l.maj ? "Dernière activité : " + dateFr(l.maj) : "Jamais jouée")),
+                            h("button", { class: "btn secondary small", type: "button", onclick: () => resetProgress(s.id, l.id, "la leçon « " + l.titre + " » de " + s.pseudo) }, "Remettre cette leçon à zéro"));
+                    }));
+        }
+        async function resetProgress(studentId, quizId, label) {
+            if (!confirm("Remettre à zéro " + label + " ? Cette progression sera perdue.")) return;
+            const status = $("prog-status");
             showStatus(status, "info", "Remise à zéro…");
             try {
-                await server("resetProgramme", pw(), target);
+                const res = await server("resetProgress", pw(), studentId, quizId);
                 await reload();
-                showStatus(status, "ok", "Remise à zéro enregistrée. Chaque élève concerné repart de 0 à sa prochaine connexion.");
+                showStatus(status, "ok", res.supprimes ? "Remise à zéro faite : " + label + "." : "Rien à remettre à zéro : " + label + " n'avait pas de progression.");
             } catch (e) {
                 showStatus(status, "err", e.message);
             }
         }
 
         // ---------- événements ----------
+        TABS.forEach(t => $("tab-" + t).addEventListener("click", () => go(t)));
         $("unlock").addEventListener("click", unlock);
         $("password").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); unlock(); } });
         $("save-student").addEventListener("click", saveStudent);
@@ -861,10 +1021,12 @@
         $("save-quiz").addEventListener("click", () => saveItem("quiz"));
         $("reset-deck").addEventListener("click", () => { resetDeckForm(); $("deck-status").className = "status"; });
         $("save-deck").addEventListener("click", () => saveItem("deck"));
-        $("reset-all").addEventListener("click", () => resetProgramme("all", "le programme de TOUS les élèves"));
+        $("prog-filtre").addEventListener("change", e => { progFilter = e.target.value; renderProgrammes(); });
+        $("reset-all").addEventListener("click", () => resetProgress("all", "all", "TOUTE la progression de TOUS les élèves"));
 
         resetQuizForm();
         resetDeckForm();
+        go("eleve-ajout");
     </script>
 </body>
 </html>

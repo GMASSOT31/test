@@ -236,6 +236,7 @@
         .login-card .btn { width: 100%; }
         #app { flex: 1; display: flex; flex-direction: column; }
         .whoami { display: flex; justify-content: flex-end; align-items: center; gap: 12px; padding: 12px 20px 0; font-weight: 800; color: var(--navy); }
+        .sync-status { color: #c0264b; font-weight: 700; font-size: .85rem; }
         .whoami .btn { margin: 0; padding: 7px 14px; font-size: .85rem; }
 
         /* Mobile : les onglets passent en barre horizontale */
@@ -368,6 +369,7 @@
 
     <div id="app" hidden>
         <div class="whoami">
+            <span id="sync-status" class="sync-status" role="status"></span>
             <span id="whoami-name"></span>
             <button type="button" class="btn secondary" id="logout">Se déconnecter</button>
         </div>
@@ -432,24 +434,44 @@
 
         // ---------------- Programme de révision : progression par question ----------------
         // Au départ, TOUTES les questions sont à apprendre. Une question est « sue » après MASTERY réussites
-        // d'affilée dans les quiz ; une erreur la remet à 0. Les réussites comptent aussi quand l'élève rejoue un quiz.
-        // Réussite = bonne réponse (pour une réponse écrite : du premier coup).
-        // La progression est mémorisée dans le navigateur de l'élève (localStorage), donc propre à son appareil.
-        // Si le navigateur refuse le stockage, elle vit le temps de la page.
+        // d'affilée dans les quiz ; une erreur la remet à 0. Réussite = bonne réponse (réponse écrite : du premier coup).
+        // La progression est enregistrée sur le serveur, propre à chaque élève : l'administrateur la consulte et peut la
+        // remettre à zéro. Chaque résultat y est envoyé ; la page la relit à la connexion.
         const MASTERY = 3;
-        let progressKey = null; // propre à chaque élève : plusieurs élèves peuvent partager le même appareil
-        let progress = {};
-        function loadProgress(userId) {
-            progressKey = "revision-programme-v3:" + userId;
-            try {
-                const v = JSON.parse(localStorage.getItem(progressKey));
-                progress = v && typeof v === "object" && !Array.isArray(v) ? v : {};
-            } catch (e) { progress = {}; }
+        let progress = {};   // clé = quiz.id + "|" + énoncé  ->  { ok, fails }
+        let session = null;  // identifiants de l'élève connecté (en mémoire), pour enregistrer ses résultats
+
+        // Empreinte courte d'un énoncé (FNV-1a 32 bits) : même calcul que le serveur (qhash_ dans Code.gs)
+        function qhash(text) {
+            let h = 0x811c9dc5;
+            for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+            return ("0000000" + (h >>> 0).toString(16)).slice(-8);
         }
-        function persistProgress() {
-            if (!progressKey) return;
-            try { localStorage.setItem(progressKey, JSON.stringify(progress)); } catch (e) { /* stockage indisponible */ }
+        // Charge la progression renvoyée par le serveur : { quizId: { empreinte: [réussites d'affilée, erreurs] } }
+        function loadProgress(fromServer) {
+            progress = {};
+            QUIZZES.forEach(quiz => quiz.questions.forEach(q => {
+                const r = ((fromServer || {})[quiz.id] || {})[qhash(q.question)];
+                if (r) progress[keyOf(quiz, q)] = { ok: r[0], fails: r[1] };
+            }));
         }
+        // Envoi des résultats au serveur, un par un et dans l'ordre ; en cas d'échec réseau, 3 essais.
+        let saveChain = Promise.resolve();
+        function setSync(text) { const el = document.getElementById("sync-status"); if (el) el.textContent = text; }
+        function sendResult(quizId, hash, success) {
+            if (!hasServer || !session) return;
+            const c = session;
+            const attempt = n => new Promise(resolve => google.script.run
+                .withSuccessHandler(() => { setSync(""); resolve(); })
+                .withFailureHandler(err => {
+                    const msg = String(err && err.message);
+                    if (n < 3 && !/incorrect|Trop d'essais|inaccessible|inconnue/.test(msg)) setTimeout(() => attempt(n + 1).then(resolve), 1000 * n);
+                    else { setSync("⚠️ Ta progression n'a pas pu être enregistrée."); resolve(); }
+                })
+                .saveResult(c.classe, c.pseudo, c.pin, quizId, hash, success));
+            saveChain = saveChain.then(() => attempt(1));
+        }
+        window.revisionFlush = () => saveChain;   // attend la fin des envois en cours (utile aux tests)
         function answerOf(q) {
             if (q.champs) return q.champs.map(c => (c.label ? c.label + " : " : "") + c.reponses[0]).join(" · ");
             return Array.isArray(q.reponses) ? q.reponses[0] : q.options[q.correct];
@@ -461,7 +483,7 @@
             const cur = progressOf(quiz, q);
             const ok = success ? Math.min(MASTERY, cur.ok + 1) : 0;
             progress[keyOf(quiz, q)] = { ok, fails: cur.fails + (success ? 0 : 1) };
-            persistProgress();
+            sendResult(quiz.id, qhash(q.question), success);
             updateCounts();
             return ok;
         }
@@ -948,7 +970,7 @@
         function cleanError(err) { return String(err && err.message ? err.message : err).replace(/^Error:\s*/, ""); }
 
         function showLogin(message) {
-            me = null; QUIZZES = []; FLASHCARDS = []; progress = {}; progressKey = null; inQuiz = false;
+            me = null; session = null; QUIZZES = []; FLASHCARDS = []; progress = {}; inQuiz = false;
             content.replaceChildren();
             $("app").hidden = true;
             $("login").hidden = false;
@@ -963,9 +985,8 @@
             me = data.student;
             QUIZZES = data.quizzes;
             FLASHCARDS = data.decks;
-            loadProgress(me.id);
-            // Remise à zéro décidée par l'administrateur : plus récente que celle de cet appareil => on repart de 0
-            if (data.reset > (progress._reset || 0)) { progress = { _reset: data.reset }; persistProgress(); }
+            session = creds;
+            loadProgress(data.progress);
             try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(creds)); } catch (e) { /* ignoré */ }
             try { localStorage.setItem(LAST_KEY, JSON.stringify({ classe: creds.classe, pseudo: creds.pseudo })); } catch (e) { /* ignoré */ }
             $("login").hidden = true;
