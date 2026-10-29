@@ -104,6 +104,21 @@
         .card:hover { transform: translateY(-3px) rotate(-.6deg); box-shadow: 0 8px 0 rgba(15,23,80,.14), 0 16px 32px rgba(30,58,138,.14); }
         .card { position: relative; }
         .fois { position: absolute; top: 12px; right: 12px; padding: 3px 10px; border-radius: 999px; background: var(--gold); color: var(--navy); font-size: .75rem; font-weight: 800; box-shadow: var(--sticker); }
+        /* Accueil : la question centrale */
+        .home-question { text-align: center; margin: 10px 0 26px; }
+        .home-question h2 { display: block; background: none; margin: 0; font-size: clamp(1.6rem, 3.6vw, 2.3rem); line-height: 1.2; }
+        .home-question h2::after { content: ""; display: block; width: 90px; height: 6px; margin: 12px auto 0; border-radius: 999px; background: linear-gradient(90deg, var(--gold), var(--pink)); }
+        .card.lecon .etape { margin-top: 8px; font-size: .85rem; font-weight: 800; color: var(--violet); }
+        .etape-dots { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+        .etape-dots .dot { font-size: .72rem; font-weight: 800; padding: 2px 9px; border-radius: 999px; background: #eef0fa; color: var(--muted); }
+        .etape-dots .dot.done { background: var(--mint); color: #07402a; }
+        .etape-dots .dot.on { background: var(--gold); color: var(--navy); box-shadow: var(--sticker); }
+        .etape-banner { text-align: center; font-weight: 800; color: var(--violet); background: #f1eeff; border-radius: 12px; padding: 8px 12px; margin-bottom: 12px; }
+        .etape-msg { margin: 0 0 20px; padding: 14px 16px; border-radius: 12px; background: #fff6dc; border-left: 5px solid var(--gold); font-weight: 700; text-align: left; line-height: 1.4; }
+        .etape-intro { margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; background: #f1eeff; border-left: 5px solid var(--violet); font-weight: 700; line-height: 1.4; }
+        .finish-zone { margin-top: 18px; }
+        .finish-btn { background: var(--green); padding: 14px 30px; font-size: 1.05rem; }
+        .finish-btn:hover:not(:disabled) { background: #1aa34f; }
         .card .emoji { font-size: 2rem; }
         .card h3 { margin: 8px 0 4px; font-size: 1.1rem; font-weight: 800; color: var(--navy); }
         .card .meta { font-size: .85rem; font-weight: 600; color: var(--muted); }
@@ -377,7 +392,7 @@
         </div>
         <div class="layout">
             <nav class="sidebar" role="tablist" aria-label="Sections">
-                <button class="tab" role="tab" id="tab-quiz" data-tab="quiz">🧠 Quiz <span class="count" id="count-quiz"></span></button>
+                <button class="tab" role="tab" id="tab-quiz" data-tab="quiz">🎓 Mes leçons <span class="count" id="count-quiz"></span></button>
                 <button class="tab" role="tab" id="tab-flashcards" data-tab="flashcards">🃏 Flashcards <span class="count" id="count-flashcards"></span></button>
                 <button class="tab" role="tab" id="tab-programme" data-tab="programme">📅 Programme <span class="count" id="count-programme"></span></button>
             </nav>
@@ -440,8 +455,10 @@
         // La progression est enregistrée sur le serveur, propre à chaque élève : l'administrateur la consulte et peut la
         // remettre à zéro. Chaque résultat y est envoyé ; la page la relit à la connexion.
         const MASTERY = 3;
+        const PASSAGES = 3;  // passages de quiz à faire avant l'étape suivante du parcours
         let progress = {};   // clé = quiz.id + "|" + énoncé  ->  { ok, fails }
         let doneCounts = {}; // quiz.id -> nombre de parties terminées par cet élève (cumulé)
+        let parcours = {};   // quiz.id -> { etape, passages, cycle } : où en est l'élève dans le parcours de chaque leçon
         let session = null;  // identifiants de l'élève connecté (en mémoire), pour enregistrer ses résultats
 
         // Identifiant stable d'une question (la progression s'y rattache : corriger l'énoncé ne la fait pas perdre).
@@ -471,7 +488,7 @@
                 .withSuccessHandler(() => { setSync(""); resolve(); })
                 .withFailureHandler(err => {
                     const msg = String(err && err.message);
-                    if (n < 3 && !/incorrect|Trop d'essais|inaccessible|inconnue/.test(msg)) setTimeout(() => attempt(n + 1).then(resolve), 1000 * n);
+                    if (n < 3 && !/incorrect|Trop d'essais|inaccessible|inconnue|en cours/.test(msg)) setTimeout(() => attempt(n + 1).then(resolve), 1000 * n);
                     else { setSync("⚠️ Ta progression n'a pas pu être enregistrée."); resolve(); }
                 })
                 [method](c.classe, c.pseudo, c.pin, ...args));
@@ -586,6 +603,32 @@
             return n === 0 ? "Pas encore fait" : "🔁 Fait " + n + " fois";
         }
 
+        // ---------------- Parcours de révision d'une leçon ----------------
+        // Étape 1 : le quiz, PASSAGES fois. Étape 2 : les flashcards des questions non sues, puis retour à l'étape 1
+        // (jusqu'à ce que tout soit su). Étape 3 : le paquet complet, sans choix proposés, puis validation par un adulte.
+        function getParcours(quizId) {
+            if (!parcours[quizId]) parcours[quizId] = { etape: "quiz", passages: 0, cycle: 1 };
+            return parcours[quizId];
+        }
+        function unsuedCards(quiz) { return programmeCards(quiz); }
+        function etapeText(quiz) {
+            const pc = getParcours(quiz.id);
+            const tour = pc.cycle > 1 ? " · tour " + pc.cycle : "";
+            if (pc.etape === "quiz") return `Étape 1 sur 3 · Quiz : ${pc.passages} / ${PASSAGES} passages faits${tour}`;
+            if (pc.etape === "cartes") return `Étape 2 sur 3 · Flashcards à revoir (${unsuedCards(quiz).length})${tour}`;
+            if (pc.etape === "revision") return "Étape 3 sur 3 · Apprendre sans choix proposés";
+            if (pc.etape === "fini") return "⏳ Parcours terminé : en attente de validation";
+            return "✅ Parcours validé";
+        }
+        // Les trois étapes : faites, en cours, à venir
+        function stepsEl(quiz) {
+            const pc = getParcours(quiz.id);
+            const cur = pc.etape === "quiz" ? 1 : pc.etape === "cartes" ? 2 : pc.etape === "revision" ? 3 : 4;
+            return h("div", { class: "etape-dots", "aria-hidden": "true" },
+                ["1 Quiz", "2 Cartes", "3 Appris"].map((t, i) =>
+                    h("span", { class: "dot " + (i + 1 < cur ? "done" : i + 1 === cur ? "on" : "") }, t)));
+        }
+
         function setTab(tab) {
             activeTab = tab;
             document.querySelectorAll(".tab").forEach(b =>
@@ -597,17 +640,20 @@
             inQuiz = false;
             content.replaceChildren();
             if (activeTab === "quiz") {
-                content.append(h("h2", {}, "Quiz"));
+                content.append(h("div", { class: "home-question" },
+                    h("h2", {}, "Quelle leçon veux-tu réviser maintenant ?")));
                 if (QUIZZES.length === 0) {
-                    content.append(h("div", { class: "empty" }, "Aucun quiz pour le moment."));
+                    content.append(h("div", { class: "empty" }, "Aucune leçon pour le moment."));
                     return;
                 }
                 content.append(h("div", { class: "grid" }, QUIZZES.map(q =>
-                    h("button", { class: "card", onclick: () => startQuiz(q) },
+                    h("button", { class: "card lecon", onclick: () => openLesson(q) },
                         h("span", { class: "fois" }, foisLabel(q.id)),
                         h("div", { class: "emoji" }, q.emoji),
                         h("h3", {}, q.titre),
                         h("div", { class: "meta" }, `${q.matiere} · ${q.questions.length} questions`),
+                        stepsEl(q),
+                        h("div", { class: "etape" }, etapeText(q)),
                         h("p", { class: "desc" }, q.description)
                     )
                 )));
@@ -638,7 +684,14 @@
             let score = 0;
             const total = quiz.questions.length;
 
-            const back = () => h("button", { class: "back", onclick: renderList }, "← Retour à la liste");
+            const back = () => h("button", { class: "back", onclick: renderList }, "← Retour aux leçons");
+            // Bandeau « Étape 1 sur 3 · Passage 2 sur 3 »
+            const etapeBanner = () => {
+                const pc = getParcours(quiz.id);
+                return pc.etape === "quiz"
+                    ? h("div", { class: "etape-banner" }, `Étape 1 sur 3 · Passage ${pc.passages + 1} sur ${PASSAGES}` + (pc.cycle > 1 ? ` (tour ${pc.cycle})` : ""))
+                    : null;
+            };
 
             function showQuestion() {
                 const q = quiz.questions[index];
@@ -687,6 +740,7 @@
                     : null;
                 content.replaceChildren(h("div", { class: "panel" },
                     h("div", { class: "panel-top" }, back(), lien),
+                    etapeBanner(),
                     h("div", { class: "progress" },
                         h("span", {}, `Question ${index + 1} / ${total}`), scoreEl),
                     h("h3", { class: "question" }, q.question),
@@ -883,15 +937,35 @@
                 } else {
                     emoji = "💪"; msg = "Ne te décourage pas ! Relis tes fiches et relance le quiz, tu vas y arriver !";
                 }
+                // Parcours : ce passage compte, et on dit à l'élève combien il lui en reste.
+                // L'étape suivante est calculée de la même façon que sur le serveur (finishQuiz).
+                const pc = getParcours(quiz.id);
+                let etapeMsg = "", nextLabel = null;
+                if (pc.etape === "quiz") {
+                    pc.passages = Math.min(PASSAGES, pc.passages + 1);
+                    if (pc.passages >= PASSAGES) {
+                        const reste = unsuedCards(quiz).length;
+                        pc.etape = reste > 0 ? "cartes" : "revision";
+                        etapeMsg = reste > 0
+                            ? `🎯 Tes ${PASSAGES} passages sont faits ! Prochaine étape : revoir les ${reste} flashcard${reste > 1 ? "s" : ""} des questions que tu ne sais pas encore.`
+                            : `🎯 Tes ${PASSAGES} passages sont faits et tu sais tout ! Dernière étape : apprendre le paquet complet de flashcards.`;
+                        nextLabel = "Étape suivante →";
+                    } else {
+                        const rest = PASSAGES - pc.passages;
+                        etapeMsg = `📈 Passage ${pc.passages} sur ${PASSAGES} terminé. Il te reste ${rest} passage${rest > 1 ? "s" : ""} avant l'étape suivante.`;
+                        nextLabel = "Passage suivant →";
+                    }
+                }
                 content.replaceChildren(h("div", { class: "panel result" },
                     h("h2", {}, "Quiz terminé !"),
                     h("div", { class: "big-emoji" }, emoji),
                     h("p", {}, "Ton score final est de :"),
                     h("div", { class: "final" }, `${score} / ${total}`),
                     h("p", { class: "msg" }, msg),
+                    etapeMsg ? h("div", { class: "etape-msg", role: "status" }, etapeMsg) : null,
                     h("div", { class: "actions" },
-                        h("button", { class: "btn", onclick: () => startQuiz(quiz) }, "Rejouer 🔄"),
-                        h("button", { class: "btn secondary", onclick: renderList }, "Retour à la liste")
+                        nextLabel ? h("button", { class: "btn", onclick: () => openLesson(quiz) }, nextLabel) : null,
+                        h("button", { class: "btn secondary", onclick: renderList }, "Retour aux leçons")
                     )
                 ));
             }
@@ -939,7 +1013,10 @@
 
         // ---------------- Flashcards ----------------
         // learn = true : paquet « à apprendre » (cartes pas encore sues). Chaque carte montre sa progression.
-        function startDeck(deck, learn) {
+        // opts (facultatif) : { intro, finishLabel, onFinish, back } pour les étapes 2 et 3 d'une leçon :
+        // un message en tête, et un bouton qui apparaît quand l'élève arrive à la dernière carte.
+        function startDeck(deck, learn, opts) {
+            opts = opts || {};
             inQuiz = true;
             let cards = deck.cartes.slice();
             let index = 0;
@@ -950,6 +1027,9 @@
             const prev = h("button", { class: "btn secondary", onclick: () => go(-1) }, "← Précédente");
             const next = h("button", { class: "btn", onclick: () => go(1) }, "Suivante →");
             const mix = h("button", { class: "btn secondary", onclick: () => { cards = shuffle(cards); index = 0; flipped = false; draw(); } }, "🔀 Mélanger");
+            const finish = opts.onFinish
+                ? h("button", { class: "btn finish-btn", style: "display:none", onclick: opts.onFinish }, opts.finishLabel)
+                : null;
 
             function go(delta) { index += delta; flipped = false; draw(); }
 
@@ -963,18 +1043,87 @@
                 counter.textContent = `Carte ${index + 1} / ${cards.length}`;
                 prev.disabled = index === 0;
                 next.disabled = index === cards.length - 1;
+                if (finish) finish.style.display = index === cards.length - 1 ? "block" : "none";
             }
 
             content.replaceChildren(h("div", { class: "panel" },
-                h("button", { class: "back", onclick: renderList }, learn ? "← Retour au programme" : "← Retour à la liste"),
+                h("button", { class: "back", onclick: renderList }, opts.back || (learn ? "← Retour au programme" : "← Retour à la liste")),
+                opts.intro ? h("div", { class: "etape-intro", role: "status" }, opts.intro) : null,
                 h("div", { class: "progress" }, h("span", {}, deck.titre), counter),
                 card,
                 h("div", { class: "deck-nav" }, prev, mix, next),
-                h("p", { class: "hint-small" }, learn
-                    ? `Relis ces cartes, puis rejoue les quiz : une question est sue après ${MASTERY} réussites d'affilée.`
-                    : "Clique sur la carte pour la retourner.")
+                finish ? h("div", { class: "finish-zone" }, finish) : null,
+                h("p", { class: "hint-small" }, opts.onFinish
+                    ? "Clique sur la carte pour la retourner. Le bouton apparaît à la dernière carte."
+                    : learn
+                        ? `Relis ces cartes, puis rejoue les quiz : une question est sue après ${MASTERY} réussites d'affilée.`
+                        : "Clique sur la carte pour la retourner.")
             ));
             draw();
+        }
+
+        // ---------------- Ouverture d'une leçon : l'étape en cours ----------------
+        function openLesson(quiz) {
+            const pc = getParcours(quiz.id);
+            if (pc.etape === "quiz") return startQuiz(quiz);
+            if (pc.etape === "cartes") return startCartes(quiz);
+            if (pc.etape === "revision") return startRevision(quiz);
+            return showFini(quiz);
+        }
+
+        // Étape 2 : les flashcards des questions non sues, puis « C'est bon, j'ai mémorisé » -> retour à l'étape 1
+        function startCartes(quiz) {
+            const cartes = unsuedCards(quiz);
+            const onFinish = () => {
+                const pc = getParcours(quiz.id);
+                parcours[quiz.id] = { etape: "quiz", passages: 0, cycle: (pc.cycle || 1) + 1 };
+                enqueue("cardsDone", quiz.id);
+                startQuiz(quiz);
+            };
+            if (cartes.length === 0) {
+                content.replaceChildren(h("div", { class: "panel result" },
+                    h("h2", {}, "Tu connais déjà toutes les cartes !"),
+                    h("div", { class: "etape-msg" }, "Il ne reste aucune carte à revoir. Tu peux refaire tes passages de quiz."),
+                    h("div", { class: "actions" },
+                        h("button", { class: "btn", onclick: onFinish }, "✅ C'est bon, j'ai mémorisé"),
+                        h("button", { class: "btn secondary", onclick: renderList }, "Retour aux leçons"))));
+                return;
+            }
+            startDeck({ titre: "Étape 2 · À revoir : " + quiz.titre, cartes }, true, {
+                back: "← Retour aux leçons",
+                intro: `Étape 2 sur 3 : révise ces ${cartes.length} flashcard${cartes.length > 1 ? "s" : ""}, celles des questions que tu ne sais pas encore. À la dernière carte, clique sur « C'est bon, j'ai mémorisé » : tu referas ${PASSAGES} passages de quiz.`,
+                finishLabel: "✅ C'est bon, j'ai mémorisé",
+                onFinish
+            });
+        }
+
+        // Étape 3 : le paquet complet, sans choix proposés, puis validation par un adulte
+        function startRevision(quiz) {
+            const deck = decksFromQuizzes().find(d => d.id === "quiz-" + quiz.id);
+            startDeck({ titre: "Étape 3 · Paquet complet : " + quiz.titre, cartes: deck.cartes }, false, {
+                back: "← Retour aux leçons",
+                intro: "Maintenant apprends les réponses mais sans choix proposés.",
+                finishLabel: "👩‍🏫 Faire valider par un adulte",
+                onFinish: () => {
+                    getParcours(quiz.id).etape = "fini";
+                    enqueue("requestValidation", quiz.id);
+                    showFini(quiz);
+                }
+            });
+        }
+
+        // Parcours terminé : en attente de validation, puis validé par l'administrateur
+        function showFini(quiz) {
+            inQuiz = true;
+            const valide = getParcours(quiz.id).etape === "valide";
+            content.replaceChildren(h("div", { class: "panel result" },
+                h("div", { class: "big-emoji" }, valide ? "✅" : "🎉"),
+                h("h2", {}, valide ? "Parcours validé !" : "Parcours terminé !"),
+                h("p", { class: "msg" }, quiz.titre),
+                h("div", { class: "etape-msg", role: "status" }, valide
+                    ? "Un adulte a validé ton parcours sur cette leçon. Bravo !"
+                    : "Tu as fini ton parcours sur cette leçon. Montre-le maintenant à un adulte pour qu'il le valide."),
+                h("div", { class: "actions" }, h("button", { class: "btn", onclick: renderList }, "Retour aux leçons"))));
         }
 
         // ---------------- Connexion ----------------
@@ -987,7 +1136,7 @@
         function cleanError(err) { return String(err && err.message ? err.message : err).replace(/^Error:\s*/, ""); }
 
         function showLogin(message) {
-            me = null; session = null; QUIZZES = []; FLASHCARDS = []; progress = {}; doneCounts = {}; inQuiz = false;
+            me = null; session = null; QUIZZES = []; FLASHCARDS = []; progress = {}; doneCounts = {}; parcours = {}; inQuiz = false;
             content.replaceChildren();
             $("app").hidden = true;
             $("login").hidden = false;
@@ -1005,6 +1154,7 @@
             session = creds;
             loadProgress(data.progress);
             doneCounts = data.fois || {};
+            parcours = data.parcours || {};
             try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(creds)); } catch (e) { /* ignoré */ }
             try { localStorage.setItem(LAST_KEY, JSON.stringify({ classe: creds.classe, pseudo: creds.pseudo })); } catch (e) { /* ignoré */ }
             $("login").hidden = true;
