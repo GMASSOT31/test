@@ -538,9 +538,26 @@
                 .replace(/\s{2,}/g, " ");
         }
 
+        // Chaque quiz donne un paquet du même nom : recto = question, verso = bonne réponse.
+        // Calculés à chaque affichage, donc toujours à jour avec les quiz (y compris ceux de l'administration).
+        function decksFromQuizzes() {
+            return QUIZZES.map(q => ({
+                id: "quiz-" + q.id,
+                emoji: q.emoji,
+                matiere: q.matiere,
+                titre: q.titre,
+                description: "Cartes générées depuis le quiz : la question au recto, la réponse au verso.",
+                cartes: q.questions.map(x => ({
+                    recto: x.question,
+                    verso: Array.isArray(x.reponses) ? x.reponses[0] : x.options[x.correct]
+                }))
+            }));
+        }
+        function allDecks() { return decksFromQuizzes().concat(FLASHCARDS); }
+
         function updateCounts() {
             document.getElementById("count-quiz").textContent = QUIZZES.length;
-            document.getElementById("count-flashcards").textContent = FLASHCARDS.length;
+            document.getElementById("count-flashcards").textContent = allDecks().length;
         }
 
         function setTab(tab) {
@@ -569,11 +586,12 @@
                 )));
             } else {
                 content.append(h("h2", {}, "Flashcards"));
-                if (FLASHCARDS.length === 0) {
+                const decks = allDecks();
+                if (decks.length === 0) {
                     content.append(h("div", { class: "empty" }, "Aucune flashcard pour le moment. Elles apparaîtront ici."));
                     return;
                 }
-                content.append(h("div", { class: "grid" }, FLASHCARDS.map(d =>
+                content.append(h("div", { class: "grid" }, decks.map(d =>
                     h("button", { class: "card", onclick: () => startDeck(d) },
                         h("div", { class: "emoji" }, d.emoji),
                         h("h3", {}, d.titre),
