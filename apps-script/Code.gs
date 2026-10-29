@@ -34,6 +34,20 @@ var MAX_VALUE_BYTES = 8500; // une propriété est limitée à 9 Ko
 function getQuizzes() { return list_(QUIZ_PREFIX); }
 function getDecks() { return list_(DECK_PREFIX); }
 
+// Remise à zéro du programme de révision. La progression est enregistrée sur l'appareil de l'élève :
+// l'administrateur ne peut pas l'effacer directement, il enregistre donc ici la date de la dernière
+// remise à zéro. Chaque appareil la compare à la sienne à l'ouverture de la page, et repart de 0 si elle est plus récente.
+var RESET_KEY = 'programme_reset';
+function getProgrammeReset() {
+  return Number(PropertiesService.getScriptProperties().getProperty(RESET_KEY)) || 0;
+}
+function resetProgramme(password) {
+  checkAdmin_(password);
+  var ts = Date.now();
+  PropertiesService.getScriptProperties().setProperty(RESET_KEY, String(ts));
+  return { reset: ts };
+}
+
 // Écritures : protégées par le mot de passe.
 function saveQuiz(password, quiz) {
   checkAdmin_(password);

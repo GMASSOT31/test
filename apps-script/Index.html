@@ -196,6 +196,10 @@
         .progress-panel { margin-bottom: 0; }
         .bar { height: 12px; border-radius: 999px; background: #e5e7eb; overflow: hidden; margin: 8px 0 4px; }
         .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--blue), var(--green)); transition: width .4s; }
+        .pile-title { margin: 22px 0 12px; font-size: 1.05rem; }
+        .bar.small { height: 8px; margin: 10px 0 0; }
+        .card.done { opacity: .6; cursor: default; }
+        .card.done:hover { transform: none; box-shadow: none; }
         .deck-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 16px; }
         .deck-nav .btn { margin: 0; }
         .btn:disabled { opacity: .5; cursor: default; }
@@ -543,9 +547,9 @@
             return ok;
         }
         // Questions pas encore sues, les plus ratées d'abord, puis les moins avancées
-        function programmeCards() {
+        function programmeCards(only) {
             const out = [];
-            QUIZZES.forEach(quiz => quiz.questions.forEach(q => {
+            QUIZZES.forEach(quiz => (only && quiz !== only ? [] : quiz.questions).forEach(q => {
                 const p = progressOf(quiz, q);
                 if (p.ok < MASTERY) out.push({ recto: q.question, verso: answerOf(q), quiz: quiz.titre, ok: p.ok, fails: p.fails });
             }));
@@ -838,27 +842,27 @@
 
             if (remaining === 0) {
                 content.append(h("div", { class: "empty", style: "margin-top:16px" }, "🎉 Bravo, tu sais toutes tes questions !"));
-            } else {
-                const cards = programmeCards();
-                const restantes = {};
-                cards.forEach(c => { restantes[c.quiz] = (restantes[c.quiz] || 0) + 1; });
-                const resume = Object.entries(restantes).map(([titre, n]) => `${titre} : ${n}`).join(" · ");
-                content.append(h("div", { class: "grid", style: "margin-top:16px" },
-                    h("button", { class: "card", onclick: () => startDeck({ titre: "Flashcards à apprendre", cartes: programmeCards() }, true) },
-                        h("div", { class: "emoji" }, "🃏"),
-                        h("h3", {}, "Flashcards à apprendre"),
-                        h("div", { class: "meta" }, `${remaining} carte${remaining > 1 ? "s" : ""} restante${remaining > 1 ? "s" : ""}`),
-                        h("p", { class: "desc" }, resume)
-                    )));
             }
-            content.append(h("p", { class: "hint-small" },
-                h("button", { class: "back", onclick: () => {
-                    if (!confirm("Recommencer le programme à zéro ? Toutes les questions redeviennent à apprendre.")) return;
-                    progress = {};
-                    persistProgress();
-                    updateCounts();
-                    renderList();
-                } }, "Recommencer le programme")));
+
+            // Un paquet de flashcards à apprendre par quiz
+            content.append(h("h3", { class: "pile-title" }, "Mes paquets de flashcards à apprendre"));
+            content.append(h("div", { class: "grid" }, QUIZZES.map(quiz => {
+                const cards = programmeCards(quiz);
+                const n = quiz.questions.length;
+                const done = cards.length === 0;
+                const quizPct = n ? Math.round((n - cards.length) / n * 100) : 0;
+                const pile = h("button", { class: "card" + (done ? " done" : ""), onclick: () => startDeck({ titre: "À apprendre · " + quiz.titre, cartes: programmeCards(quiz) }, true) },
+                    h("div", { class: "emoji" }, quiz.emoji),
+                    h("h3", {}, quiz.titre),
+                    h("div", { class: "meta" }, done
+                        ? "✅ Tout su !"
+                        : `${cards.length} carte${cards.length > 1 ? "s" : ""} restante${cards.length > 1 ? "s" : ""} sur ${n}`),
+                    h("div", { class: "bar small" }, h("span", { style: `width:${quizPct}%` })),
+                    h("p", { class: "desc" }, `${n - cards.length} / ${n} questions sues`)
+                );
+                pile.disabled = done;
+                return pile;
+            })));
         }
 
         // ---------------- Flashcards ----------------
@@ -918,6 +922,14 @@
             const refresh = () => { updateCounts(); if (!inQuiz) renderList(); };
             google.script.run.withSuccessHandler(saved => { merge(QUIZZES, saved); refresh(); }).getQuizzes();
             google.script.run.withSuccessHandler(saved => { merge(FLASHCARDS, saved); refresh(); }).getDecks();
+            // Remise à zéro du programme décidée par l'administrateur : plus récente que celle de cet appareil => on repart de 0
+            google.script.run.withSuccessHandler(ts => {
+                if (ts > (progress._reset || 0)) {
+                    progress = { _reset: ts };
+                    persistProgress();
+                    refresh();
+                }
+            }).getProgrammeReset();
         }
     </script>
 </body>
