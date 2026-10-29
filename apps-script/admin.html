@@ -7,31 +7,93 @@
     <style>
         :root {
             --navy: #1e3a8a;
-            --blue: #3b82f6;
-            --gold: #f5c542;
-            --ink: #1f2937;
-            --muted: #6b7280;
-            --line: #e5e7eb;
-            --bg: #f3f4f8;
+            --blue: #3b6fe0;
+            --gold: #ffd166;
+            --pink: #ff8fb8;
+            --violet: #785aff;
+            --mint: #5dffb0;
+            --ink: #1f2a4d;
+            --muted: #6a7394;
+            --line: #e3e8f5;
+            --bg: #f4f6fb;
             --green: #16a34a;
             --red: #dc2626;
+            --sticker: 0 3px 0 rgba(15,23,80,.35);
+            --soft: 0 5px 0 rgba(15,23,80,.12), 0 12px 28px rgba(30,58,138,.10);
         }
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--bg); }
-        .banner {
-            background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%);
-            color: #fff; padding: 18px 24px; text-align: center; border-bottom: 4px solid var(--gold);
-        }
-        .banner h1 { margin: 0; font-size: clamp(1.5rem, 4vw, 2.1rem); font-weight: 800; letter-spacing: .04em; }
-        .banner h1 span { color: var(--gold); }
-        .banner p { margin: 4px 0 0; opacity: .9; }
+        body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); background: var(--bg); }
+        /* ===== BANNIÈRE (fournie) ===== */
+      .rv-banner {
+        position: relative; overflow: hidden; color: #fff; text-align: center;
+        padding: 26px 16px 0;
+        background:
+          radial-gradient(circle at 12% 20%, rgba(255,95,162,.55), transparent 38%),
+          radial-gradient(circle at 88% 10%, rgba(255,209,102,.40), transparent 34%),
+          radial-gradient(circle at 70% 100%, rgba(120,90,255,.55), transparent 45%),
+          linear-gradient(135deg, #1e3a8a 0%, #3b6fe0 100%);
+        border-bottom: 3px solid #ffd166;
+      }
+      .rv-banner::before { /* motif points façon cahier */
+        content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .18;
+        background-image: radial-gradient(#fff 1.2px, transparent 1.4px);
+        background-size: 22px 22px;
+      }
+      .rv-inner { position: relative; z-index: 2; max-width: 760px; margin: 0 auto; }
+
+      .rv-sticker {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.35);
+        backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+        padding: 5px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; letter-spacing: .3px;
+        transform: rotate(-2deg);
+      }
+      .rv-dot { width: 9px; height: 9px; border-radius: 50%; background: #5dffb0; box-shadow: 0 0 0 0 rgba(93,255,176,.7); animation: rv-pulse 1.8s infinite; }
+      @keyframes rv-pulse { 70% { box-shadow: 0 0 0 10px rgba(93,255,176,0); } 100% { box-shadow: 0 0 0 0 rgba(93,255,176,0); } }
+
+      .rv-title {
+        margin: 12px 0 4px; font-size: clamp(30px, 6vw, 48px); line-height: 1.05; font-weight: 900; letter-spacing: -1px;
+        text-shadow: 0 4px 0 rgba(15,23,80,.35);
+      }
+      .rv-title .rv-hl {
+        background: linear-gradient(90deg, #ffd166, #ff8fb8); -webkit-background-clip: text; background-clip: text;
+        -webkit-text-fill-color: transparent; text-shadow: none; filter: drop-shadow(0 3px 0 rgba(15,23,80,.35));
+      }
+      .rv-sub { min-height: 24px; margin: 0 0 14px; font-size: clamp(14px, 2.4vw, 17px); font-weight: 600; opacity: .95; transition: opacity .35s, transform .35s; }
+      .rv-sub.rv-out { opacity: 0; transform: translateY(6px); }
+
+      .rv-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px; }
+      .rv-chip {
+        background: #fff; color: #1e3a8a; font-weight: 800; font-size: 13px; padding: 6px 12px; border-radius: 12px;
+        box-shadow: 0 3px 0 rgba(15,23,80,.35); transition: transform .15s;
+      }
+      .rv-chip:nth-child(odd) { transform: rotate(-2deg); }
+      .rv-chip:nth-child(even) { transform: rotate(2deg); }
+      .rv-chip:hover { transform: rotate(0) translateY(-2px) scale(1.06); }
+
+      /* emojis flottants */
+      .rv-float { position: absolute; z-index: 1; font-size: 30px; opacity: .9; animation: rv-bob 5s ease-in-out infinite; user-select: none; }
+      .rv-f1 { left: 5%;  top: 22%; animation-delay: 0s; }
+      .rv-f2 { left: 14%; top: 62%; animation-delay: -1.2s; font-size: 24px; }
+      .rv-f3 { right: 6%; top: 18%; animation-delay: -2.4s; }
+      .rv-f4 { right: 15%; top: 58%; animation-delay: -3.3s; font-size: 24px; }
+      @keyframes rv-bob { 0%,100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-12px) rotate(8deg); } }
+
+      /* bandeau défilant */
+      .rv-ticker { position: relative; z-index: 2; margin: 0 -16px; background: #ffd166; color: #1e3a8a; overflow: hidden; white-space: nowrap; transform: rotate(-.6deg) scale(1.02); }
+      .rv-track { display: inline-block; padding: 7px 0; font-size: 12.5px; font-weight: 900; letter-spacing: 1.2px; animation: rv-scroll 28s linear infinite; }
+      @keyframes rv-scroll { to { transform: translateX(-50%); } }
+
+      @media (max-width: 560px) { .rv-float { display: none; } .rv-banner { padding-top: 18px; } }
+      @media (prefers-reduced-motion: reduce) { .rv-float, .rv-track, .rv-dot { animation: none; } }
+
         main { max-width: 820px; margin: 0 auto; padding: 24px 16px 60px; display: grid; gap: 20px; }
-        section { background: #fff; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.06); padding: 22px; }
-        h2 { margin: 0 0 14px; font-size: 1.2rem; }
-        label { display: block; font-weight: 600; font-size: .9rem; margin: 12px 0 4px; }
+        section { background: #fff; border-radius: 18px; box-shadow: var(--soft); padding: 22px; }
+        h2 { margin: 0 0 14px; font-size: 1.25rem; font-weight: 900; letter-spacing: -.3px; color: var(--navy); }
+        label { display: block; font-weight: 700; font-size: .9rem; margin: 12px 0 4px; }
         input[type=text], input[type=password], textarea, select {
-            width: 100%; padding: 10px 12px; border: 2px solid var(--line); border-radius: 10px;
-            font: inherit; background: #f9fafb;
+            width: 100%; padding: 10px 12px; border: 2px solid var(--line); border-radius: 12px;
+            font: inherit; background: #f9faff;
         }
         input:focus, textarea:focus, select:focus { outline: none; border-color: var(--blue); background: #fff; }
         textarea { resize: vertical; min-height: 60px; }
@@ -39,7 +101,7 @@
         .hint { font-size: .8rem; color: var(--muted); margin: 4px 0 0; }
 
         .question {
-            border: 2px solid var(--line); border-radius: 12px; padding: 14px; margin-top: 14px; background: #fcfcfd;
+            border: 2px solid var(--line); border-radius: 14px; padding: 14px; margin-top: 14px; background: #fafbff;
         }
         .question-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 700; margin-bottom: 6px; }
         .question-head select { width: auto; padding: 6px 10px; font-weight: 600; }
@@ -47,19 +109,24 @@
         .opt input[type=radio] { width: 20px; height: 20px; accent-color: var(--green); flex-shrink: 0; }
 
         .btn {
-            border: 0; border-radius: 999px; padding: 10px 22px; font: inherit; font-weight: 700;
+            border: 0; border-radius: 999px; padding: 10px 22px; font: inherit; font-weight: 800;
             cursor: pointer; background: var(--blue); color: #fff;
+            box-shadow: var(--sticker); transition: transform .12s, box-shadow .12s, background .15s;
         }
-        .btn:hover:not(:disabled) { background: #2563eb; }
-        .btn:disabled { opacity: .6; cursor: default; }
-        .btn.secondary { background: #fff; color: var(--blue); border: 2px solid var(--blue); }
-        .btn.danger { background: #fff; color: var(--red); border: 2px solid var(--red); padding: 6px 14px; }
+        .btn:hover:not(:disabled) { background: #2f5fd0; transform: translateY(-2px); }
+        .btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgba(15,23,80,.35); }
+        .btn:disabled { opacity: .6; cursor: default; box-shadow: none; }
+        .btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+        .btn.secondary { background: #fff; color: var(--navy); }
+        .btn.secondary:hover:not(:disabled) { background: #fff9e8; }
+        .btn.danger { background: #fff; color: var(--red); box-shadow: 0 3px 0 rgba(220,38,38,.4); padding: 6px 14px; }
+        .btn.danger:hover:not(:disabled) { background: #fff0f0; }
         .btn.small { padding: 6px 14px; }
         .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
-        .status { margin-top: 14px; padding: 10px 14px; border-radius: 10px; font-weight: 600; display: none; }
-        .status.ok { display: block; background: #dcfce7; color: #166534; }
-        .status.err { display: block; background: #fee2e2; color: #991b1b; }
-        .status.info { display: block; background: #e0e7ff; color: #3730a3; }
+        .status { margin-top: 14px; padding: 10px 14px; border-radius: 12px; font-weight: 700; display: none; }
+        .status.ok { display: block; background: #d9fff0; color: #07402a; }
+        .status.err { display: block; background: #ffe3ee; color: #5a0a2a; }
+        .status.info { display: block; background: #eceaff; color: #3a2a9a; }
 
         .item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
         .item:first-child { border-top: 0; }
@@ -68,6 +135,7 @@
         .item .info span { font-size: .85rem; color: var(--muted); }
         .empty { color: var(--muted); }
 
+        @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
         @media (max-width: 600px) {
             .row { grid-template-columns: 1fr; }
             .item { flex-wrap: wrap; }
@@ -76,9 +144,30 @@
 </head>
 <body>
 
-    <header class="banner">
-        <h1>⚙️ <span>Révision</span> · Administration</h1>
-        <p>Ajoute, modifie ou supprime des quiz et des flashcards</p>
+    <header class="rv-banner">
+      <span aria-hidden="true" class="rv-float rv-f1">📚</span>
+      <span aria-hidden="true" class="rv-float rv-f2">⚡</span>
+      <span aria-hidden="true" class="rv-float rv-f3">🧠</span>
+      <span aria-hidden="true" class="rv-float rv-f4">🎯</span>
+    
+      <div class="rv-inner">
+        <span class="rv-sticker"><span class="rv-dot"></span> Espace administrateur</span>
+        <h1 class="rv-title">Espace <span class="rv-hl">admin</span> ⚙️</h1>
+        <p class="rv-sub" id="rvSub">Ajoute, modifie ou supprime des quiz et des flashcards</p>
+        <div class="rv-chips">
+          <span class="rv-chip">🧠 Quiz</span>
+          <span class="rv-chip">🃏 Flashcards</span>
+          <span class="rv-chip">📅 Programme</span>
+          <span class="rv-chip">🔒 Réservé à l'admin</span>
+        </div>
+      </div>
+    
+      <div class="rv-ticker" aria-hidden="true">
+        <div class="rv-track">
+          ADMIN • QUIZ • FLASHCARDS • PROGRAMME • 3 RÉUSSITES D'AFFILÉE = QUESTION SUE • ADMIN • QUIZ • FLASHCARDS • PROGRAMME • 3 RÉUSSITES D'AFFILÉE = QUESTION SUE •&nbsp;
+          ADMIN • QUIZ • FLASHCARDS • PROGRAMME • 3 RÉUSSITES D'AFFILÉE = QUESTION SUE • ADMIN • QUIZ • FLASHCARDS • PROGRAMME • 3 RÉUSSITES D'AFFILÉE = QUESTION SUE •&nbsp;
+        </div>
+      </div>
     </header>
 
     <main>
@@ -179,6 +268,23 @@
             <div class="status" id="programme-status" role="status"></div>
         </section>
     </main>
+
+    <script>
+(function () {
+  // Phrases qui tournent sous le titre
+  var phrases = [
+    "Ajoute, modifie ou supprime des quiz et des flashcards",
+    "Une question courte et claire vaut mieux qu'une longue ✍️",
+    "Pense à ajouter une explication : elle aide à retenir 💡",
+    "Le programme de révision se remet à zéro depuis cette page 📅"
+  ];
+  var el = document.getElementById("rvSub"), i = 0;
+  if (el) setInterval(function () {
+    el.classList.add("rv-out");
+    setTimeout(function () { i = (i + 1) % phrases.length; el.textContent = phrases[i]; el.classList.remove("rv-out"); }, 350);
+  }, 4500);
+})();
+    </script>
 
     <script>
         const OPTION_LETTERS = ["A", "B", "C", "D"];
