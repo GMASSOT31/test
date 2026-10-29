@@ -165,6 +165,37 @@
         .btn.secondary { background: #fff; color: var(--blue); border: 2px solid var(--blue); }
         .btn.secondary:hover { background: #eff6ff; }
 
+        /* Questions à réponse écrite */
+        .saisie {
+            width: 100%; padding: 14px 16px; font: inherit; font-size: 1.15rem;
+            border: 3px solid var(--line); border-radius: 14px; background: #fff;
+        }
+        .saisie:focus { outline: none; border-color: var(--blue); }
+        .saisie.input-correct { border-color: var(--green); background: #f0fdf4; color: #166534; }
+        .saisie.input-wrong { border-color: var(--red); background: #fef2f2; color: #991b1b; }
+        .feedback { min-height: 28px; margin: 12px 0; font-weight: 700; }
+        .feedback.ok { color: #16a34a; }
+        .feedback.ko { color: #dc2626; }
+        .saisie-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 18px; }
+        .saisie-actions .btn { margin: 0; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+        .shake { animation: shake .4s ease-in-out; }
+
+        /* Flashcards */
+        .flashcard {
+            width: 100%; min-height: 240px; padding: 24px; cursor: pointer; font: inherit;
+            border: 2px solid var(--line); border-radius: 18px; background: #fff;
+            box-shadow: 0 4px 14px rgba(0,0,0,.08);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px;
+        }
+        .flashcard.flipped { background: #eff6ff; border-color: var(--blue); }
+        .face-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+        .face-text { font-size: 1.5rem; font-weight: 700; text-align: center; line-height: 1.35; color: var(--ink); }
+        .deck-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 16px; }
+        .deck-nav .btn { margin: 0; }
+        .btn:disabled { opacity: .5; cursor: default; }
+        .hint-small { text-align: center; color: var(--muted); font-size: .85rem; margin: 12px 0 0; }
+
         /* Mobile : les onglets passent en barre horizontale */
         @media (max-width: 700px) {
             .layout { flex-direction: column; }
@@ -444,10 +475,29 @@
                         explication: "En 1054, les désaccords religieux entraînent le Schisme, la séparation définitive entre Église catholique (Occident) et orthodoxe (Orient)."
                     }
                 ]
+            },
+            {
+                id: "zootopia",
+                emoji: "🦊",
+                matiere: "Anglais",
+                titre: "Zootopia : les quartiers",
+                description: "Vocabulaire anglais des quartiers de Zootopie. Les réponses s'écrivent au clavier.",
+                questions: [
+                    { question: "Le quartier du désert, chaud et sec ?", reponses: ["sahara square"] },
+                    { question: "Le quartier glacé et enneigé ?", reponses: ["tundratown"] },
+                    { question: "Le centre-ville animé avec les gratte-ciels ?", reponses: ["downtown"] },
+                    { question: "La forêt tropicale très humide ?", reponses: ["rainforest district"] },
+                    { question: "Comment dit-on « des gratte-ciels » ?", reponses: ["skyscrapers", "skyscraper"] },
+                    { question: "Comment dit-on « des dunes de sable » ?", reponses: ["sand dunes", "sand dune"] },
+                    { question: "Comment dit-on « une cascade » ?", reponses: ["waterfall"] },
+                    { question: "L'accentuation : quelle est LA syllabe accentuée dans GIRAFFE ? (Tape juste la syllabe)", reponses: ["raffe"] },
+                    { question: "L'accentuation : quelle est LA syllabe accentuée dans ELEPHANT ? (Tape juste la syllabe)", reponses: ["el"] },
+                    { question: "Traduis : « humide »", reponses: ["humid", "wet"] }
+                ]
             }
         ];
 
-        // Pas encore de flashcards : l'onglet affichera un message vide.
+        // Pas de flashcards intégrées : les paquets viennent de la page d'administration.
         const FLASHCARDS = [];
 
         // ================================================================
@@ -455,7 +505,7 @@
         // ================================================================
         const content = document.getElementById("content");
         let activeTab = "quiz";
-        let inQuiz = false; // vrai pendant qu'un quiz est en cours (évite de le remplacer par la liste)
+        let inQuiz = false; // vrai pendant qu'un quiz ou un paquet est ouvert (évite de le remplacer par la liste)
 
         // Petit utilitaire pour créer des éléments sans innerHTML
         function h(tag, props, ...children) {
@@ -467,6 +517,30 @@
             });
             children.flat().forEach(c => { if (c != null) el.append(c); });
             return el;
+        }
+
+        // Mélange de Fisher-Yates sur une copie
+        function shuffle(list) {
+            const a = list.slice();
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        // Compare sans tenir compte de la casse, des accents, de la ponctuation et des espaces en trop
+        function norm(text) {
+            return text.toLowerCase()
+                .normalize("NFD").replace(/[̀-ͯ]/g, "")
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+                .trim()
+                .replace(/\s{2,}/g, " ");
+        }
+
+        function updateCounts() {
+            document.getElementById("count-quiz").textContent = QUIZZES.length;
+            document.getElementById("count-flashcards").textContent = FLASHCARDS.length;
         }
 
         function setTab(tab) {
@@ -495,61 +569,141 @@
                 )));
             } else {
                 content.append(h("h2", {}, "Flashcards"));
-                content.append(h("div", { class: "empty" }, "Aucune flashcard pour le moment. Elles apparaîtront ici."));
+                if (FLASHCARDS.length === 0) {
+                    content.append(h("div", { class: "empty" }, "Aucune flashcard pour le moment. Elles apparaîtront ici."));
+                    return;
+                }
+                content.append(h("div", { class: "grid" }, FLASHCARDS.map(d =>
+                    h("button", { class: "card", onclick: () => startDeck(d) },
+                        h("div", { class: "emoji" }, d.emoji),
+                        h("h3", {}, d.titre),
+                        h("div", { class: "meta" }, `${d.matiere} · ${d.cartes.length} cartes`),
+                        h("p", { class: "desc" }, d.description)
+                    )
+                )));
             }
         }
 
+        // ---------------- Quiz ----------------
         function startQuiz(quiz) {
             inQuiz = true;
             let index = 0;
             let score = 0;
+            const total = quiz.questions.length;
 
             const back = () => h("button", { class: "back", onclick: renderList }, "← Retour à la liste");
 
             function showQuestion() {
                 const q = quiz.questions[index];
-                let answered = false;
-                const next = h("button", { class: "btn", style: "display:none", onclick: () => {
-                    index++;
-                    index < quiz.questions.length ? showQuestion() : showResult();
-                } }, index + 1 < quiz.questions.length ? "Question suivante ➔" : "Voir le résultat ➔");
                 const scoreEl = h("span", { class: "score" }, `Score : ${score}`);
                 const explication = q.explication
                     ? h("div", { class: "explication", style: "display:none" }, q.explication)
                     : null;
-                const buttons = q.options.map((opt, i) =>
-                    h("button", { class: "option", onclick: () => {
-                        if (answered) return;
-                        answered = true;
-                        if (i === q.correct) {
-                            score++;
-                            scoreEl.textContent = `Score : ${score}`;
-                            buttons[i].classList.add("correct");
-                        } else {
-                            buttons[i].classList.add("incorrect");
-                            buttons[q.correct].classList.add("correct");
-                        }
-                        buttons.forEach((b, j) => {
-                            b.disabled = true;
-                            if (j !== i && j !== q.correct) b.classList.add("dim");
-                        });
-                        if (explication) explication.style.display = "block";
-                        next.style.display = "block";
-                    } }, opt));
+                const next = h("button", { class: "btn", style: "display:none", onclick: () => {
+                    index++;
+                    index < total ? showQuestion() : showResult();
+                } }, index + 1 < total ? "Question suivante ➔" : "Voir le résultat ➔");
+                // Appelé quand la question est terminée : montre l'explication et le bouton suivant
+                const reveal = () => {
+                    if (explication) explication.style.display = "block";
+                    next.style.display = "block";
+                    next.focus();
+                };
+                const addPoint = () => { score++; scoreEl.textContent = `Score : ${score}`; };
+                const body = Array.isArray(q.reponses)
+                    ? typedBody(q, addPoint, reveal)
+                    : choiceBody(q, addPoint, reveal);
 
                 content.replaceChildren(h("div", { class: "panel" },
                     back(),
                     h("div", { class: "progress" },
-                        h("span", {}, `Question ${index + 1} / ${quiz.questions.length}`), scoreEl),
+                        h("span", {}, `Question ${index + 1} / ${total}`), scoreEl),
                     h("h3", { class: "question" }, q.question),
-                    h("div", { class: "options" }, buttons),
+                    body,
                     explication,
                     next
                 ));
             }
 
+            // Question à choix : l'ordre des réponses est mélangé à chaque affichage
+            function choiceBody(q, addPoint, reveal) {
+                let answered = false;
+                const order = shuffle(q.options.map((text, i) => ({ text, ok: i === q.correct })));
+                const buttons = order.map((o, i) =>
+                    h("button", { class: "option", onclick: () => {
+                        if (answered) return;
+                        answered = true;
+                        const good = buttons[order.findIndex(x => x.ok)];
+                        if (o.ok) {
+                            addPoint();
+                            buttons[i].classList.add("correct");
+                        } else {
+                            buttons[i].classList.add("incorrect");
+                            good.classList.add("correct");
+                        }
+                        buttons.forEach(b => {
+                            b.disabled = true;
+                            if (b !== buttons[i] && b !== good) b.classList.add("dim");
+                        });
+                        reveal();
+                    } }, o.text));
+                return h("div", { class: "options" }, buttons);
+            }
+
+            // Question à réponse écrite : on réessaie jusqu'à trouver ; le point n'est donné qu'au premier essai.
+            // Après 3 erreurs, un bouton permet de voir la réponse (sans point).
+            function typedBody(q, addPoint, reveal) {
+                let tries = 0;
+                let done = false;
+                const input = h("input", { type: "text", class: "saisie", placeholder: "Écris ta réponse…",
+                    autocomplete: "off", autocapitalize: "off", spellcheck: "false", "aria-label": "Ta réponse" });
+                const feedback = h("div", { class: "feedback", role: "status" });
+                const check = h("button", { class: "btn", onclick: validate }, "Valider ✔️");
+                const showAnswer = h("button", { class: "btn secondary", style: "display:none", onclick: giveUp }, "Voir la réponse");
+
+                function finish(ok, text) {
+                    done = true;
+                    input.disabled = true;
+                    check.style.display = "none";
+                    showAnswer.style.display = "none";
+                    feedback.className = "feedback " + (ok ? "ok" : "ko");
+                    feedback.textContent = text;
+                    reveal();
+                }
+                function validate() {
+                    if (done) return;
+                    const value = norm(input.value);
+                    if (!value) return;
+                    if (q.reponses.some(r => norm(r) === value)) {
+                        input.classList.remove("input-wrong", "shake");
+                        input.classList.add("input-correct");
+                        if (tries === 0) addPoint();
+                        finish(true, tries === 0
+                            ? "🎉 Bravo ! Bonne réponse !"
+                            : "✅ Bonne réponse, mais sans point : il t'a fallu plusieurs essais.");
+                    } else {
+                        tries++;
+                        input.classList.remove("shake");
+                        void input.offsetWidth; // relance l'animation
+                        input.classList.add("input-wrong", "shake");
+                        feedback.className = "feedback ko";
+                        feedback.textContent = "❌ Oups, essaie encore !";
+                        if (tries >= 3) showAnswer.style.display = "inline-block";
+                        input.select();
+                    }
+                }
+                function giveUp() {
+                    input.classList.add("input-wrong");
+                    finish(false, "La réponse était : " + q.reponses[0]);
+                }
+                input.addEventListener("keydown", e => {
+                    if (e.key === "Enter") { e.preventDefault(); validate(); }
+                });
+                setTimeout(() => input.focus(), 0);
+                return h("div", {}, input, feedback, h("div", { class: "saisie-actions" }, check, showAnswer));
+            }
+
             function showResult() {
-                const total = quiz.questions.length;
                 let emoji, msg;
                 if (score === total) {
                     emoji = "👑"; msg = "Impérial ! Tu connais ce cours sur le bout des doigts !";
@@ -576,27 +730,59 @@
             showQuestion();
         }
 
+        // ---------------- Flashcards ----------------
+        function startDeck(deck) {
+            inQuiz = true;
+            let cards = deck.cartes.slice();
+            let index = 0;
+            let flipped = false;
+
+            const card = h("button", { class: "flashcard", "aria-label": "Retourner la carte", onclick: () => { flipped = !flipped; draw(); } });
+            const counter = h("span", {});
+            const prev = h("button", { class: "btn secondary", onclick: () => go(-1) }, "← Précédente");
+            const next = h("button", { class: "btn", onclick: () => go(1) }, "Suivante →");
+            const mix = h("button", { class: "btn secondary", onclick: () => { cards = shuffle(cards); index = 0; flipped = false; draw(); } }, "🔀 Mélanger");
+
+            function go(delta) { index += delta; flipped = false; draw(); }
+
+            function draw() {
+                const c = cards[index];
+                card.classList.toggle("flipped", flipped);
+                card.replaceChildren(
+                    h("div", { class: "face-label" }, flipped ? "Réponse" : "Question"),
+                    h("div", { class: "face-text" }, flipped ? c.verso : c.recto));
+                counter.textContent = `Carte ${index + 1} / ${cards.length}`;
+                prev.disabled = index === 0;
+                next.disabled = index === cards.length - 1;
+            }
+
+            content.replaceChildren(h("div", { class: "panel" },
+                h("button", { class: "back", onclick: renderList }, "← Retour à la liste"),
+                h("div", { class: "progress" }, h("span", {}, deck.titre), counter),
+                card,
+                h("div", { class: "deck-nav" }, prev, mix, next),
+                h("p", { class: "hint-small" }, "Clique sur la carte pour la retourner.")
+            ));
+            draw();
+        }
+
         // Compteurs dans les onglets + événements
-        document.getElementById("count-quiz").textContent = QUIZZES.length;
-        document.getElementById("count-flashcards").textContent = FLASHCARDS.length;
+        updateCounts();
         document.querySelectorAll(".tab").forEach(b =>
             b.addEventListener("click", () => setTab(b.dataset.tab)));
 
         setTab("quiz");
 
-        // Quiz ajoutés depuis la page d'administration (uniquement une fois déployé dans Apps Script).
-        // Les quiz ci-dessus restent affichés si le serveur ne répond pas.
+        // Quiz et paquets ajoutés depuis la page d'administration (uniquement une fois déployé dans Apps Script).
+        // Ce qui est écrit ci-dessus reste affiché si le serveur ne répond pas.
         if (window.google && google.script && google.script.run) {
-            google.script.run
-                .withSuccessHandler(saved => {
-                    saved.forEach(q => {
-                        const i = QUIZZES.findIndex(x => x.id === q.id);
-                        if (i >= 0) QUIZZES[i] = q; else QUIZZES.push(q);
-                    });
-                    document.getElementById("count-quiz").textContent = QUIZZES.length;
-                    if (activeTab === "quiz" && !inQuiz) renderList();
-                })
-                .getQuizzes();
+            const merge = (target, saved) => saved.forEach(item => {
+                const i = target.findIndex(x => x.id === item.id);
+                if (i >= 0) target[i] = item; else target.push(item);
+            });
+            const refresh = () => { updateCounts(); if (!inQuiz) renderList(); };
+            google.script.run.withSuccessHandler(saved => { merge(QUIZZES, saved); refresh(); }).getQuizzes();
+            google.script.run.withSuccessHandler(saved => { merge(FLASHCARDS, saved); refresh(); }).getDecks();
         }
     </script>
 </body>
