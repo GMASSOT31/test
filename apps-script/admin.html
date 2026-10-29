@@ -224,6 +224,13 @@
         .prog-detail .detail-actions { margin-top: 8px; }
         .badges { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
         .fois-admin { font-size: .8rem; font-weight: 800; padding: 2px 10px; border-radius: 999px; background: var(--gold); color: var(--navy); }
+        .q-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0 4px; }
+        .q-tools input { flex: 1; min-width: 200px; width: auto; }
+        .q-count { font-size: .85rem; color: var(--muted); font-weight: 700; }
+        .question[hidden] { display: none; }
+        .question.collapsed > :not(.question-head):not(.q-text) { display: none !important; }
+        .q-toggle { padding: 4px 10px; }
+        .badge-modifie { font-size: .75rem; font-weight: 800; padding: 2px 9px; border-radius: 999px; background: #fff6dc; color: #8a6100; margin-left: 8px; }
     </style>
 </head>
 <body>
@@ -338,14 +345,18 @@
                     </div>
                 </div>
 
-                <div class="row2">
+                <div class="row3">
                     <div>
-                        <label for="lien-texte">Lien utile pendant le quiz (facultatif) : texte du bouton</label>
+                        <label for="lien-texte">Lien utile (facultatif) : texte du bouton</label>
                         <input type="text" id="lien-texte" maxlength="60" placeholder="Ex : Écouter les extraits sonores">
                     </div>
                     <div>
                         <label for="lien-url">Adresse du lien</label>
                         <input type="text" id="lien-url" maxlength="300" placeholder="https://…">
+                    </div>
+                    <div>
+                        <label for="lien-icone">Icône du bouton</label>
+                        <input type="text" id="lien-icone" maxlength="8" placeholder="🔗">
                     </div>
                 </div>
 
@@ -353,8 +364,17 @@
                 <div class="pour" id="quiz-pour"></div>
                 <p class="hint">Seuls les élèves cochés verront ce quiz. Sans destinataire, il reste caché.</p>
 
+                <p class="hint" id="builtin-note" hidden>✏️ Tu modifies un <strong>quiz intégré</strong> : l'original est conservé et peut être rétabli à tout moment depuis « Liste des quiz ».</p>
+
                 <h2 style="margin-top:22px">Questions</h2>
+                <p class="hint">Tu peux corriger une question à tout moment, même après l'avoir enregistrée : <strong>la progression des élèves sur cette question est conservée</strong>, même si tu changes l'énoncé ou la réponse. Pour que les élèves repartent de zéro, utilise « Programmes de révision ».</p>
                 <p class="hint">Choix : remplis au moins 2 réponses et coche la bonne (les réponses sont mélangées à chaque partie, tu peux donc mettre la bonne où tu veux). Réponse écrite : l'élève tape sa réponse au clavier. Plusieurs champs : un champ par blanc à remplir.</p>
+                <div class="q-tools" id="q-tools">
+                    <input type="search" id="q-search" placeholder="🔎 Retrouver une question (énoncé ou réponse)…" aria-label="Rechercher une question">
+                    <span class="q-count" id="q-count" role="status"></span>
+                    <button class="btn secondary small" id="q-collapse" type="button">Tout replier</button>
+                    <button class="btn secondary small" id="q-expand" type="button">Tout déplier</button>
+                </div>
                 <div id="questions"></div>
 
                 <div class="actions">
@@ -470,6 +490,7 @@
         let editingStudentId = null;
         let editingQuizId = null;   // id du quiz en cours de modification, null = nouveau
         let editingDeckId = null;
+        let editingBuiltinId = null;   // id du quiz intégré en cours de modification, null sinon
         let questionCount = 0;      // sert uniquement à donner un name unique aux boutons radio
         let progFilter = "all";     // « all », « c:<classe> » ou « s:<idÉlève> »
         let firstUnlock = true;
@@ -743,7 +764,13 @@
             };
             type.addEventListener("change", sync);
 
-            block.append(h("div", { class: "question-head" }, title, type, remove), text, choiceArea, typedArea, fieldsArea,
+            // L'identifiant d'une question existante est conservé : sa progression aussi, même si l'énoncé change.
+            if (data && data.id) block.dataset.qid = data.id;
+            const toggle = h("button", { class: "btn secondary q-toggle", type: "button", "aria-label": "Replier ou déplier la question", onclick: () => {
+                block.classList.toggle("collapsed");
+                toggle.textContent = block.classList.contains("collapsed") ? "▸" : "▾";
+            } }, "▾");
+            block.append(h("div", { class: "question-head" }, toggle, title, type, remove), text, choiceArea, typedArea, fieldsArea,
                 h("label", {}, "Explication"), explication);
             sync();
             qList.append(block);
@@ -778,6 +805,7 @@
                 const question = blk.querySelector(".q-text").value.trim();
                 if (!question) throw new Error(label + "l'énoncé est vide.");
                 const out = { question };
+                if (blk.dataset.qid) out.id = blk.dataset.qid;
 
                 const kind = blk.querySelector(".q-type").value;
                 if (kind === "fields") {
@@ -831,17 +859,23 @@
             if (lienUrl) {
                 if (!/^https?:\/\/\S+$/i.test(lienUrl)) throw new Error("L'adresse du lien doit commencer par http:// ou https://.");
                 quiz.lien = { texte: $("lien-texte").value.trim() || "Ouvrir le lien", url: lienUrl };
+                const icone = $("lien-icone").value.trim();
+                if (icone) quiz.lien.icone = icone;
             }
             if (editingQuizId) quiz.id = editingQuizId;
             return quiz;
         }
         function resetQuizForm() {
             editingQuizId = null;
+            editingBuiltinId = null;
+            $("builtin-note").hidden = true;
+            $("q-search").value = "";
             $("quiz-form-title").textContent = "➕ Nouveau quiz";
-            ["titre", "matiere", "emoji", "description", "lien-texte", "lien-url"].forEach(id => $(id).value = "");
+            ["titre", "matiere", "emoji", "description", "lien-texte", "lien-url", "lien-icone"].forEach(id => $(id).value = "");
             pourBoxes($("quiz-pour"), []);
             qList.replaceChildren();
             addQuestion();
+            filterQuestions();
         }
         function loadQuiz(quiz) {
             editingQuizId = quiz.id;
@@ -852,9 +886,14 @@
             $("description").value = quiz.description || "";
             $("lien-texte").value = quiz.lien ? quiz.lien.texte : "";
             $("lien-url").value = quiz.lien ? quiz.lien.url : "";
+            $("lien-icone").value = quiz.lien && quiz.lien.icone ? quiz.lien.icone : "";
+            editingBuiltinId = null;
+            $("builtin-note").hidden = true;
+            $("q-search").value = "";
             pourBoxes($("quiz-pour"), quiz.pour || []);
             qList.replaceChildren();
             quiz.questions.forEach(addQuestion);
+            filterQuestions();
             $("quiz-status").className = "status";
             go("quiz-ajout");
         }
@@ -937,6 +976,27 @@
             }
         }
 
+        // Retrouver une question dans un long quiz : on ne garde affichées que celles qui contiennent le texte cherché
+        function filterQuestions() {
+            const needle = $("q-search").value.trim().toLowerCase();
+            const blocks = [...qList.children];
+            let shown = 0;
+            blocks.forEach(blk => {
+                const text = (blk.querySelector(".q-text").value + " " + [...blk.querySelectorAll("input[type=text]")].map(i => i.value).join(" ")).toLowerCase();
+                const match = !needle || text.includes(needle);
+                blk.hidden = !match;
+                if (match) shown++;
+            });
+            $("q-count").textContent = needle ? shown + " sur " + blocks.length + " affichée" + (shown > 1 ? "s" : "") : blocks.length + " question" + (blocks.length > 1 ? "s" : "");
+        }
+        function setCollapsed(collapsed) {
+            [...qList.children].forEach(blk => {
+                blk.classList.toggle("collapsed", collapsed);
+                const t = blk.querySelector(".q-toggle");
+                if (t) t.textContent = collapsed ? "▸" : "▾";
+            });
+        }
+
         // Enregistrement commun : collect() lit le formulaire, puis on appelle le serveur
         async function saveItem(kind) {
             const isQuiz = kind === "quiz";
@@ -947,8 +1007,12 @@
             btn.disabled = true;
             showStatus(status, "info", "Enregistrement…");
             try {
-                await server(isQuiz ? "saveQuiz" : "saveDeck", pw(), payload);
-                const msg = payload.pour.length
+                const builtinId = isQuiz ? editingBuiltinId : null;
+                if (builtinId) await server("saveBuiltin", pw(), builtinId, payload);
+                else await server(isQuiz ? "saveQuiz" : "saveDeck", pw(), payload);
+                const msg = builtinId
+                    ? "Quiz intégré modifié (l'original peut être rétabli). La progression des élèves est conservée."
+                    : payload.pour.length
                     ? "Enregistré. Il apparaît chez les élèves choisis."
                     : "Enregistré, mais sans destinataire : il reste caché. Coche au moins un élève pour le montrer.";
                 if (isQuiz) {
@@ -983,13 +1047,40 @@
                         await reload();
                     } catch (e) { status.textContent = e.message; }
                 } }, "Enregistrer l'accès");
+                const edit = h("button", { class: "btn secondary small", type: "button", onclick: () => editBuiltin(q) }, "✏️ Modifier");
+                const restore = q.modifie ? h("button", { class: "btn danger", type: "button", onclick: () => restoreBuiltin(q) }, "Rétablir l'original") : null;
                 return h("div", { class: "builtin", "data-id": q.id },
                     h("div", { class: "info" },
-                        h("strong", {}, (q.emoji || "📘") + " " + q.titre),
+                        h("strong", {}, (q.emoji || "📘") + " " + q.titre, q.modifie ? h("span", { class: "badge-modifie" }, "✏️ modifié") : null),
                         h("span", {}, q.matiere + " · " + q.questions + " questions"),
                         h("span", { class: (q.pour || []).length ? "" : "warn" }, pourText(q.pour))),
-                    boxes, h("div", { class: "actions", style: "margin-top:8px" }, save, status));
+                    boxes, h("div", { class: "actions", style: "margin-top:8px" }, save, edit, restore, status));
             }));
+        }
+        // Charge la version en vigueur d'un quiz intégré dans le formulaire (l'original reste intact côté serveur)
+        async function editBuiltin(q) {
+            const status = $("quizlist-status");
+            try {
+                const res = await server("getBuiltinForEdit", pw(), q.id);
+                loadQuiz({ ...res.quiz, pour: res.pour });
+                editingQuizId = null;
+                editingBuiltinId = q.id;
+                $("quiz-form-title").textContent = "✏️ Modifier le quiz intégré : " + res.quiz.titre;
+                $("builtin-note").hidden = false;
+            } catch (e) {
+                showStatus(status, "err", e.message);
+            }
+        }
+        async function restoreBuiltin(q) {
+            if (!confirm("Rétablir la version d'origine de « " + q.titre + " » ? Tes modifications seront perdues (la progression des élèves est conservée).")) return;
+            const status = $("quizlist-status");
+            try {
+                await server("restoreBuiltin", pw(), q.id);
+                await reload();
+                showStatus(status, "ok", "Version d'origine rétablie : « " + q.titre + " ».");
+            } catch (e) {
+                showStatus(status, "err", e.message);
+            }
         }
 
         // ================= PROGRAMMES DE RÉVISION =================
@@ -1084,7 +1175,10 @@
         $("password").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); unlock(); } });
         $("save-student").addEventListener("click", saveStudent);
         $("reset-student-form").addEventListener("click", () => { resetStudentForm(); $("student-status").className = "status"; });
-        $("add-question").addEventListener("click", () => addQuestion());
+        $("add-question").addEventListener("click", () => { addQuestion(); filterQuestions(); });
+        $("q-search").addEventListener("input", filterQuestions);
+        $("q-collapse").addEventListener("click", () => setCollapsed(true));
+        $("q-expand").addEventListener("click", () => setCollapsed(false));
         $("reset-quiz").addEventListener("click", () => { resetQuizForm(); $("quiz-status").className = "status"; });
         $("save-quiz").addEventListener("click", () => saveItem("quiz"));
         $("reset-deck").addEventListener("click", () => { resetDeckForm(); $("deck-status").className = "status"; });
