@@ -444,17 +444,19 @@
         let doneCounts = {}; // quiz.id -> nombre de parties terminées par cet élève (cumulé)
         let session = null;  // identifiants de l'élève connecté (en mémoire), pour enregistrer ses résultats
 
-        // Empreinte courte d'un énoncé (FNV-1a 32 bits) : même calcul que le serveur (qhash_ dans Code.gs)
+        // Identifiant stable d'une question (la progression s'y rattache : corriger l'énoncé ne la fait pas perdre).
+        // Sans identifiant, c'est l'empreinte de l'énoncé : même calcul que le serveur (qhash_ dans Code.gs).
         function qhash(text) {
             let h = 0x811c9dc5;
             for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193); }
             return ("0000000" + (h >>> 0).toString(16)).slice(-8);
         }
+        function qid(q) { return q.id || qhash(q.question); }
         // Charge la progression renvoyée par le serveur : { quizId: { empreinte: [réussites d'affilée, erreurs] } }
         function loadProgress(fromServer) {
             progress = {};
             QUIZZES.forEach(quiz => quiz.questions.forEach(q => {
-                const r = ((fromServer || {})[quiz.id] || {})[qhash(q.question)];
+                const r = ((fromServer || {})[quiz.id] || {})[qid(q)];
                 if (r) progress[keyOf(quiz, q)] = { ok: r[0], fails: r[1] };
             }));
         }
@@ -482,14 +484,14 @@
             if (q.champs) return q.champs.map(c => (c.label ? c.label + " : " : "") + c.reponses[0]).join(" · ");
             return Array.isArray(q.reponses) ? q.reponses[0] : q.options[q.correct];
         }
-        function keyOf(quiz, q) { return quiz.id + "|" + q.question; }
+        function keyOf(quiz, q) { return quiz.id + "|" + qid(q); }
         function progressOf(quiz, q) { return progress[keyOf(quiz, q)] || { ok: 0, fails: 0 }; }
         // Enregistre le résultat d'une question et renvoie le nombre de réussites d'affilée
         function recordResult(quiz, q, success) {
             const cur = progressOf(quiz, q);
             const ok = success ? Math.min(MASTERY, cur.ok + 1) : 0;
             progress[keyOf(quiz, q)] = { ok, fails: cur.fails + (success ? 0 : 1) };
-            sendResult(quiz.id, qhash(q.question), success);
+            sendResult(quiz.id, qid(q), success);
             updateCounts();
             return ok;
         }

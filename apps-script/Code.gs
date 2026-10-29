@@ -24,7 +24,9 @@ function doGet(e) {
 //   student_<id>  un compte élève (classe, pseudo, PIN haché)
 //   quiz_<id>     un quiz créé depuis l'administration
 //   deck_<id>     un paquet de flashcards créé depuis l'administration
+//   override_<id>  version modifiée d'un quiz intégré (voir Contenu.gs) ; l'original n'est jamais modifié
 //   builtin_assign  à qui est donné chaque quiz intégré (voir Contenu.gs)
+// Un élément trop gros pour une propriété (9 Ko) est découpé en morceaux : <clé>~0, <clé>~1…
 //   prog_<idÉlève>__<idQuiz>  la progression d'un élève dans un quiz (réussites d'affilée par question)
 //   done_<idÉlève>__<idQuiz>  combien de fois l'élève a terminé ce quiz (historique : la remise à zéro de la progression n'y touche pas)
 // Le mot de passe administrateur est la propriété ADMIN_PASSWORD.
@@ -35,6 +37,7 @@ function doGet(e) {
 var QUIZ_PREFIX = 'quiz_';
 var DECK_PREFIX = 'deck_';
 var STUDENT_PREFIX = 'student_';
+var OVERRIDE_PREFIX = 'override_';   // version modifiée d'un quiz intégré (l'original reste dans Contenu.gs)
 var BUILTIN_ASSIGN_KEY = 'builtin_assign';
 var PROGRESS_PREFIX = 'prog_';
 var DONE_PREFIX = 'done_';
@@ -43,7 +46,9 @@ var MAX_QUESTIONS = 50;
 var MAX_CARDS = 150;
 var MAX_FIELDS = 12;       // champs maximum dans une question à plusieurs champs
 var MAX_STUDENTS = 40;
-var MAX_VALUE_BYTES = 8500; // une propriété est limitée à 9 Ko
+var MAX_VALUE_BYTES = 8500; // une propriété est limitée à 9 Ko : au-delà, on découpe
+var CHUNK_CHARS = 3000;     // taille d'un morceau (3 octets au pire par caractère, donc < 9 Ko)
+var MAX_ITEM_CHARS = 250000; // plafond de sécurité pour un quiz ou un paquet
 var MAX_PIN_FAILS = 5;      // erreurs de PIN avant blocage temporaire
 var LOCK_SECONDS = 300;     // durée du blocage (5 minutes)
 
@@ -78,7 +83,7 @@ function saveResult(classe, pseudo, pin, quizId, qhash, success) {
   var st = authStudent_(classe, pseudo, pin);
   var quiz = quizzesOf_(st.id).filter(function (q) { return q.id === quizId; })[0];
   if (!quiz) throw new Error('Quiz inaccessible.');
-  if (!/^[0-9a-f]{8}$/.test(String(qhash)) || !quiz.questions.some(function (q) { return qhash_(q.question) === qhash; })) {
+  if (!/^[0-9a-f]{8}$/.test(String(qhash)) || !quiz.questions.some(function (q) { return qid_(q) === qhash; })) {
     throw new Error('Question inconnue.');
   }
   var lock = LockService.getScriptLock();
@@ -123,8 +128,11 @@ function adminData(password) {
   var props = PropertiesService.getScriptProperties().getProperties();
   var assigned = builtinAssign_();
   var students = students_();
-  var customQuizzes = list_(QUIZ_PREFIX);
-  var allQuizzes = BUILTIN_QUIZZES.concat(customQuizzes);
+  var customQuizzes = list_(QUIZ_PREFIX).map(withQids_);
+  var builtins = builtins_();
+  var modifies = {};
+  list_(OVERRIDE_PREFIX).forEach(function (o) { modifies[o.id] = true; });
+  var allQuizzes = builtins.concat(customQuizzes);
   var progress = {};
   students.forEach(function (st) {
     progress[st.id] = allQuizzes
@@ -135,8 +143,8 @@ function adminData(password) {
     students: students.map(publicStudent_),
     quizzes: customQuizzes,
     decks: list_(DECK_PREFIX),
-    builtins: BUILTIN_QUIZZES.map(function (q) {
-      return { id: q.id, titre: q.titre, emoji: q.emoji, matiere: q.matiere, questions: q.questions.length, pour: assigned[q.id] || [] };
+    builtins: builtins.map(function (q) {
+      return { id: q.id, titre: q.titre, emoji: q.emoji, matiere: q.matiere, questions: q.questions.length, pour: assigned[q.id] || [], modifie: !!modifies[q.id] };
     }),
     progress: progress
   };
@@ -199,7 +207,7 @@ function deleteStudent(password, id) {
     list_(prefix).forEach(function (item) {
       if ((item.pour || []).indexOf(id) >= 0) {
         item.pour = item.pour.filter(function (x) { return x !== id; });
-        store.setProperty(prefix + item.id, JSON.stringify(item));
+        putItem_(store, prefix, item.id, item);
       }
     });
   });
@@ -232,11 +240,51 @@ function deleteDeck(password, id) {
 // À qui est donné un quiz intégré
 function setBuiltinAssign(password, quizId, pour) {
   checkAdmin_(password);
-  if (!BUILTIN_QUIZZES.some(function (q) { return q.id === quizId; })) throw new Error('Quiz intégré inconnu.');
+  if (!isBuiltin_(quizId)) throw new Error('Quiz intégré inconnu.');
   var assigned = builtinAssign_();
   assigned[quizId] = cleanPour_(pour);
   PropertiesService.getScriptProperties().setProperty(BUILTIN_ASSIGN_KEY, JSON.stringify(assigned));
   return { pour: assigned[quizId] };
+}
+
+// Version à modifier d'un quiz intégré : la version en vigueur (modifiée ou d'origine) et ses destinataires.
+function getBuiltinForEdit(password, quizId) {
+  checkAdmin_(password);
+  if (!isBuiltin_(quizId)) throw new Error('Quiz intégré inconnu.');
+  var quiz = builtins_().filter(function (q) { return q.id === quizId; })[0];
+  return { quiz: quiz, pour: builtinAssign_()[quizId] || [] };
+}
+
+// Enregistre une version modifiée d'un quiz intégré (l'original reste intact et peut être rétabli).
+// Les questions gardent leur identifiant : la progression des élèves est conservée, même si l'énoncé change.
+function saveBuiltin(password, quizId, quiz) {
+  checkAdmin_(password);
+  if (!isBuiltin_(quizId)) throw new Error('Quiz intégré inconnu.');
+  var clean = validateQuiz_(quiz);
+  var pour = clean.pour;
+  delete clean.pour;
+  clean.id = quizId;
+  clean.ajoute = 0;
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var store = PropertiesService.getScriptProperties();
+    putItem_(store, OVERRIDE_PREFIX, quizId, clean);
+    var assigned = builtinAssign_();
+    assigned[quizId] = pour;
+    store.setProperty(BUILTIN_ASSIGN_KEY, JSON.stringify(assigned));
+  } finally {
+    lock.releaseLock();
+  }
+  return { id: quizId };
+}
+
+// Rétablit la version d'origine d'un quiz intégré. La progression des élèves est conservée.
+function restoreBuiltin(password, quizId) {
+  checkAdmin_(password);
+  if (!isBuiltin_(quizId)) throw new Error('Quiz intégré inconnu.');
+  delItem_(PropertiesService.getScriptProperties(), OVERRIDE_PREFIX, quizId);
+  return true;
 }
 
 // Remise à zéro de la progression : pour un élève (id ou 'all') et une leçon (id d'un quiz ou 'all').
@@ -270,6 +318,38 @@ function qhash_(text) {
   return ('0000000' + (h >>> 0).toString(16)).slice(-8);
 }
 
+// Identifiant stable d'une question : sert de clé à la progression. Une question sans identifiant (quiz anciens,
+// quiz intégrés d'origine) prend l'empreinte de son énoncé : les progressions déjà enregistrées restent valables.
+function qid_(question) { return question.id || qhash_(question.question); }
+
+// Copie d'un quiz où chaque question a son identifiant
+function withQids_(quiz) {
+  var copy = {};
+  Object.keys(quiz).forEach(function (k) { copy[k] = quiz[k]; });
+  copy.questions = quiz.questions.map(function (q) {
+    if (q.id) return q;
+    var c = { id: qhash_(q.question) };
+    Object.keys(q).forEach(function (k) { c[k] = q[k]; });
+    return c;
+  });
+  return copy;
+}
+
+function newQid_(seen) {
+  var id;
+  do { id = qhash_(String(Math.random()) + ':' + Date.now()); } while (seen[id]);
+  return id;
+}
+
+function isBuiltin_(quizId) { return BUILTIN_QUIZZES.some(function (q) { return q.id === quizId; }); }
+
+// Quiz intégrés en vigueur : la version modifiée par l'administrateur si elle existe, sinon l'original.
+function builtins_() {
+  var ov = {};
+  list_(OVERRIDE_PREFIX).forEach(function (o) { ov[o.id] = o; });
+  return BUILTIN_QUIZZES.map(function (q) { return withQids_(ov[q.id] ? ov[q.id] : q); });
+}
+
 function progressKey_(studentId, quizId) { return PROGRESS_PREFIX + studentId + '__' + quizId; }
 function doneKey_(studentId, quizId) { return DONE_PREFIX + studentId + '__' + quizId; }
 
@@ -280,7 +360,7 @@ function quizFor_(quiz, studentId, assigned) {
 
 function quizzesOf_(studentId) {
   var assigned = builtinAssign_();
-  return BUILTIN_QUIZZES.concat(list_(QUIZ_PREFIX)).filter(function (q) { return quizFor_(q, studentId, assigned); });
+  return builtins_().concat(list_(QUIZ_PREFIX).map(withQids_)).filter(function (q) { return quizFor_(q, studentId, assigned); });
 }
 
 // Résumé d'une leçon pour l'administration : questions sues / en cours / à apprendre, erreurs, dernière activité.
@@ -288,7 +368,7 @@ function lessonSummary_(quiz, rec, done) {
   var q = (rec && rec.q) || {};
   var sues = 0, enCours = 0, erreurs = 0;
   quiz.questions.forEach(function (question) {
-    var r = q[qhash_(question.question)] || [0, 0];
+    var r = q[qid_(question)] || [0, 0];
     if (r[0] >= MASTERY) sues++; else if (r[0] > 0) enCours++;
     erreurs += r[1];
   });
@@ -387,9 +467,54 @@ function authStudent_(classe, pseudo, pin) {
 function list_(prefix) {
   var props = PropertiesService.getScriptProperties().getProperties();
   return Object.keys(props)
-    .filter(function (k) { return k.indexOf(prefix) === 0; })
-    .map(function (k) { return JSON.parse(props[k]); })
+    .filter(function (k) { return k.indexOf(prefix) === 0 && k.indexOf('~') < 0; })
+    .map(function (k) { return readItem_(props, k); })
+    .filter(Boolean)
     .sort(function (a, b) { return (a.ajoute || 0) - (b.ajoute || 0); });
+}
+
+// Lit un élément, éventuellement découpé en morceaux (<clé>~0, <clé>~1…)
+function readItem_(props, key) {
+  var head = parseJson_(props[key]);
+  if (!head || !head._chunks) return head;
+  var text = '';
+  for (var i = 0; i < head._chunks; i++) text += props[key + '~' + i] || '';
+  return parseJson_(text);
+}
+
+function getItem_(store, prefix, id) {
+  var key = prefix + id;
+  var head = parseJson_(store.getProperty(key));
+  if (!head || !head._chunks) return head;
+  var text = '';
+  for (var i = 0; i < head._chunks; i++) text += store.getProperty(key + '~' + i) || '';
+  return parseJson_(text);
+}
+
+// Écrit un élément ; au-delà de la taille d'une propriété, il est découpé en morceaux.
+function putItem_(store, prefix, id, obj) {
+  var key = prefix + id;
+  var json = JSON.stringify(obj);
+  if (json.length > MAX_ITEM_CHARS) throw new Error('Trop volumineux : réduis le nombre ou la longueur des éléments.');
+  var old = parseJson_(store.getProperty(key));
+  var oldChunks = old && old._chunks ? old._chunks : 0;
+  var chunks = 0;
+  if (unescape(encodeURIComponent(json)).length <= MAX_VALUE_BYTES) {
+    store.setProperty(key, json);
+  } else {
+    chunks = Math.ceil(json.length / CHUNK_CHARS);
+    for (var i = 0; i < chunks; i++) store.setProperty(key + '~' + i, json.slice(i * CHUNK_CHARS, (i + 1) * CHUNK_CHARS));
+    store.setProperty(key, JSON.stringify({ _chunks: chunks, id: obj.id, ajoute: obj.ajoute }));
+  }
+  for (var j = chunks; j < oldChunks; j++) store.deleteProperty(key + '~' + j);   // anciens morceaux devenus inutiles
+}
+
+function delItem_(store, prefix, id) {
+  var key = prefix + id;
+  var old = parseJson_(store.getProperty(key));
+  var n = old && old._chunks ? old._chunks : 0;
+  for (var i = 0; i < n; i++) store.deleteProperty(key + '~' + i);
+  store.deleteProperty(key);
 }
 
 function save_(prefix, clean, requestedId) {
@@ -398,10 +523,7 @@ function save_(prefix, clean, requestedId) {
   lock.waitLock(10000);
   try {
     var existing = null;
-    if (requestedId && /^[a-z0-9-]{1,60}$/.test(requestedId)) {
-      var raw = store.getProperty(prefix + requestedId);
-      if (raw) existing = JSON.parse(raw);
-    }
+    if (requestedId && /^[a-z0-9-]{1,60}$/.test(requestedId)) existing = getItem_(store, prefix, requestedId);
     if (existing) {
       clean.id = existing.id;
       clean.ajoute = existing.ajoute;
@@ -413,11 +535,7 @@ function save_(prefix, clean, requestedId) {
       clean.id = id;
       clean.ajoute = Date.now();
     }
-    var json = JSON.stringify(clean);
-    if (unescape(encodeURIComponent(json)).length > MAX_VALUE_BYTES) {
-      throw new Error('Trop volumineux : réduis le nombre ou la longueur des éléments.');
-    }
-    store.setProperty(prefix + clean.id, json);
+    putItem_(store, prefix, clean.id, clean);
     return { id: clean.id };
   } finally {
     lock.releaseLock();
@@ -426,7 +544,7 @@ function save_(prefix, clean, requestedId) {
 
 function remove_(prefix, id) {
   if (!/^[a-z0-9-]{1,60}$/.test(String(id))) throw new Error('Identifiant invalide.');
-  PropertiesService.getScriptProperties().deleteProperty(prefix + id);
+  delItem_(PropertiesService.getScriptProperties(), prefix, id);
   return true;
 }
 
@@ -453,11 +571,15 @@ function validateQuiz_(quiz) {
   if (quiz.questions.length > MAX_QUESTIONS) {
     throw new Error('Maximum ' + MAX_QUESTIONS + ' questions par quiz.');
   }
+  var seen = {};
   var questions = quiz.questions.map(function (q, i) {
     var label = 'Question ' + (i + 1) + ' : ';
     var question = str_(q && q.question, 300);
     if (!question) throw new Error(label + "l'énoncé est vide.");
-    var out = { question: question };
+    // L'identifiant d'une question existante est conservé (sa progression aussi) ; une nouvelle question en reçoit un.
+    var qid = (typeof q.id === 'string' && /^[0-9a-f]{8}$/.test(q.id) && !seen[q.id]) ? q.id : newQid_(seen);
+    seen[qid] = true;
+    var out = { id: qid, question: question };
 
     if (Array.isArray(q.champs)) {
       if (q.champs.length < 2 || q.champs.length > MAX_FIELDS) {
@@ -520,7 +642,10 @@ function validateLien_(lien) {
   var url = str_(lien.url, 300);
   if (!url) return null;
   if (!/^https?:\/\/[^\s]+$/i.test(url)) throw new Error("L'adresse du lien doit commencer par http:// ou https://.");
-  return { texte: str_(lien.texte, 60) || 'Ouvrir le lien', url: url };
+  var res = { texte: str_(lien.texte, 60) || 'Ouvrir le lien', url: url };
+  var icone = str_(lien.icone, 8);
+  if (icone) res.icone = icone;
+  return res;
 }
 
 function validateDeck_(deck) {
