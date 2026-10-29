@@ -167,6 +167,17 @@
             <h2>🃏 Paquets enregistrés</h2>
             <div id="deck-list"><p class="empty">Chargement…</p></div>
         </section>
+
+        <!-- ================= PROGRAMME DE RÉVISION ================= -->
+        <section>
+            <h2>📅 Programme de révision</h2>
+            <p class="hint">Seul l'administrateur peut le remettre à zéro : l'élève n'a aucun bouton pour le faire. Toutes les questions redeviennent « à apprendre » (0 / 3) sur chaque appareil, à sa prochaine ouverture de la page Révision.</p>
+            <p id="reset-info" style="margin:12px 0 0;font-weight:600">Chargement…</p>
+            <div class="actions">
+                <button class="btn danger" id="reset-programme" type="button" style="padding:10px 22px">Remettre à zéro le programme de révision</button>
+            </div>
+            <div class="status" id="programme-status" role="status"></div>
+        </section>
     </main>
 
     <script>
@@ -454,9 +465,34 @@
         $("reset-deck").addEventListener("click", () => { resetDeckForm(); $("deck-status").className = "status"; });
         $("save-deck").addEventListener("click", () => saveItem("deck"));
 
+        // ================= PROGRAMME DE RÉVISION =================
+        async function refreshReset() {
+            const el = $("reset-info");
+            if (!hasServer) { el.textContent = "Mode aperçu : disponible uniquement depuis le script déployé."; return; }
+            try {
+                const ts = await server("getProgrammeReset");
+                el.textContent = ts ? "Dernière remise à zéro : " + new Date(ts).toLocaleString("fr-FR") : "Jamais remis à zéro.";
+            } catch (e) {
+                el.textContent = "Impossible de lire l'état : " + e.message;
+            }
+        }
+        $("reset-programme").addEventListener("click", async () => {
+            if (!confirm("Remettre à zéro le programme de révision ? Toute la progression de l'élève sera perdue.")) return;
+            const status = $("programme-status");
+            showStatus(status, "info", "Remise à zéro…");
+            try {
+                await server("resetProgramme", $("password").value);
+                showStatus(status, "ok", "Programme remis à zéro. L'élève repart de 0 à sa prochaine ouverture de la page.");
+                refreshReset();
+            } catch (e) {
+                showStatus(status, "err", e.message);
+            }
+        });
+
         resetQuizForm();
         refreshList("quiz");
         refreshList("deck");
+        refreshReset();
     </script>
 </body>
 </html>
