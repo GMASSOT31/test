@@ -261,6 +261,7 @@
         // ================================================================
         const content = document.getElementById("content");
         let activeTab = "quiz";
+        let inQuiz = false; // vrai pendant qu'un quiz est en cours (évite de le remplacer par la liste)
 
         // Petit utilitaire pour créer des éléments sans innerHTML
         function h(tag, props, ...children) {
@@ -282,6 +283,7 @@
         }
 
         function renderList() {
+            inQuiz = false;
             content.replaceChildren();
             if (activeTab === "quiz") {
                 content.append(h("h2", {}, "Quiz"));
@@ -304,6 +306,7 @@
         }
 
         function startQuiz(quiz) {
+            inQuiz = true;
             let index = 0;
             let score = 0;
 
@@ -381,6 +384,21 @@
             b.addEventListener("click", () => setTab(b.dataset.tab)));
 
         setTab("quiz");
+
+        // Quiz ajoutés depuis la page d'administration (uniquement une fois déployé dans Apps Script).
+        // Les quiz ci-dessus restent affichés si le serveur ne répond pas.
+        if (window.google && google.script && google.script.run) {
+            google.script.run
+                .withSuccessHandler(saved => {
+                    saved.forEach(q => {
+                        const i = QUIZZES.findIndex(x => x.id === q.id);
+                        if (i >= 0) QUIZZES[i] = q; else QUIZZES.push(q);
+                    });
+                    document.getElementById("count-quiz").textContent = QUIZZES.length;
+                    if (activeTab === "quiz" && !inQuiz) renderList();
+                })
+                .getQuizzes();
+        }
     </script>
 </body>
 </html>
