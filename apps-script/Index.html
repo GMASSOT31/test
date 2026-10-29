@@ -235,7 +235,7 @@
         /* ===== BANNIÈRE (fournie) ===== */
       .rv-banner {
         position: relative; overflow: hidden; color: #fff; text-align: center;
-        padding: 26px 16px 0;
+        padding: 14px 16px 0;
         background:
           radial-gradient(circle at 12% 20%, rgba(255,95,162,.55), transparent 38%),
           radial-gradient(circle at 88% 10%, rgba(255,209,102,.40), transparent 34%),
@@ -254,26 +254,26 @@
         display: inline-flex; align-items: center; gap: 8px;
         background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.35);
         backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-        padding: 5px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; letter-spacing: .3px;
+        padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .3px;
         transform: rotate(-2deg);
       }
       .rv-dot { width: 9px; height: 9px; border-radius: 50%; background: #5dffb0; box-shadow: 0 0 0 0 rgba(93,255,176,.7); animation: rv-pulse 1.8s infinite; }
       @keyframes rv-pulse { 70% { box-shadow: 0 0 0 10px rgba(93,255,176,0); } 100% { box-shadow: 0 0 0 0 rgba(93,255,176,0); } }
 
       .rv-title {
-        margin: 12px 0 4px; font-size: clamp(30px, 6vw, 48px); line-height: 1.05; font-weight: 900; letter-spacing: -1px;
-        text-shadow: 0 4px 0 rgba(15,23,80,.35);
+        margin: 8px 0 2px; font-size: clamp(24px, 4.6vw, 36px); line-height: 1.05; font-weight: 900; letter-spacing: -1px;
+        text-shadow: 0 3px 0 rgba(15,23,80,.35);
       }
       .rv-title .rv-hl {
         background: linear-gradient(90deg, #ffd166, #ff8fb8); -webkit-background-clip: text; background-clip: text;
         -webkit-text-fill-color: transparent; text-shadow: none; filter: drop-shadow(0 3px 0 rgba(15,23,80,.35));
       }
-      .rv-sub { min-height: 24px; margin: 0 0 14px; font-size: clamp(14px, 2.4vw, 17px); font-weight: 600; opacity: .95; transition: opacity .35s, transform .35s; }
+      .rv-sub { min-height: 20px; margin: 0 0 8px; font-size: clamp(13px, 2vw, 15px); font-weight: 600; opacity: .95; transition: opacity .35s, transform .35s; }
       .rv-sub.rv-out { opacity: 0; transform: translateY(6px); }
 
-      .rv-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px; }
+      .rv-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
       .rv-chip {
-        background: #fff; color: #1e3a8a; font-weight: 800; font-size: 13px; padding: 6px 12px; border-radius: 12px;
+        background: #fff; color: #1e3a8a; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 10px;
         box-shadow: 0 3px 0 rgba(15,23,80,.35); transition: transform .15s;
       }
       .rv-chip:nth-child(odd) { transform: rotate(-2deg); }
@@ -281,19 +281,19 @@
       .rv-chip:hover { transform: rotate(0) translateY(-2px) scale(1.06); }
 
       /* emojis flottants */
-      .rv-float { position: absolute; z-index: 1; font-size: 30px; opacity: .9; animation: rv-bob 5s ease-in-out infinite; user-select: none; }
+      .rv-float { position: absolute; z-index: 1; font-size: 24px; opacity: .9; animation: rv-bob 5s ease-in-out infinite; user-select: none; }
       .rv-f1 { left: 5%;  top: 22%; animation-delay: 0s; }
-      .rv-f2 { left: 14%; top: 62%; animation-delay: -1.2s; font-size: 24px; }
+      .rv-f2 { left: 14%; top: 62%; animation-delay: -1.2s; font-size: 19px; }
       .rv-f3 { right: 6%; top: 18%; animation-delay: -2.4s; }
-      .rv-f4 { right: 15%; top: 58%; animation-delay: -3.3s; font-size: 24px; }
+      .rv-f4 { right: 15%; top: 58%; animation-delay: -3.3s; font-size: 19px; }
       @keyframes rv-bob { 0%,100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-12px) rotate(8deg); } }
 
       /* bandeau défilant */
       .rv-ticker { position: relative; z-index: 2; margin: 0 -16px; background: #ffd166; color: #1e3a8a; overflow: hidden; white-space: nowrap; transform: rotate(-.6deg) scale(1.02); }
-      .rv-track { display: inline-block; padding: 7px 0; font-size: 12.5px; font-weight: 900; letter-spacing: 1.2px; animation: rv-scroll 28s linear infinite; }
+      .rv-track { display: inline-block; padding: 4px 0; font-size: 11px; font-weight: 900; letter-spacing: 1.2px; animation: rv-scroll 28s linear infinite; }
       @keyframes rv-scroll { to { transform: translateX(-50%); } }
 
-      @media (max-width: 560px) { .rv-float { display: none; } .rv-banner { padding-top: 18px; } }
+      @media (max-width: 560px) { .rv-float { display: none; } .rv-banner { padding-top: 10px; } }
       @media (prefers-reduced-motion: reduce) { .rv-float, .rv-track, .rv-dot { animation: none; } }
     </style>
 </head>
