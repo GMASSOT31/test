@@ -528,7 +528,9 @@ var BUILTIN_QUIZZES = [
     "titre": "Musique descriptive : Le Carnaval des animaux (5ᵉ)",
     "description": "40 questions : Le Carnaval des animaux, Camille Saint-Saëns, les 4 paramètres du son, les nuances et l'analyse de 6 extraits.",
     "lien": {
-      "texte": "Écouter les extraits sonores (Padlet / Digipad)"
+      "texte": "Écouter les extraits sonores (Padlet / Digipad)",
+      "url": "https://digipad.app/p/1852174/2ea2dfaf331198",
+      "icone": "🎧"
     },
     "questions": [
       {

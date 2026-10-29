@@ -502,6 +502,15 @@
             return a;
         }
 
+        // Place le curseur dans le premier champ d'une question, sauf si l'élève a déjà cliqué dans un champ
+        // (sinon on lui volerait le curseur au milieu de sa saisie).
+        function focusFirst(input) {
+            setTimeout(() => {
+                const a = document.activeElement;
+                if (!a || a === document.body || a.tagName === "BUTTON") input.focus();
+            }, 0);
+        }
+
         // Compare sans tenir compte de la casse, des accents, de la ponctuation et des espaces en trop
         function norm(text) {
             return text.toLowerCase()
@@ -637,7 +646,7 @@
                         : choiceBody(q, addPoint, fail, reveal);
 
                 const lien = quiz.lien && /^https?:\/\//.test(quiz.lien.url || "")
-                    ? h("a", { class: "quiz-link", href: quiz.lien.url, target: "_blank", rel: "noopener noreferrer" }, "🎧 " + (quiz.lien.texte || "Ouvrir le lien"))
+                    ? h("a", { class: "quiz-link", href: quiz.lien.url, target: "_blank", rel: "noopener noreferrer" }, (quiz.lien.icone || "🔗") + " " + (quiz.lien.texte || "Ouvrir le lien"))
                     : null;
                 content.replaceChildren(h("div", { class: "panel" },
                     h("div", { class: "panel-top" }, back(), lien),
@@ -727,7 +736,7 @@
                 input.addEventListener("keydown", e => {
                     if (e.key === "Enter") { e.preventDefault(); validate(); }
                 });
-                setTimeout(() => input.focus(), 0);
+                focusFirst(input);
                 return h("div", {}, input, feedback, h("div", { class: "saisie-actions" }, check, showAnswer));
             }
 
@@ -818,7 +827,7 @@
                 rows.forEach(r => r.input.addEventListener("keydown", e => {
                     if (e.key === "Enter") { e.preventDefault(); validate(); }
                 }));
-                setTimeout(() => rows[0].input.focus(), 0);
+                focusFirst(rows[0].input);
                 return h("div", {},
                     rows.map(r => h("label", { class: "champ-row" }, h("span", { class: "champ-label" }, r.ch.label || ""), r.input)),
                     feedback, h("div", { class: "saisie-actions" }, check, showAnswer));

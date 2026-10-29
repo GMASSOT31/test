@@ -39,6 +39,7 @@ var RESET_KEY = 'programme_reset';
 var RESET_STUDENT_PREFIX = 'reset_';
 var MAX_QUESTIONS = 50;
 var MAX_CARDS = 150;
+var MAX_FIELDS = 12;       // champs maximum dans une question à plusieurs champs
 var MAX_STUDENTS = 40;
 var MAX_VALUE_BYTES = 8500; // une propriété est limitée à 9 Ko
 var MAX_PIN_FAILS = 5;      // erreurs de PIN avant blocage temporaire
@@ -319,7 +320,8 @@ function checkAdmin_(password) {
   }
 }
 
-// Une question est soit à choix (options + correct), soit à réponse écrite (reponses).
+// Une question est de l'un des trois types : à choix (options + correct), à réponse écrite (reponses),
+// ou à plusieurs champs (champs : [{ label, reponses, groupe? }], libre?).
 function validateQuiz_(quiz) {
   if (!quiz || typeof quiz !== 'object') throw new Error('Quiz invalide.');
   var titre = str_(quiz.titre, 120);
@@ -336,7 +338,26 @@ function validateQuiz_(quiz) {
     if (!question) throw new Error(label + "l'énoncé est vide.");
     var out = { question: question };
 
-    if (Array.isArray(q.reponses)) {
+    if (Array.isArray(q.champs)) {
+      if (q.champs.length < 2 || q.champs.length > MAX_FIELDS) {
+        throw new Error(label + 'il faut entre 2 et ' + MAX_FIELDS + ' champs.');
+      }
+      out.champs = q.champs.map(function (c, j) {
+        var fl = label + 'champ ' + (j + 1) + ' : ';
+        var intitule = str_(c && c.label, 60);
+        if (!intitule) throw new Error(fl + "l'intitulé est vide.");
+        var reps = (c && Array.isArray(c.reponses) ? c.reponses : []).map(function (r) { return str_(r, 80); }).filter(Boolean);
+        if (reps.length < 1 || reps.length > 10) throw new Error(fl + 'il faut entre 1 et 10 réponses acceptées.');
+        var field = { label: intitule, reponses: reps };
+        var groupe = str_(c.groupe, 20);
+        if (groupe) {
+          if (!/^[A-Za-z0-9À-ÿ _-]+$/.test(groupe)) throw new Error(fl + 'le nom du groupe contient un caractère non autorisé.');
+          field.groupe = groupe;
+        }
+        return field;
+      });
+      if (q.libre === true) out.libre = true;
+    } else if (Array.isArray(q.reponses)) {
       var reponses = q.reponses.map(function (r) { return str_(r, 80); }).filter(Boolean);
       if (reponses.length < 1 || reponses.length > 10) {
         throw new Error(label + 'il faut entre 1 et 10 réponses acceptées.');
@@ -359,7 +380,7 @@ function validateQuiz_(quiz) {
     if (explication) out.explication = explication;
     return out;
   });
-  return {
+  var clean = {
     titre: titre,
     matiere: str_(quiz.matiere, 40) || 'Divers',
     emoji: str_(quiz.emoji, 8) || '📘',
@@ -367,6 +388,18 @@ function validateQuiz_(quiz) {
     pour: cleanPour_(quiz.pour),
     questions: questions
   };
+  var lien = validateLien_(quiz.lien);
+  if (lien) clean.lien = lien;
+  return clean;
+}
+
+// Lien utile affiché pendant le quiz (ex. des extraits sonores). Seules les adresses http(s) sont acceptées.
+function validateLien_(lien) {
+  if (!lien || typeof lien !== 'object') return null;
+  var url = str_(lien.url, 300);
+  if (!url) return null;
+  if (!/^https?:\/\/[^\s]+$/i.test(url)) throw new Error("L'adresse du lien doit commencer par http:// ou https://.");
+  return { texte: str_(lien.texte, 60) || 'Ouvrir le lien', url: url };
 }
 
 function validateDeck_(deck) {

@@ -137,7 +137,9 @@
 
         @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
         @media (max-width: 600px) {
-            .row, .row3 { grid-template-columns: 1fr; }
+            .row, .row2, .row3 { grid-template-columns: 1fr; }
+            .field-row { grid-template-columns: 1fr 1fr; }
+            .field-row .f-reps { grid-column: 1 / -1; }
             .inline { flex-wrap: wrap; }
             .item { flex-wrap: wrap; }
         }
@@ -154,6 +156,10 @@
         .builtin .info strong { display: block; }
         .builtin .info span { display: block; font-size: .85rem; color: var(--muted); }
         .item .info span { display: block; }
+        .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .fields-rows { display: grid; gap: 8px; margin: 8px 0; }
+        .field-row { display: grid; grid-template-columns: 1fr 1.6fr .8fr auto; gap: 8px; align-items: center; }
+        .field-row .btn { padding: 6px 12px; }
     </style>
 </head>
 <body>
@@ -247,6 +253,17 @@
                 <div>
                     <label for="emoji">Emoji</label>
                     <input type="text" id="emoji" maxlength="8" placeholder="📘">
+                </div>
+            </div>
+
+            <div class="row2">
+                <div>
+                    <label for="lien-texte">Lien utile pendant le quiz (facultatif) : texte du bouton</label>
+                    <input type="text" id="lien-texte" maxlength="60" placeholder="Ex : Écouter les extraits sonores">
+                </div>
+                <div>
+                    <label for="lien-url">Adresse du lien</label>
+                    <input type="text" id="lien-url" maxlength="300" placeholder="https://…">
                 </div>
             </div>
 
@@ -508,14 +525,15 @@
         // ================= QUIZ =================
         function addQuestion(data) {
             const n = ++questionCount;
-            const typed = !!(data && Array.isArray(data.reponses));
+            const kind = !data ? "choice" : data.champs ? "fields" : Array.isArray(data.reponses) ? "typed" : "choice";
             const block = h("div", { class: "question" });
 
             const title = h("span", {}, "");
             const type = h("select", { class: "q-type", "aria-label": "Type de question" },
                 h("option", { value: "choice" }, "Choix"),
-                h("option", { value: "typed" }, "Réponse écrite"));
-            type.value = typed ? "typed" : "choice";
+                h("option", { value: "typed" }, "Réponse écrite"),
+                h("option", { value: "fields" }, "Plusieurs champs"));
+            type.value = kind;
             const remove = h("button", { class: "btn danger", type: "button", onclick: () => { block.remove(); renumber(); } }, "Supprimer");
             const text = h("textarea", { class: "q-text", placeholder: "Énoncé de la question" });
             text.value = data ? data.question : "";
@@ -525,7 +543,7 @@
             OPTION_LETTERS.forEach((letter, i) => {
                 const radio = h("input", { type: "radio", name: "correct-" + n, value: String(i), "aria-label": "Bonne réponse " + letter });
                 const input = h("input", { type: "text", class: "opt-text", maxlength: "150", placeholder: "Réponse " + letter });
-                if (data && !typed) {
+                if (data && kind === "choice") {
                     input.value = data.options[i] || "";
                     radio.checked = data.correct === i;
                 } else {
@@ -539,7 +557,21 @@
                 h("label", {}, "Réponses acceptées, séparées par ;"),
                 h("input", { type: "text", class: "typed-text", maxlength: "400", placeholder: "Ex : humid ; wet" }),
                 h("p", { class: "hint" }, "La casse, les accents et la ponctuation sont ignorés."));
-            if (typed) typedArea.querySelector(".typed-text").value = data.reponses.join(" ; ");
+            if (kind === "typed") typedArea.querySelector(".typed-text").value = data.reponses.join(" ; ");
+
+            // Zone « plusieurs champs » : un champ par blanc à remplir, chacun avec ses réponses acceptées
+            const rowsBox = h("div", { class: "fields-rows" });
+            const libre = h("select", { class: "q-libre", "aria-label": "Ordre des champs" },
+                h("option", { value: "fixe" }, "Chaque champ a sa place"),
+                h("option", { value: "libre" }, "Ordre libre (les champs sont interchangeables)"));
+            libre.value = kind === "fields" && data.libre ? "libre" : "fixe";
+            const fieldsArea = h("div", { class: "fields-area" },
+                h("label", {}, "Ordre des champs"), libre,
+                h("p", { class: "hint" }, "Un champ par blanc, avec ses réponses acceptées séparées par ;. Dans un même groupe (ou en ordre libre), les champs sont interchangeables et chacun attend une réponse différente."),
+                rowsBox,
+                h("button", { class: "btn secondary small", type: "button", onclick: () => addFieldRow(rowsBox) }, "+ Ajouter un champ"));
+            if (kind === "fields") data.champs.forEach(f => addFieldRow(rowsBox, f));
+            else { addFieldRow(rowsBox); addFieldRow(rowsBox); }
 
             const explication = h("input", { type: "text", class: "q-expl", maxlength: "400", placeholder: "Explication affichée après la réponse (facultatif)" });
             explication.value = data && data.explication ? data.explication : "";
@@ -547,14 +579,28 @@
             const sync = () => {
                 choiceArea.style.display = type.value === "choice" ? "" : "none";
                 typedArea.style.display = type.value === "typed" ? "" : "none";
+                fieldsArea.style.display = type.value === "fields" ? "" : "none";
             };
             type.addEventListener("change", sync);
 
-            block.append(h("div", { class: "question-head" }, title, type, remove), text, choiceArea, typedArea,
+            block.append(h("div", { class: "question-head" }, title, type, remove), text, choiceArea, typedArea, fieldsArea,
                 h("label", {}, "Explication"), explication);
             sync();
             qList.append(block);
             renumber();
+        }
+        function addFieldRow(container, f) {
+            const row = h("div", { class: "field-row" },
+                h("input", { type: "text", class: "f-label", maxlength: "60", placeholder: "Intitulé (ex : Hauteur)", "aria-label": "Intitulé du champ" }),
+                h("input", { type: "text", class: "f-reps", maxlength: "400", placeholder: "Réponses acceptées ; séparées par ;", "aria-label": "Réponses acceptées" }),
+                h("input", { type: "text", class: "f-groupe", maxlength: "20", placeholder: "Groupe (option)", "aria-label": "Groupe" }),
+                h("button", { class: "btn danger", type: "button", "aria-label": "Retirer le champ", onclick: () => row.remove() }, "✕"));
+            if (f) {
+                row.querySelector(".f-label").value = f.label || "";
+                row.querySelector(".f-reps").value = (f.reponses || []).join(" ; ");
+                row.querySelector(".f-groupe").value = f.groupe || "";
+            }
+            container.append(row);
         }
         function renumber() {
             [...qList.children].forEach((blk, i) => {
@@ -574,7 +620,22 @@
                 if (!question) throw new Error(label + "l'énoncé est vide.");
                 const out = { question };
 
-                if (blk.querySelector(".q-type").value === "typed") {
+                const kind = blk.querySelector(".q-type").value;
+                if (kind === "fields") {
+                    const rows = [...blk.querySelectorAll(".field-row")];
+                    if (rows.length < 2) throw new Error(label + "il faut au moins 2 champs.");
+                    out.champs = rows.map((r, j) => {
+                        const intitule = r.querySelector(".f-label").value.trim();
+                        const reponses = r.querySelector(".f-reps").value.split(";").map(x => x.trim()).filter(Boolean);
+                        if (!intitule) throw new Error(label + "champ " + (j + 1) + " : l'intitulé est vide.");
+                        if (reponses.length === 0) throw new Error(label + "champ " + (j + 1) + " : indique au moins une réponse acceptée.");
+                        const f = { label: intitule, reponses };
+                        const g = r.querySelector(".f-groupe").value.trim();
+                        if (g) f.groupe = g;
+                        return f;
+                    });
+                    if (blk.querySelector(".q-libre").value === "libre") out.libre = true;
+                } else if (kind === "typed") {
                     const reponses = blk.querySelector(".typed-text").value.split(";").map(s => s.trim()).filter(Boolean);
                     if (reponses.length === 0) throw new Error(label + "indique au moins une réponse acceptée.");
                     out.reponses = reponses;
@@ -607,6 +668,11 @@
                 pour: pourValues($("quiz-pour")),
                 questions
             };
+            const lienUrl = $("lien-url").value.trim();
+            if (lienUrl) {
+                if (!/^https?:\/\/\S+$/i.test(lienUrl)) throw new Error("L'adresse du lien doit commencer par http:// ou https://.");
+                quiz.lien = { texte: $("lien-texte").value.trim() || "Ouvrir le lien", url: lienUrl };
+            }
             if (editingQuizId) quiz.id = editingQuizId;
             return quiz;
         }
@@ -614,7 +680,7 @@
         function resetQuizForm() {
             editingQuizId = null;
             $("quiz-form-title").textContent = "➕ Nouveau quiz";
-            ["titre", "matiere", "emoji", "description"].forEach(id => $(id).value = "");
+            ["titre", "matiere", "emoji", "description", "lien-texte", "lien-url"].forEach(id => $(id).value = "");
             pourBoxes($("quiz-pour"), []);
             qList.replaceChildren();
             addQuestion();
@@ -627,6 +693,8 @@
             $("matiere").value = quiz.matiere || "";
             $("emoji").value = quiz.emoji || "";
             $("description").value = quiz.description || "";
+            $("lien-texte").value = quiz.lien ? quiz.lien.texte : "";
+            $("lien-url").value = quiz.lien ? quiz.lien.url : "";
             pourBoxes($("quiz-pour"), quiz.pour || []);
             qList.replaceChildren();
             quiz.questions.forEach(addQuestion);
