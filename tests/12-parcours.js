@@ -56,10 +56,10 @@ const ZOO = ['sahara square', 'tundratown', 'downtown', 'rainforest district', '
   const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.goto('file://' + SRC + 'Index.html'); await login(p, LEO);
   const sync = () => p.evaluate(() => revisionFlush());
   const card = () => p.locator('.card.lecon', { hasText: 'Zootopia' });
-  const nextBtn = () => p.locator('.panel .btn', { hasText: /suivante|résultat/ });
+  const nextBtn = () => p.locator('.panel .btn', { hasText: /suivante|résultat|Continuer/ });
   // une partie complète ; wrongFirst = numéros (0, 1…) de questions où l'élève se trompe d'abord
-  const runQuiz = async (wrongFirst = []) => {
-    for (let i = 0; i < 10; i++) {
+  const runQuiz = async (wrongFirst = [], n = 10) => {
+    for (let i = 0; i < n; i++) {
       if (wrongFirst.includes(i)) { await p.fill('.saisie', 'faux'); await p.keyboard.press('Enter'); }
       await p.fill('.saisie', ZOO[i]); await p.keyboard.press('Enter'); await nextBtn().click();
     }
@@ -111,14 +111,16 @@ const ZOO = ['sahara square', 'tundratown', 'downtown', 'rainforest district', '
   await p.click('text=Suivante →');
   ok(await p.locator('.finish-btn').isVisible() && (await p.locator('.finish-btn').innerText()).includes("C'est bon, j'ai mémorisé"), 'il apparaît à la DERNIÈRE carte : « ' + await p.locator('.finish-btn').innerText() + ' »');
   await p.click('.finish-btn');
-  ok((await p.locator('.etape-banner').innerText()) === 'Étape 1 sur 3 · Passage 1 sur 3 (tour 2)' && await p.locator('.question').isVisible(), '« C\'est bon, j\'ai mémorisé » : retour à l\'étape 1, le quiz recommence (« ' + await p.locator('.etape-banner').innerText() + ' »)');
+  ok((await p.locator('.etape-banner').innerText()) === 'Étape 1 sur 3 · Rattrapage : 2 questions à retravailler' && await p.locator('.question').isVisible(), '« C\'est bon, j\'ai mémorisé » : retour à l\'étape 1, le quiz recommence (« ' + await p.locator('.etape-banner').innerText() + ' »)');
   await sync(); ok(pc().etape === 'quiz' && pc().passages === 0 && pc().cycle === 2, 'serveur : étape 1, 0 passage, tour 2');
 
   // ---- 2e tour : les questions Q1 et Q2 deviennent sues -> on saute l'étape 2 ----
-  await runQuiz(); ok((await result()).includes('Il te reste 2 passages'), '2e tour, passage 1 : « ' + await result() + ' »');
-  await p.click('text=Passage suivant'); await runQuiz(); await p.click('text=Passage suivant'); await runQuiz();
+  ok(await p.locator('.question').count() === 1, 'rattrapage : seules les 2 questions non sues sont reposées');
+  let tours = 0;
+  while (await p.locator('.saisie').count() && tours < 5) { await runQuiz([], 2); tours++; }
+  ok(tours >= 1 && tours <= 3, 'le rattrapage enchaîne les tours sans erreur jusqu\'à ce que tout soit su (' + tours + ' tours, une seule fois les 2 questions non sues)');
   const m6 = await result();
-  ok(m6.includes('Tes 3 passages sont faits et tu sais tout') && m6.includes('Dernière étape'), 'tout est su après le 2e tour : « ' + m6 + ' »');
+  ok(m6.includes('Rattrapage terminé et tu sais tout') && m6.includes('Dernière étape'), 'tout est su après UN seul passage de rattrapage : « ' + m6 + ' »');
   await sync(); ok(pc().etape === 'revision', 'serveur : étape 3');
 
   // ---- étape 3 : le paquet complet sans choix ----

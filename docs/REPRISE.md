@@ -31,7 +31,7 @@ Attends ma prochaine consigne.
 
 **Questions** : id stable `q.id` (8 hex) ; à défaut empreinte FNV-1a de l'énoncé (`qhash_` serveur = `qhash` page, doivent rester identiques). Types : QCM, réponse écrite (comparaison insensible casse/accents/ponctuation), plusieurs champs, option `explication`, option quiz `lien:{texte,url,icone?}`. Question sue = 3 réussites d'affilée (`MASTERY = 3`), une erreur remet à 0 ; en réponse écrite seul le premier coup compte.
 
-**Parcours par leçon** (serveur = référence) : 1) quiz, 3 passages ; 2) flashcards des questions non sues, puis retour à l'étape 1 ; 3) révision sans choix, puis « Faire valider par un adulte » (`fini`) ; l'admin valide (`valide`). Remise à zéro d'une leçon → étape 1.
+**Parcours par leçon** (serveur = référence) : 1) quiz, 3 passages ; 2) flashcards des questions non sues, puis rattrapage : un seul passage (cycle > 1, serveur : 1 passage) limité aux questions non sues, enchaîné tour après tour tant qu'aucune erreur et qu'il en reste ; une erreur ramène aux flashcards ; 3) révision sans choix, puis « Faire valider par un adulte » (`fini`) ; l'admin valide (`valide`). Remise à zéro d'une leçon → étape 1.
 
 **Page élève** : connexion Classe/Pseudo/PIN, « Mes leçons » (« Fait N fois »), passage automatique après une bonne réponse du premier coup (1 s, 1,8 s avec explication ou question devenue sue ; jamais après une erreur ; `window.revisionAutoNext=false` le désactive), envois via file ordonnée `enqueue()` (3 essais, `window.revisionFlush()` pour les tests).
 
