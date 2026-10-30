@@ -617,7 +617,7 @@
         function etapeText(quiz) {
             const pc = getParcours(quiz.id);
             const tour = pc.cycle > 1 ? " · tour " + pc.cycle : "";
-            if (pc.etape === "quiz") return `Étape 1 sur 3 · Quiz : ${pc.passages} / ${PASSAGES} passages faits${tour}`;
+            if (pc.etape === "quiz") return `Étape 1 sur 3 · ${pc.cycle > 1 ? "Rattrapage des questions non sues" : `Quiz : ${pc.passages} / ${PASSAGES} passages faits`}`;
             if (pc.etape === "cartes") return `Étape 2 sur 3 · Flashcards à revoir (${unsuedCards(quiz).length})${tour}`;
             if (pc.etape === "revision") return "Étape 3 sur 3 · Apprendre sans choix proposés";
             if (pc.etape === "fini") return "⏳ Parcours terminé : en attente de validation";
@@ -685,19 +685,29 @@
             inQuiz = true;
             let index = 0;
             let score = 0;
-            const total = quiz.questions.length;
+            // Après les flashcards (tour 2 et suivants), seules les questions encore non sues sont reposées.
+            const pc0 = getParcours(quiz.id);
+            const rattrapage = pc0.etape === "quiz" && pc0.cycle > 1;
+            // Le rattrapage se poursuit tour après tour (sans erreur) jusqu'à ce que toutes ces questions soient sues.
+            const toLearn = () => quiz.questions.filter(q => progressOf(quiz, q).ok < MASTERY);
+            let qs = rattrapage ? toLearn() : quiz.questions;
+            if (rattrapage && qs.length === 0) qs = quiz.questions.slice();
+            let total = qs.length;        // questions posées depuis le début de ce passage
+            let roundFailed = false;      // une erreur dans le tour en cours met fin au rattrapage (retour aux flashcards)
 
             const back = () => h("button", { class: "back", onclick: renderList }, "← Retour aux leçons");
             // Bandeau « Étape 1 sur 3 · Passage 2 sur 3 »
             const etapeBanner = () => {
                 const pc = getParcours(quiz.id);
                 return pc.etape === "quiz"
-                    ? h("div", { class: "etape-banner" }, `Étape 1 sur 3 · Passage ${pc.passages + 1} sur ${PASSAGES}` + (pc.cycle > 1 ? ` (tour ${pc.cycle})` : ""))
+                    ? h("div", { class: "etape-banner" }, pc.cycle > 1
+                        ? `Étape 1 sur 3 · Rattrapage : ${qs.length} question${qs.length > 1 ? "s" : ""} à retravailler`
+                        : `Étape 1 sur 3 · Passage ${pc.passages + 1} sur ${PASSAGES}`)
                     : null;
             };
 
             function showQuestion() {
-                const q = quiz.questions[index];
+                const q = qs[index];
                 const scoreEl = h("span", { class: "score" }, `Score : ${score}`);
                 const explication = q.explication
                     ? h("div", { class: "explication", style: "display:none" }, q.explication)
@@ -708,10 +718,15 @@
                     if (advanced) return;
                     advanced = true;
                     index++;
-                    index < total ? showQuestion() : showResult();
+                    if (index < qs.length) return showQuestion();
+                    if (rattrapage && !roundFailed) {
+                        const again = toLearn();
+                        if (again.length) { qs = again; total += again.length; index = 0; return showQuestion(); }
+                    }
+                    showResult();
                 };
                 const next = h("button", { class: "btn", style: "display:none", onclick: goNext },
-                    index + 1 < total ? "Question suivante ➔" : "Voir le résultat ➔");
+                    index + 1 < qs.length ? "Question suivante ➔" : rattrapage ? "Continuer ➔" : "Voir le résultat ➔");
                 // Barre qui se remplit pendant l'attente avant le passage automatique
                 const autoBar = h("div", { class: "auto-next", style: "display:none", "aria-hidden": "true" });
                 // Appelé quand la question est terminée : montre l'explication et le bouton suivant
@@ -724,6 +739,7 @@
                     if (settled) return;
                     settled = true;
                     succeeded = success;
+                    if (!success) roundFailed = true;
                     level = recordResult(quiz, q, success);
                 };
                 const progressLine = h("div", { class: "mastery-line", style: "display:none" });
@@ -764,7 +780,7 @@
                     h("div", { class: "panel-top" }, back(), lien),
                     etapeBanner(),
                     h("div", { class: "progress" },
-                        h("span", {}, `Question ${index + 1} / ${total}`), scoreEl),
+                        h("span", {}, `Question ${index + 1} / ${qs.length}`), scoreEl),
                     h("h3", { class: "question" }, q.question),
                     body,
                     progressLine,
@@ -965,13 +981,15 @@
                 const pc = getParcours(quiz.id);
                 let etapeMsg = "", nextLabel = null;
                 if (pc.etape === "quiz") {
-                    pc.passages = Math.min(PASSAGES, pc.passages + 1);
-                    if (pc.passages >= PASSAGES) {
+                    const need = rattrapage ? 1 : PASSAGES;
+                    pc.passages = Math.min(need, pc.passages + 1);
+                    if (pc.passages >= need) {
                         const reste = unsuedCards(quiz).length;
                         pc.etape = reste > 0 ? "cartes" : "revision";
+                        const intro = rattrapage ? "Rattrapage terminé" : `Tes ${PASSAGES} passages sont faits`;
                         etapeMsg = reste > 0
-                            ? `🎯 Tes ${PASSAGES} passages sont faits ! Prochaine étape : revoir les ${reste} flashcard${reste > 1 ? "s" : ""} des questions que tu ne sais pas encore.`
-                            : `🎯 Tes ${PASSAGES} passages sont faits et tu sais tout ! Dernière étape : apprendre le paquet complet de flashcards.`;
+                            ? `🎯 ${intro} ! Prochaine étape : revoir les ${reste} flashcard${reste > 1 ? "s" : ""} des questions que tu ne sais pas encore.`
+                            : `🎯 ${intro} et tu sais tout ! Dernière étape : apprendre le paquet complet de flashcards.`;
                         nextLabel = "Étape suivante →";
                     } else {
                         const rest = PASSAGES - pc.passages;
@@ -1106,7 +1124,7 @@
             if (cartes.length === 0) {
                 content.replaceChildren(h("div", { class: "panel result" },
                     h("h2", {}, "Tu connais déjà toutes les cartes !"),
-                    h("div", { class: "etape-msg" }, "Il ne reste aucune carte à revoir. Tu peux refaire tes passages de quiz."),
+                    h("div", { class: "etape-msg" }, "Il ne reste aucune carte à revoir. Tu peux passer au rattrapage."),
                     h("div", { class: "actions" },
                         h("button", { class: "btn", onclick: onFinish }, "✅ C'est bon, j'ai mémorisé"),
                         h("button", { class: "btn secondary", onclick: renderList }, "Retour aux leçons"))));
@@ -1114,7 +1132,7 @@
             }
             startDeck({ titre: "Étape 2 · À revoir : " + quiz.titre, cartes }, true, {
                 back: "← Retour aux leçons",
-                intro: `Étape 2 sur 3 : révise ces ${cartes.length} flashcard${cartes.length > 1 ? "s" : ""}, celles des questions que tu ne sais pas encore. À la dernière carte, clique sur « C'est bon, j'ai mémorisé » : tu referas ${PASSAGES} passages de quiz.`,
+                intro: `Étape 2 sur 3 : révise ces ${cartes.length} flashcard${cartes.length > 1 ? "s" : ""}, celles des questions que tu ne sais pas encore. À la dernière carte, clique sur « C'est bon, j'ai mémorisé » : tu referas seulement ces questions-là, pas tout le quiz.`,
                 finishLabel: "✅ C'est bon, j'ai mémorisé",
                 onFinish
             });

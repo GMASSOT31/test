@@ -111,10 +111,11 @@ function saveResult(classe, pseudo, pin, quizId, qhash, success) {
 // Enregistre qu'une partie du quiz est terminée (l'élève est allé jusqu'au résultat) : le compteur « fait N fois » augmente.
 //
 // Parcours de révision d'une leçon, par élève :
-//   étape 1 « quiz »     : l'élève fait le quiz PASSAGES fois ; à la fin du dernier passage on passe à l'étape 2 s'il reste des
-//                          questions non sues (3 réussites d'affilée), sinon directement à l'étape 3 ;
+//   étape 1 « quiz »     : l'élève fait le quiz PASSAGES fois (au premier tour) ; à la fin du dernier passage on passe à l'étape 2
+//                          s'il reste des questions non sues (3 réussites d'affilée), sinon directement à l'étape 3 ;
+//                          aux tours suivants (cycle > 1) un seul passage de rattrapage, limité aux questions non sues ;
 //   étape 2 « cartes »   : il révise les flashcards des questions non sues, puis « C'est bon, j'ai mémorisé » (cardsDone)
-//                          le ramène à l'étape 1 pour PASSAGES nouveaux passages ;
+//                          le ramène à l'étape 1 pour un passage de rattrapage (questions non sues seulement) ;
 //   étape 3 « revision » : il apprend le paquet complet sans choix proposés, puis demande la validation d'un adulte (requestValidation) ;
 //   « fini »             : en attente de validation ; « valide » : validé par l'administrateur (validateParcours).
 function defaultParcours_() { return { etape: 'quiz', passages: 0, cycle: 1, maj: 0 }; }
@@ -145,8 +146,9 @@ function finishQuiz(classe, pseudo, pin, quizId) {
     var pk = parcoursKey_(st.id, quizId);
     var pc = parseJson_(store.getProperty(pk)) || defaultParcours_();
     if (pc.etape === 'quiz') {
-      pc.passages = Math.min(PASSAGES, pc.passages + 1);
-      if (pc.passages >= PASSAGES) {
+      var need = (pc.cycle || 1) > 1 ? 1 : PASSAGES;   // après les flashcards : un seul passage de rattrapage
+      pc.passages = Math.min(need, pc.passages + 1);
+      if (pc.passages >= need) {
         pc.etape = hasUnsued_(quiz, parseJson_(store.getProperty(progressKey_(st.id, quizId)))) ? 'cartes' : 'revision';
       }
       pc.maj = Date.now();
@@ -158,7 +160,7 @@ function finishQuiz(classe, pseudo, pin, quizId) {
   }
 }
 
-// Étape 2 -> étape 1 : « C'est bon, j'ai mémorisé ». L'élève refait PASSAGES passages de quiz.
+// Étape 2 -> étape 1 : « C'est bon, j'ai mémorisé ». L'élève fait un passage de rattrapage.
 function cardsDone(classe, pseudo, pin, quizId) {
   return moveParcours_(classe, pseudo, pin, quizId, 'cartes', function (pc) {
     pc.etape = 'quiz'; pc.passages = 0; pc.cycle = (pc.cycle || 1) + 1;
