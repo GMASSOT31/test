@@ -1186,5 +1186,152 @@ var BUILTIN_QUIZZES = [
         ]
       }
     ]
+  },
+  {
+    "id": "anglais-animaux",
+    "emoji": "🐾",
+    "matiere": "Anglais",
+    "titre": "Anglais : les animaux (vocabulaire)",
+    "description": "Traduction français → anglais, pluriels et devinettes « Qui suis-je ? ». Les réponses s'écrivent au clavier.",
+    "questions": [
+      {
+        "question": "Traduis en anglais : un porc-épic",
+        "reponses": [
+          "a porcupine",
+          "porcupine"
+        ]
+      },
+      {
+        "question": "Traduis en anglais : un paresseux",
+        "reponses": [
+          "a sloth",
+          "sloth"
+        ]
+      },
+      {
+        "question": "Traduis en anglais : un furet",
+        "reponses": [
+          "a ferret",
+          "ferret"
+        ]
+      },
+      {
+        "question": "Traduis en anglais : un renne",
+        "reponses": [
+          "a reindeer",
+          "reindeer"
+        ]
+      },
+      {
+        "question": "Traduis en anglais : un raton laveur",
+        "reponses": [
+          "a racoon",
+          "racoon",
+          "a raccoon",
+          "raccoon"
+        ]
+      },
+      {
+        "question": "Traduis en anglais : un guépard",
+        "reponses": [
+          "a cheetah",
+          "cheetah"
+        ]
+      },
+      {
+        "question": "Traduis en anglais : un chameau",
+        "reponses": [
+          "a camel",
+          "camel"
+        ]
+      },
+      {
+        "question": "Traduis en anglais : un ours polaire",
+        "reponses": [
+          "a polar bear",
+          "polar bear"
+        ]
+      },
+      {
+        "question": "Traduis en anglais : un yack",
+        "reponses": [
+          "a yak",
+          "yak"
+        ]
+      },
+      {
+        "question": "Traduis en anglais : une antilope",
+        "reponses": [
+          "an antelope",
+          "antelope"
+        ]
+      },
+      {
+        "question": "Quel est le pluriel du mot « a wolf » ?",
+        "reponses": [
+          "wolves"
+        ]
+      },
+      {
+        "question": "Quel est le pluriel du mot « a fox » ?",
+        "reponses": [
+          "foxes"
+        ]
+      },
+      {
+        "question": "Quel est le pluriel du mot « a sheep » ?",
+        "reponses": [
+          "sheep"
+        ]
+      },
+      {
+        "question": "Comment est écrit le mot « écureuils » sur la liste ?",
+        "reponses": [
+          "squirrels"
+        ]
+      },
+      {
+        "question": "Quel est le pluriel indiqué pour « a buffalo » ?",
+        "reponses": [
+          "buffalo",
+          "buffaloes"
+        ]
+      },
+      {
+        "question": "Qui suis-je ? « I am very slow and I live in trees. »",
+        "reponses": [
+          "a sloth",
+          "sloth"
+        ]
+      },
+      {
+        "question": "Qui suis-je ? « I have a very long neck and live in the savanna. »",
+        "reponses": [
+          "a giraffe",
+          "giraffe"
+        ]
+      },
+      {
+        "question": "Qui suis-je ? « I am the fastest land animal on Earth. »",
+        "reponses": [
+          "a cheetah",
+          "cheetah"
+        ]
+      },
+      {
+        "question": "Qui suis-je ? « I live in dry areas and have humps. »",
+        "reponses": [
+          "a camel",
+          "camel"
+        ]
+      },
+      {
+        "question": "Qui suis-je ? « I am a pink farm animal. »",
+        "reponses": [
+          "a pig",
+          "pig"
+        ]
+      }
+    ]
   }
 ];
