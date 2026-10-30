@@ -1111,10 +1111,12 @@
             function draw() {
                 const c = cards[index];
                 card.classList.toggle("flipped", flipped);
-                card.replaceChildren(
+                // (replaceChildren écrirait « null » pour un argument nul : on n'ajoute la ligne que si elle existe)
+                const faces = [
                     h("div", { class: "face-label" }, (flipped ? "Réponse" : "Question") + (learn && c.quiz ? " · " + c.quiz : "")),
-                    h("div", { class: "face-text" }, flipped ? c.verso : c.recto),
-                    learn ? h("div", { class: "mastery-line" }, `${masteryDots(c.ok)} ${c.ok} / ${MASTERY} réussites d'affilée`) : null);
+                    h("div", { class: "face-text" }, flipped ? c.verso : c.recto)];
+                if (learn) faces.push(h("div", { class: "mastery-line" }, `${masteryDots(c.ok)} ${c.ok} / ${MASTERY} réussites d'affilée`));
+                card.replaceChildren(...faces);
                 counter.textContent = `Carte ${index + 1} / ${cards.length}`;
                 prev.disabled = index === 0;
                 next.disabled = index === cards.length - 1;

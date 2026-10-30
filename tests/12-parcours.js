@@ -126,6 +126,9 @@ const ZOO = ['sahara square', 'tundratown', 'downtown', 'rainforest district', '
   // ---- étape 3 : le paquet complet sans choix ----
   await p.click('.actions .btn:has-text("Étape suivante")');
   ok((await p.locator('.etape-intro').innerText()) === 'Maintenant apprends les réponses mais sans choix proposés.', 'ÉTAPE 3 : message « ' + await p.locator('.etape-intro').innerText() + ' »');
+  ok(!/null|undefined/.test(await p.locator('.flashcard').innerText()), 'ÉTAPE 3 : aucune mention « null » sur la carte (recto) : « ' + (await p.locator('.flashcard').innerText()).replace(/\n+/g, ' | ') + ' »');
+  await p.click('.flashcard'); ok(!/null|undefined/.test(await p.locator('.flashcard').innerText()), 'ÉTAPE 3 : aucune mention « null » au verso');
+  await p.click('.flashcard');
   ok((await p.locator('.progress').innerText()).includes('Carte 1 / 10'), 'le paquet ENTIER : 10 cartes');
   let tropTot = false;
   for (let i = 0; i < 9; i++) { if (await p.locator('.finish-btn').isVisible()) tropTot = true; await p.click('text=Suivante →'); }
