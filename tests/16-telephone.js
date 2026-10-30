@@ -1,0 +1,30 @@
+// Affichage téléphone : bandeau fin, onglets admin en symboles sur une ligne, barre du bas côté élève, connexion compacte
+const { chromium } = require('playwright');
+const { makeWorld, install, ok, summary } = require('./harness');
+const path = require('path');
+(async () => {
+  const w = makeWorld({ ADMIN_PASSWORD: 'secret' });
+  w.run('saveStudent', 'secret', { classe: '5B', pseudo: 'Léo', pin: '1234' }); w.run('setBuiltinAssign', 'secret', 'zootopia', ['leo']);
+  const b = await chromium.launch();
+  const c = await b.newContext({ viewport: { width: 360, height: 740 } }); await install(c, w);
+  const A = 'file://' + path.join(__dirname, '..', 'apps-script', 'admin.html'), E = 'file://' + path.join(__dirname, '..', 'apps-script', 'Index.html');
+  const a = await c.newPage(); await a.goto(A);
+  ok((await a.locator('.rv-banner').boundingBox()).height < 50, 'ADMIN : bandeau très fin (' + Math.round((await a.locator('.rv-banner').boundingBox()).height) + ' px)');
+  ok(!(await a.locator('.rv-chip').first().isVisible()) && !(await a.locator('.rv-ticker').isVisible()), 'ADMIN : plus de faux boutons ni de bandeau défilant');
+  ok((await a.locator('#lockbar').boundingBox()).height < 70, 'ADMIN : mot de passe sur une seule ligne');
+  await a.fill('#password', 'secret'); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])');
+  const ys = await a.evaluate(() => ['tab-eleve-ajout', 'tab-eleves', 'tab-quiz-ajout', 'tab-quiz-liste', 'tab-fc-ajout', 'tab-programmes', 'unlock', 'lock'].map(i => Math.round(document.getElementById(i).getBoundingClientRect().top)));
+  ok(new Set(ys).size === 1, '6 onglets + actualiser + verrouiller sur UNE ligne ' + JSON.stringify(ys));
+  ok(await a.evaluate(() => document.documentElement.scrollWidth <= 360), 'ADMIN : pas de défilement horizontal');
+  const s = await c.newPage(); await s.goto(E);
+  ok((await s.locator('.rv-banner').boundingBox()).height < 50, 'ÉLÈVE : même bandeau fin');
+  ok((await s.locator('.login-card').boundingBox()).height < 330 && (await s.locator('#login-classe').getAttribute('placeholder')) === 'Classe' && (await s.locator('#login-pin').getAttribute('placeholder')) === 'PIN', 'connexion compacte, textes dans les champs');
+  await s.fill('#login-classe', '5B'); await s.fill('#login-pseudo', 'Léo'); await s.fill('#login-pin', '1234'); await s.click('#login-btn'); await s.waitForSelector('#app:not([hidden])');
+  const ids = ['tab-quiz', 'tab-flashcards', 'tab-programme', 'logout'];
+  const r = await s.evaluate(ids => ids.map(i => { const r = document.getElementById(i).getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; }), ids);
+  const bar = await s.locator('.sidebar').boundingBox();
+  ok(new Set(r.map(x => x[0])).size === 1 && bar.height < 60 && Math.abs(bar.y + bar.height - 740) < 2, '4 onglets sur une ligne, barre fine collée en bas (' + Math.round(bar.height) + ' px)');
+  await s.click('#tab-flashcards'); ok((await s.locator('#tab-flashcards').getAttribute('aria-selected')) === 'true', 'les onglets fonctionnent');
+  await s.click('#logout'); ok(await s.locator('#login').isVisible(), 'le 4e onglet déconnecte');
+  await b.close(); process.exit(summary() ? 1 : 0);
+})().catch(e => { console.log('ECHEC:', e.message.split('\n')[0]); process.exit(1); });

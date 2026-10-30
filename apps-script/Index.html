@@ -271,6 +271,34 @@
             .panel { padding: 20px; }
             .champ-row { grid-template-columns: 1fr; gap: 4px; }
         }
+        /* ===== Téléphone : bandeau très fin, connexion compacte, onglets en barre fine tout en bas ===== */
+        .login-card label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+        .login-card input { margin-top: 10px; }
+        .whoami .ico { display: none; }
+        .tab .ico { font-size: 1.1rem; line-height: 1; }
+        @media (max-width: 700px) {
+            .login { padding: 10px 12px 16px; }
+            .login-card { padding: 12px 14px; border-radius: 16px; }
+            .login-emoji { display: none; }
+            .login-card h2 { margin: 0 0 2px; font-size: 1.15rem; }
+            .login-help { font-size: .75rem; margin: 0 0 2px; line-height: 1.25; }
+            .login-card input { padding: 9px 12px; margin-top: 8px; font-size: 1rem; }
+            .login-error { min-height: 0; margin: 6px 0; }
+            .login-error:empty { display: none; }
+            .whoami { padding: 6px 12px 0; gap: 8px; font-size: .9rem; }
+            .layout .content { padding-bottom: 76px; }
+            /* barre fine fixée en bas : Mes leçons · Flashcards · Programme · Se déconnecter */
+            .sidebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; width: 100%; flex-direction: row; gap: 4px;
+                       padding: 5px 6px calc(5px + env(safe-area-inset-bottom)); background: #fff; border-top: 3px solid var(--gold); box-shadow: 0 -4px 14px rgba(30,58,138,.12); }
+            .sidebar .tab { flex: 1 1 0; min-width: 0; flex-direction: column; justify-content: center; gap: 1px; padding: 3px 2px; font-size: .64rem; line-height: 1.1;
+                            box-shadow: none; background: #f4f6ff; border-radius: 10px; position: relative; }
+            .sidebar .tab[aria-selected="true"] { background: var(--gold); transform: none; }
+            .sidebar .tab .lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+            .sidebar .tab .count { position: absolute; top: -4px; right: 2px; margin: 0; padding: 0 5px; font-size: .58rem; }
+            .sidebar .tab .count:empty { display: none; }
+            .sidebar .tab.logout-tab { background: #fff0f3; color: #c0264b; }
+            .sidebar .tab .ico { display: inline; }
+        }
         @media (prefers-reduced-motion: reduce) {
             .tab, .card, .btn, .option { transition: none; }
             .tab:nth-child(odd), .tab:nth-child(even) { transform: none; }
@@ -340,6 +368,12 @@
 
       @media (max-width: 560px) { .rv-float { display: none; } .rv-banner { padding-top: 10px; } }
       @media (prefers-reduced-motion: reduce) { .rv-float, .rv-track, .rv-dot { animation: none; } }
+      /* téléphone : bandeau très fin (même que l'administration) */
+      @media (max-width: 700px) {
+        .rv-banner { padding: 6px 12px; border-bottom-width: 2px; }
+        .rv-sticker, .rv-sub, .rv-chips, .rv-ticker, .rv-float { display: none; }
+        .rv-title { margin: 0; font-size: 18px; letter-spacing: -.5px; text-shadow: 0 2px 0 rgba(15,23,80,.35); }
+      }
     </style>
 </head>
 <body>
@@ -377,11 +411,11 @@
             <h2>Connecte-toi</h2>
             <p class="login-help">Ta classe, ton pseudo et ton PIN : demande-les à la personne qui gère tes révisions.</p>
             <label for="login-classe">Classe</label>
-            <input id="login-classe" type="text" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+            <input id="login-classe" placeholder="Classe" type="text" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" required>
             <label for="login-pseudo">Pseudo</label>
-            <input id="login-pseudo" type="text" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+            <input id="login-pseudo" placeholder="Pseudo" type="text" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" required>
             <label for="login-pin">PIN</label>
-            <input id="login-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" required>
+            <input id="login-pin" placeholder="PIN" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" required>
             <div id="login-error" class="login-error" role="alert"></div>
             <button class="btn" type="submit" id="login-btn">Entrer 🚀</button>
         </form>
@@ -391,13 +425,13 @@
         <div class="whoami">
             <span id="sync-status" class="sync-status" role="status"></span>
             <span id="whoami-name"></span>
-            <button type="button" class="btn secondary" id="logout">Se déconnecter</button>
+            <button type="button" class="btn secondary" id="logout"><span class="ico">🚪</span><span class="lbl">Se déconnecter</span></button>
         </div>
         <div class="layout">
             <nav class="sidebar" role="tablist" aria-label="Sections">
-                <button class="tab" role="tab" id="tab-quiz" data-tab="quiz">🎓 Mes leçons <span class="count" id="count-quiz"></span></button>
-                <button class="tab" role="tab" id="tab-flashcards" data-tab="flashcards">🃏 Flashcards <span class="count" id="count-flashcards"></span></button>
-                <button class="tab" role="tab" id="tab-programme" data-tab="programme">📅 Programme <span class="count" id="count-programme"></span></button>
+                <button class="tab" role="tab" id="tab-quiz" data-tab="quiz"><span class="ico">🎓</span><span class="lbl">Mes leçons</span> <span class="count" id="count-quiz"></span></button>
+                <button class="tab" role="tab" id="tab-flashcards" data-tab="flashcards"><span class="ico">🃏</span><span class="lbl">Flashcards</span> <span class="count" id="count-flashcards"></span></button>
+                <button class="tab" role="tab" id="tab-programme" data-tab="programme"><span class="ico">📅</span><span class="lbl">Programme</span> <span class="count" id="count-programme"></span></button>
             </nav>
             <main class="content" id="content" role="tabpanel"></main>
         </div>
@@ -634,7 +668,7 @@
 
         function setTab(tab) {
             activeTab = tab;
-            document.querySelectorAll(".tab").forEach(b =>
+            document.querySelectorAll(".tab[data-tab]").forEach(b =>
                 b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
             renderList();
         }
@@ -1221,10 +1255,19 @@
             connect({ classe: $("login-classe").value, pseudo: $("login-pseudo").value, pin: $("login-pin").value }, false);
         });
         $("logout").addEventListener("click", () => showLogin(""));
+        // Sur téléphone, « Se déconnecter » devient le 4e onglet de la barre du bas
+        const phoneMq = window.matchMedia("(max-width: 700px)");
+        function placeLogout() {
+            const btn = $("logout");
+            if (phoneMq.matches) { btn.className = "tab logout-tab"; document.querySelector(".sidebar").append(btn); }
+            else { btn.className = "btn secondary"; document.querySelector(".whoami").append(btn); }
+        }
+        placeLogout();
+        if (phoneMq.addEventListener) phoneMq.addEventListener("change", placeLogout);
 
         // Compteurs dans les onglets + événements
         updateCounts();
-        document.querySelectorAll(".tab").forEach(b =>
+        document.querySelectorAll(".tab[data-tab]").forEach(b =>
             b.addEventListener("click", () => setTab(b.dataset.tab)));
 
         // Préremplit la classe et le pseudo du dernier élève, puis rouvre la session de l'onglet s'il y en a une
