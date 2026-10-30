@@ -43,8 +43,7 @@ var BUILTIN_ASSIGN_KEY = 'builtin_assign';
 var PROGRESS_PREFIX = 'prog_';
 var DONE_PREFIX = 'done_';
 var PARCOURS_PREFIX = 'parcours_';
-var PASSAGES = 3;            // passages de quiz à faire avant l'étape suivante
-var MASTERY = 3;            // réussites d'affilée pour qu'une question soit sue
+var MASTERY = 2;            // réussites consécutives aux quiz pour qu'une question soit vérifiée
 var MAX_QUESTIONS = 50;
 var MAX_CARDS = 150;
 var MAX_FIELDS = 12;       // champs maximum dans une question à plusieurs champs
@@ -67,8 +66,8 @@ function getStudentData(classe, pseudo, pin) {
   var fois = {};
   var parcours = {};
   quizzes.forEach(function (q) {
-    parcours[q.id] = parseJson_(props[parcoursKey_(st.id, q.id)]) || defaultParcours_();
     var rec = parseJson_(props[progressKey_(st.id, q.id)]);
+    parcours[q.id] = presentParcours_(readParcours_(props[parcoursKey_(st.id, q.id)], q, rec), q);
     if (rec && rec.q) progress[q.id] = rec.q;
     var done = parseJson_(props[doneKey_(st.id, q.id)]);
     if (done && done.n) fois[q.id] = done.n;
@@ -83,9 +82,12 @@ function getStudentData(classe, pseudo, pin) {
   };
 }
 
-// Enregistre le résultat d'une question : réussite => une réussite de plus (3 = sue), erreur => retour à 0.
-// Les identifiants sont revérifiés ; seul un quiz auquel l'élève a accès, et une question qui en fait partie, sont acceptés.
-function saveResult(classe, pseudo, pin, quizId, qhash, success) {
+// Enregistre le résultat d'une question pendant un passage de quiz (quiz initial ou vérification).
+// Réussite du premier essai => une réussite d'affilée de plus (MASTERY = 2 : question « vérifiée », plafonnée) ;
+// erreur ou « Je ne sais pas » => retour à 0 et une erreur de plus. Une question n'est comptée qu'UNE fois par passage
+// (double envoi, nouvelle tentative réseau, opId rejoué : sans effet). Hors passage de quiz, le résultat est ignoré.
+// Les identifiants sont revérifiés ; seul un quiz auquel l'élève a accès, et une question de ce passage, sont acceptés.
+function saveResult(classe, pseudo, pin, quizId, qhash, success, opId) {
   var st = authStudent_(classe, pseudo, pin);
   var quiz = quizzesOf_(st.id).filter(function (q) { return q.id === quizId; })[0];
   if (!quiz) throw new Error('Quiz inaccessible.');
@@ -98,38 +100,100 @@ function saveResult(classe, pseudo, pin, quizId, qhash, success) {
     var store = PropertiesService.getScriptProperties();
     var key = progressKey_(st.id, quizId);
     var rec = parseJson_(store.getProperty(key)) || { q: {}, maj: 0 };
+    var pc = readParcours_(store.getProperty(parcoursKey_(st.id, quizId)), quiz, rec);
     var cur = rec.q[qhash] || [0, 0];
-    rec.q[qhash] = success === true ? [Math.min(MASTERY, cur[0] + 1), cur[1]] : [0, cur[1] + 1];
+    var out = function (extra) { var o = { ok: Math.min(MASTERY, cur[0]), fails: cur[1], parcours: presentParcours_(pc, quiz) }; for (var k in extra) o[k] = extra[k]; return o; };
+    if (seenOp_(pc, opId)) return out({ rejoue: true });
+    if (pc.etape === 'quiz_initial' && !pc.pass) pc.pass = { kind: 'initial', list: quizIds_(quiz), res: {} };
+    if (!pc.pass) return out({ ignore: true });
+    if (pc.pass.list.indexOf(qhash) < 0) throw new Error('Question inconnue pour ce passage.');
+    if (pc.pass.res[qhash] !== undefined) { rememberOp_(pc, opId); store.setProperty(parcoursKey_(st.id, quizId), JSON.stringify(pc)); return out({ rejoue: true }); }
+    // une série déjà au-dessus du seuil (anciennes données) n'est pas abaissée par une réussite
+    cur = success === true ? [cur[0] >= MASTERY ? cur[0] : cur[0] + 1, cur[1]] : [0, cur[1] + 1];
+    rec.q[qhash] = cur;
     rec.maj = Date.now();
+    pc.pass.res[qhash] = success === true ? 1 : 0;
+    rememberOp_(pc, opId); pc.maj = rec.maj;
     store.setProperty(key, JSON.stringify(rec));
-    return { ok: rec.q[qhash][0], fails: rec.q[qhash][1] };
+    store.setProperty(parcoursKey_(st.id, quizId), JSON.stringify(pc));
+    return out({});
   } finally {
     lock.releaseLock();
   }
 }
 
-// Enregistre qu'une partie du quiz est terminée (l'élève est allé jusqu'au résultat) : le compteur « fait N fois » augmente.
-//
-// Parcours de révision d'une leçon, par élève :
-//   étape 1 « quiz »     : l'élève fait le quiz PASSAGES fois (au premier tour) ; à la fin du dernier passage on passe à l'étape 2
-//                          s'il reste des questions non sues (3 réussites d'affilée), sinon directement à l'étape 3 ;
-//                          aux tours suivants (cycle > 1) un seul passage de rattrapage, limité aux questions non sues ;
-//   étape 2 « cartes »   : il révise les flashcards des questions non sues, puis « C'est bon, j'ai mémorisé » (cardsDone)
-//                          le ramène à l'étape 1 pour un passage de rattrapage (questions non sues seulement) ;
-//   étape 3 « revision » : il apprend le paquet complet sans choix proposés, puis demande la validation d'un adulte (requestValidation) ;
-//   « fini »             : en attente de validation ; « valide » : validé par l'administrateur (validateParcours).
-function defaultParcours_() { return { etape: 'quiz', passages: 0, cycle: 1, maj: 0 }; }
+// ---------------- Parcours de révision d'une leçon (schemaVersion 2) ----------------
+//   quiz_initial       un seul passage COMPLET du quiz (toutes les questions) ;
+//   cartes_ciblees     flashcards des questions ratées (ou « Je ne sais pas ») ; chaque carte doit être retournée, évaluée
+//                      (Oublié / Hésité / Trouvé) et finir Trouvé ; puis vérification ;
+//   verification       passages de quiz sur les questions dont la série est < MASTERY (2 réussites consécutives) ;
+//                      une erreur renvoie aux cartes ciblées, sinon passage suivant tant qu'il reste des questions à 1 sur 2 ;
+//   cartes_finales     paquet complet (toutes les questions), même règle que les cartes ciblées ;
+//   attente_validation « Faire valider par un adulte » demandé ; valide : validé par l'administrateur (validateParcours).
+// Le serveur décide de l'étape. L'auto-évaluation des cartes est déclarative : elle ne modifie jamais les séries du quiz.
+// Enregistrement : { v:2, etape, pass:{kind,list,res}|null, pile:{kind,ids,etat:{id:{d,n}},q}|null, fini, valide, maj, ops:[opId], v1? }
+function defaultParcours_() { return { v: 2, etape: 'quiz_initial', pass: null, pile: null, maj: 0 }; }
 function parcoursKey_(studentId, quizId) { return PARCOURS_PREFIX + studentId + '__' + quizId; }
 
-// Reste-t-il des questions non sues (moins de MASTERY réussites d'affilée) ?
-function hasUnsued_(quiz, rec) {
-  var q = (rec && rec.q) || {};
-  return quiz.questions.some(function (question) { return (q[qid_(question)] || [0, 0])[0] < MASTERY; });
+function quizIds_(quiz) { return quiz.questions.map(qid_); }
+function serie_(rec, id) { var r = rec && rec.q && rec.q[id]; return r ? r[0] : 0; }
+// Identifiants des questions dont la série est sous le seuil (dans l'ordre du quiz)
+function underIds_(quiz, rec) { return quizIds_(quiz).filter(function (id) { return serie_(rec, id) < MASTERY; }); }
+
+function enterCiblees_(pc, ids) { pc.etape = 'cartes_ciblees'; pc.pass = null; pc.pile = { kind: 'ciblees', ids: ids, etat: {}, q: null }; }
+function enterVerification_(pc, ids) { pc.etape = 'verification'; pc.pile = null; pc.pass = { kind: 'verif', list: ids, res: {} }; }
+function enterFinales_(pc, quiz) { pc.etape = 'cartes_finales'; pc.pass = null; pc.pile = { kind: 'finales', ids: quizIds_(quiz), etat: {}, q: null }; }
+// Après une erreur, ou à l'issue d'une vérification sans erreur : quelle étape suit ?
+function nextStep_(pc, quiz, rec) {
+  var under = underIds_(quiz, rec);
+  if (under.length) enterVerification_(pc, under); else enterFinales_(pc, quiz);
 }
 
-// Enregistre qu'une partie du quiz est terminée (l'élève est allé jusqu'au résultat) : le compteur « fait N fois » augmente,
-// et, à l'étape 1, le passage compte pour le parcours.
-function finishQuiz(classe, pseudo, pin, quizId) {
+// Lecture d'un enregistrement (migration à la volée de l'ancien format, sans rien écrire : la première écriture le fait)
+function readParcours_(raw, quiz, rec) {
+  var pc = parseJson_(raw);
+  if (!pc) return defaultParcours_();
+  if (pc.v === 2) return pc;
+  return migrateParcours_(pc, quiz, rec);
+}
+
+// Migration v1 -> v2 (voir docs/REPRISE.md). Les séries sont conservées (plafonnées à l'usage) ; l'ancien enregistrement est gardé dans pc.v1.
+//   valide -> valide ; fini -> attente_validation ; revision -> cartes_finales (ou vérification s'il reste des questions < 2) ;
+//   cartes -> cartes_ciblees recalculée depuis les questions sous le seuil ; quiz avec au moins un passage fait -> cartes ciblées / paquet final ;
+//   quiz sans passage -> quiz_initial. Aucune carte n'est marquée « Trouvé » rétroactivement.
+function migrateParcours_(old, quiz, rec) {
+  var pc = defaultParcours_();
+  pc.v1 = old; pc.maj = old.maj || 0;
+  var under = underIds_(quiz, rec);
+  if (old.etape === 'valide') { pc.etape = 'valide'; pc.valide = old.valide || 0; pc.fini = old.fini || 0; }
+  else if (old.etape === 'fini') { pc.etape = 'attente_validation'; pc.fini = old.fini || 0; }
+  else if (old.etape === 'revision') { if (under.length) enterVerification_(pc, under); else enterFinales_(pc, quiz); }
+  else if (old.etape === 'cartes') { if (under.length) enterCiblees_(pc, under); else enterFinales_(pc, quiz); }
+  else if ((old.passages || 0) > 0 || (old.cycle || 1) > 1) { if (under.length) enterCiblees_(pc, under); else enterFinales_(pc, quiz); }
+  return pc;
+}
+
+function seenOp_(pc, opId) { return !!opId && (pc.ops || []).indexOf(String(opId)) >= 0; }
+function rememberOp_(pc, opId) {
+  if (!opId) return;
+  pc.ops = (pc.ops || []).concat(String(opId).slice(0, 40)).slice(-30);
+}
+
+// Version envoyée au navigateur : sans sauvegarde de migration ni identifiants d'opérations ; le passage initial est présenté d'avance.
+function presentParcours_(pc, quiz) {
+  var out = {};
+  Object.keys(pc).forEach(function (k) { if (k !== 'v1' && k !== 'ops') out[k] = pc[k]; });
+  if (out.etape === 'quiz_initial' && !out.pass) out.pass = { kind: 'initial', list: quizIds_(quiz), res: {} };
+  return out;
+}
+
+function pileDone_(pile, live) {
+  return !!pile && pile.ids.filter(function (id) { return live.indexOf(id) >= 0; }).every(function (id) { return pile.etat[id] && pile.etat[id].d === 'trouve'; });
+}
+
+// Fin d'un passage de quiz : le compteur « fait N fois » augmente (une seule fois par passage : un renvoi est sans effet),
+// puis le serveur décide de l'étape suivante à partir des réponses du passage. Un passage inachevé est refusé.
+function finishQuiz(classe, pseudo, pin, quizId, opId) {
   var st = authStudent_(classe, pseudo, pin);
   var quiz = quizzesOf_(st.id).filter(function (q) { return q.id === quizId; })[0];
   if (!quiz) throw new Error('Quiz inaccessible.');
@@ -139,55 +203,98 @@ function finishQuiz(classe, pseudo, pin, quizId) {
     var store = PropertiesService.getScriptProperties();
     var key = doneKey_(st.id, quizId);
     var rec = parseJson_(store.getProperty(key)) || { n: 0, last: 0 };
-    rec.n += 1;
-    rec.last = Date.now();
-    store.setProperty(key, JSON.stringify(rec));
-
+    var prog = parseJson_(store.getProperty(progressKey_(st.id, quizId)));
     var pk = parcoursKey_(st.id, quizId);
-    var pc = parseJson_(store.getProperty(pk)) || defaultParcours_();
-    if (pc.etape === 'quiz') {
-      var need = (pc.cycle || 1) > 1 ? 1 : PASSAGES;   // après les flashcards : un seul passage de rattrapage
-      pc.passages = Math.min(need, pc.passages + 1);
-      if (pc.passages >= need) {
-        pc.etape = hasUnsued_(quiz, parseJson_(store.getProperty(progressKey_(st.id, quizId)))) ? 'cartes' : 'revision';
-      }
-      pc.maj = Date.now();
-      store.setProperty(pk, JSON.stringify(pc));
-    }
-    return { n: rec.n, parcours: pc };
+    var pc = readParcours_(store.getProperty(pk), quiz, prog);
+    if (seenOp_(pc, opId)) return { n: rec.n, parcours: presentParcours_(pc, quiz), rejoue: true };
+    if (pc.etape === 'quiz_initial' && !pc.pass) pc.pass = { kind: 'initial', list: quizIds_(quiz), res: {} };
+    if (!pc.pass) return { n: rec.n, parcours: presentParcours_(pc, quiz), rejoue: true };
+    var live = quizIds_(quiz);
+    var list = pc.pass.list.filter(function (id) { return live.indexOf(id) >= 0; });
+    if (!list.every(function (id) { return pc.pass.res[id] !== undefined; })) throw new Error('Ce passage est en cours : réponds à toutes les questions.');
+    rec.n += 1; rec.last = Date.now();
+    store.setProperty(key, JSON.stringify(rec));
+    var erreurs = list.filter(function (id) { return pc.pass.res[id] === 0; });
+    var bilan = { total: list.length, bons: list.length - erreurs.length, erreurs: erreurs.length, genre: pc.pass.kind };
+    if (erreurs.length) enterCiblees_(pc, erreurs); else nextStep_(pc, quiz, prog);
+    bilan.restant = underIds_(quiz, prog).length;
+    rememberOp_(pc, opId); pc.maj = Date.now();
+    store.setProperty(pk, JSON.stringify(pc));
+    return { n: rec.n, parcours: presentParcours_(pc, quiz), bilan: bilan };
   } finally {
     lock.releaseLock();
   }
 }
 
-// Étape 2 -> étape 1 : « C'est bon, j'ai mémorisé ». L'élève fait un passage de rattrapage.
-function cardsDone(classe, pseudo, pin, quizId) {
-  return moveParcours_(classe, pseudo, pin, quizId, 'cartes', function (pc) {
-    pc.etape = 'quiz'; pc.passages = 0; pc.cycle = (pc.cycle || 1) + 1;
-  });
-}
-
-// Étape 3 -> fini : « Faire valider par un adulte ».
-function requestValidation(classe, pseudo, pin, quizId) {
-  return moveParcours_(classe, pseudo, pin, quizId, 'revision', function (pc) {
-    pc.etape = 'fini'; pc.fini = Date.now();
-  });
-}
-
-function moveParcours_(classe, pseudo, pin, quizId, from, change) {
+// Auto-évaluation d'une carte (« oublie », « hesite », « trouve ») : suppose que la carte a été retournée.
+// q = instantané de la file de répétition (pour reprendre une pile : cartes à présenter, files Oublié / Hésité, carte courante).
+function rateCard(classe, pseudo, pin, quizId, cardId, verdict, snapshot, opId) {
   var st = authStudent_(classe, pseudo, pin);
-  if (!quizzesOf_(st.id).some(function (q) { return q.id === quizId; })) throw new Error('Quiz inaccessible.');
+  var quiz = quizzesOf_(st.id).filter(function (q) { return q.id === quizId; })[0];
+  if (!quiz) throw new Error('Quiz inaccessible.');
+  if (['oublie', 'hesite', 'trouve'].indexOf(verdict) < 0) throw new Error('Choix invalide.');
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     var store = PropertiesService.getScriptProperties();
     var pk = parcoursKey_(st.id, quizId);
-    var pc = parseJson_(store.getProperty(pk)) || defaultParcours_();
-    if (pc.etape !== from) throw new Error("Cette étape n'est pas en cours.");
-    change(pc);
-    pc.maj = Date.now();
+    var pc = readParcours_(store.getProperty(pk), quiz, parseJson_(store.getProperty(progressKey_(st.id, quizId))));
+    if (pc.etape !== 'cartes_ciblees' && pc.etape !== 'cartes_finales') throw new Error("Cette étape n'est pas en cours.");
+    if (seenOp_(pc, opId)) return { parcours: presentParcours_(pc, quiz), rejoue: true };
+    if (pc.pile.ids.indexOf(cardId) < 0) throw new Error('Carte inconnue.');
+    var prev = pc.pile.etat[cardId] || { d: '', n: 0 };
+    pc.pile.etat[cardId] = { d: verdict, n: prev.n + 1 };
+    pc.pile.q = cleanSnapshot_(snapshot, pc.pile.ids);
+    rememberOp_(pc, opId); pc.maj = Date.now();
     store.setProperty(pk, JSON.stringify(pc));
-    return { parcours: pc };
+    return { parcours: presentParcours_(pc, quiz) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Ne garde de l'instantané que des identifiants de la pile (f : à présenter, o : Oublié, h : Hésité, c : carte courante)
+function cleanSnapshot_(s, ids) {
+  if (!s || typeof s !== 'object') return null;
+  var keep = function (list) { return (Array.isArray(list) ? list : []).filter(function (id) { return ids.indexOf(id) >= 0; }).slice(0, ids.length); };
+  var waits = {};
+  if (s.w && typeof s.w === 'object') Object.keys(s.w).forEach(function (id) { if (ids.indexOf(id) >= 0) waits[id] = Math.max(0, Math.min(3, Number(s.w[id]) || 0)); });
+  return { f: keep(s.f), o: keep(s.o), h: keep(s.h), w: waits, c: ids.indexOf(s.c) >= 0 ? s.c : '', l: ids.indexOf(s.l) >= 0 ? s.l : '' };
+}
+
+// Cartes ciblées terminées -> vérification. Refusé tant qu'une carte n'a pas été évaluée et ne finit pas « Trouvé ».
+function cardsDone(classe, pseudo, pin, quizId, opId) {
+  return moveParcours_(classe, pseudo, pin, quizId, 'cartes_ciblees', opId, function (pc, quiz, prog) {
+    nextStep_(pc, quiz, prog);
+  });
+}
+
+// Paquet final terminé -> « En attente de validation » (réservé à l'adulte ensuite). Exige toutes les questions vérifiées.
+function requestValidation(classe, pseudo, pin, quizId, opId) {
+  return moveParcours_(classe, pseudo, pin, quizId, 'cartes_finales', opId, function (pc, quiz, prog) {
+    if (underIds_(quiz, prog).length) throw new Error("Des questions ne sont pas encore vérifiées (pas en cours d'étape).");
+    pc.etape = 'attente_validation'; pc.fini = Date.now(); pc.pile = null;
+  });
+}
+
+function moveParcours_(classe, pseudo, pin, quizId, from, opId, change) {
+  var st = authStudent_(classe, pseudo, pin);
+  var quiz = quizzesOf_(st.id).filter(function (q) { return q.id === quizId; })[0];
+  if (!quiz) throw new Error('Quiz inaccessible.');
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var store = PropertiesService.getScriptProperties();
+    var pk = parcoursKey_(st.id, quizId);
+    var prog = parseJson_(store.getProperty(progressKey_(st.id, quizId)));
+    var pc = readParcours_(store.getProperty(pk), quiz, prog);
+    if (seenOp_(pc, opId)) return { parcours: presentParcours_(pc, quiz), rejoue: true };
+    if (pc.etape !== from) throw new Error("Cette étape n'est pas en cours.");
+    if (!pileDone_(pc.pile, quizIds_(quiz))) throw new Error("Cartes en cours : toutes ne sont pas encore évaluées « Trouvé ».");
+    change(pc, quiz, prog);
+    rememberOp_(pc, opId); pc.maj = Date.now();
+    store.setProperty(pk, JSON.stringify(pc));
+    return { parcours: presentParcours_(pc, quiz) };
   } finally {
     lock.releaseLock();
   }
@@ -209,7 +316,7 @@ function adminData(password) {
   students.forEach(function (st) {
     progress[st.id] = allQuizzes
       .filter(function (q) { return quizFor_(q, st.id, assigned); })
-      .map(function (q) { return lessonSummary_(q, parseJson_(props[progressKey_(st.id, q.id)]), parseJson_(props[doneKey_(st.id, q.id)]), parseJson_(props[parcoursKey_(st.id, q.id)])); });
+      .map(function (q) { return lessonSummary_(q, parseJson_(props[progressKey_(st.id, q.id)]), parseJson_(props[doneKey_(st.id, q.id)]), readParcours_(props[parcoursKey_(st.id, q.id)], q, parseJson_(props[progressKey_(st.id, q.id)]))); });
   });
   return {
     students: students.map(publicStudent_),
@@ -371,11 +478,13 @@ function validateParcours(password, studentId, quizId) {
   try {
     var store = PropertiesService.getScriptProperties();
     var pk = parcoursKey_(studentId, quizId);
-    var pc = parseJson_(store.getProperty(pk));
-    if (!pc || pc.etape !== 'fini') throw new Error("Ce parcours n'attend pas de validation.");
+    var quiz = builtins_().concat(list_(QUIZ_PREFIX).map(withQids_)).filter(function (q) { return q.id === quizId; })[0];
+    if (!quiz) throw new Error('Quiz inconnu.');
+    var pc = readParcours_(store.getProperty(pk), quiz, parseJson_(store.getProperty(progressKey_(studentId, quizId))));
+    if (pc.etape !== 'attente_validation') throw new Error("Ce parcours n'attend pas de validation.");
     pc.etape = 'valide'; pc.valide = Date.now(); pc.maj = pc.valide;
     store.setProperty(pk, JSON.stringify(pc));
-    return { parcours: pc };
+    return { parcours: slimParcours_(pc) };
   } finally {
     lock.releaseLock();
   }
@@ -470,8 +579,43 @@ function lessonSummary_(quiz, rec, done, parcours) {
     id: quiz.id, titre: quiz.titre, emoji: quiz.emoji, matiere: quiz.matiere,
     total: quiz.questions.length, sues: sues, enCours: enCours, erreurs: erreurs, maj: (rec && rec.maj) || 0,
     fois: (done && done.n) || 0, derniere: (done && done.last) || 0,
-    parcours: parcours || defaultParcours_()
+    parcours: slimParcours_(parcours || defaultParcours_())
   };
+}
+
+// Version courte pour l'administration : étape, dates et avancement du passage ou de la pile en cours
+function slimParcours_(pc) {
+  var out = { etape: pc.etape, maj: pc.maj || 0, fini: pc.fini || 0, valide: pc.valide || 0 };
+  if (pc.pass) out.passage = { genre: pc.pass.kind, total: pc.pass.list.length, repondues: Object.keys(pc.pass.res).length };
+  if (pc.pile) out.pile = { genre: pc.pile.kind, total: pc.pile.ids.length, trouvees: pc.pile.ids.filter(function (id) { return pc.pile.etat[id] && pc.pile.etat[id].d === 'trouve'; }).length };
+  return out;
+}
+
+// Sauvegarde complète des données (comptes avec PIN haché, quiz, progressions, parcours) : à faire avant toute migration.
+function backupData(password) {
+  checkAdmin_(password);
+  var props = PropertiesService.getScriptProperties().getProperties();
+  delete props.ADMIN_PASSWORD;
+  return { date: Date.now(), schema: 2, proprietes: props };
+}
+
+// Retour arrière de la migration : restaure les anciens parcours (v1) gardés à la première écriture. Les séries et compteurs restent.
+function rollbackParcoursV1(password) {
+  checkAdmin_(password);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var store = PropertiesService.getScriptProperties();
+    var all = store.getProperties(), n = 0;
+    Object.keys(all).forEach(function (k) {
+      if (k.indexOf(PARCOURS_PREFIX) !== 0) return;
+      var pc = parseJson_(all[k]);
+      if (pc && pc.v === 2 && pc.v1) { store.setProperty(k, JSON.stringify(pc.v1)); n++; }
+    });
+    return n;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // Supprime la progression d'un élève ('all' = tous) sur une leçon ('all' = toutes). Renvoie le nombre d'enregistrements supprimés.

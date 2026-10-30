@@ -1,5 +1,5 @@
 const { chromium } = require('playwright');
-const { makeWorld, install, ok, summary, login, LEO, EMMA, PW, SRC } = require('./harness');
+const { makeWorld, install, ok, summary, login, LEO, EMMA, PW, SRC, party } = require('./harness');
 const w = makeWorld();
 w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' }); w.run('saveStudent', PW, { classe: '5B', pseudo: 'Emma', pin: '4321' });
 w.run('setBuiltinAssign', PW, 'zootopia', ['leo', 'emma']); w.run('setBuiltinAssign', PW, 'byzance', ['leo']);
@@ -8,8 +8,8 @@ const ZOO = ['sahara square', 'tundratown', 'downtown', 'rainforest district', '
 
 (async () => {
   // ---------- serveur ----------
-  ok(w.run('finishQuiz', ...Lc, 'zootopia').n === 1 && w.run('finishQuiz', ...Lc, 'zootopia').n === 2, 'finishQuiz : 1 puis 2 (cumulé)');
-  ok(w.run('finishQuiz', ...Ec, 'zootopia').n === 1, 'le compteur d\'Emma est indépendant de celui de Léo');
+  ok(party(w, Lc, 'zootopia').n === 1 && party(w, Lc, 'zootopia').n === 2, 'finishQuiz : 1 puis 2 (cumulé)');
+  ok(party(w, Ec, 'zootopia').n === 1, 'le compteur d\'Emma est indépendant de celui de Léo');
   ok(w.try('finishQuiz', ...Ec, 'byzance').err === 'Quiz inaccessible.', 'Emma ne peut pas compter une partie sur un quiz qu\'elle n\'a pas');
   ok(w.try('finishQuiz', '5B', 'Léo', '0000', 'zootopia').err === 'Classe, pseudo ou PIN incorrect.', 'refusé avec un mauvais PIN');
   ok(w.try('finishQuiz', ...Lc, 'inexistant').err === 'Quiz inaccessible.' && w.try('finishQuiz', ...Lc, '__proto__').err === 'Quiz inaccessible.', 'quiz inconnu ou piégé refusé');
@@ -24,12 +24,14 @@ const ZOO = ['sahara square', 'tundratown', 'downtown', 'rainforest district', '
   ok(w.run('adminData', PW).progress.leo.find(x => x.id === 'zootopia').fois === 2 && w.run('adminData', PW).progress.emma.find(x => x.id === 'zootopia').fois === 1, 'même après « tout remettre à zéro » : compteurs conservés (Léo 2, Emma 1)');
   ok(Object.keys(w.props).filter(k => k.startsWith('done_')).sort().join() === 'done_emma__zootopia,done_leo__zootopia', 'stockage : une propriété par élève et par quiz');
   const custom = w.run('saveQuiz', PW, { titre: 'Maths', questions: [{ question: 'q ?', options: ['a', 'b'], correct: 0 }], pour: ['emma'] });
-  w.run('finishQuiz', ...Ec, custom.id);
+  party(w, Ec, custom.id);
   ok(w.run('getStudentData', ...Ec).fois[custom.id] === 1, 'compteur aussi sur un quiz créé depuis l\'administration');
   w.run('deleteQuiz', PW, custom.id);
   ok(!Object.keys(w.props).some(k => k.startsWith('done_') && k.endsWith('__' + custom.id)) && Object.keys(w.props).some(k => k.startsWith('done_leo__zootopia')), 'supprimer un quiz efface ses compteurs, pas ceux des autres quiz');
 
   // ---------- page élève ----------
+  w.run('resetProgress', PW, 'all', 'all');   // parcours au quiz initial (les compteurs sont conservés)
+  w.props['done_leo__zootopia'] = JSON.stringify({ n: 2, last: Date.now() });
   const b = await chromium.launch();
   const c = await b.newContext({ viewport: { width: 1000, height: 1000 } }); await install(c, w);
   const errs = [];
@@ -40,16 +42,17 @@ const ZOO = ['sahara square', 'tundratown', 'downtown', 'rainforest district', '
   // partie abandonnée : ne compte pas
   await p.locator('.card', { hasText: 'Zootopia' }).click(); await p.fill('.saisie', ZOO[0]); await p.keyboard.press('Enter'); await p.click('.back');
   ok((await label('Zootopia')) === '🔁 Fait 2 fois', 'une partie abandonnée en cours de route ne compte PAS');
-  // partie terminée : compte
+  // partie terminée : compte (la reprise redonne la question 2 : la réponse 1 est déjà enregistrée)
   await p.locator('.card', { hasText: 'Zootopia' }).click();
-  for (let i = 0; i < 10; i++) { await p.fill('.saisie', ZOO[i]); await p.keyboard.press('Enter'); await p.locator('.panel .btn', { hasText: /suivante|résultat/ }).click(); }
+  ok((await p.locator('.progress').innerText()).includes('Question 2 / 10'), 'la partie abandonnée reprend à la question 2');
+  for (let i = 1; i < 10; i++) { await p.fill('.saisie', ZOO[i]); await p.keyboard.press('Enter'); await p.locator('.panel .btn', { hasText: /suivante|résultat/ }).click(); }
   ok((await p.locator('.final').innerText()).trim() === '10 / 10', 'partie terminée jusqu\'au résultat (10 / 10)');
   await p.click('text=Retour aux leçons');
   ok((await label('Zootopia')) === '🔁 Fait 3 fois', 'l\'étiquette passe à « ' + await label('Zootopia') + ' » dès le retour à la liste');
   await p.evaluate(() => revisionFlush());
   ok(w.run('adminData', PW).progress.leo.find(x => x.id === 'zootopia').fois === 3, 'le serveur a bien enregistré 3 parties');
   // deux parties de plus, jouées sur un autre appareil : le compteur est cumulé sur le serveur
-  w.run('finishQuiz', ...Lc, 'zootopia'); w.run('finishQuiz', ...Lc, 'zootopia');
+  party(w, Lc, 'zootopia'); party(w, Lc, 'zootopia');
   // autre appareil + autre élève
   const c2 = await b.newContext({ viewport: { width: 1000, height: 900 } }); await install(c2, w);
   const p2 = await c2.newPage(); await p2.goto('file://' + SRC + 'Index.html'); await login(p2, LEO);

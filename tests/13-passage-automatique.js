@@ -26,7 +26,7 @@ const ZOO = ['sahara square', 'tundratown', 'downtown', 'rainforest district', '
   ok((await label()).startsWith('Question 1 /'), 'départ : ' + await label());
   const t0 = Date.now();
   await clickOption(true);
-  ok(await p.locator('.option.correct').isVisible() && (await p.locator('.mastery-line').innerText()).includes('1 / 3') && (await p.locator('.auto-next').evaluate(e => getComputedStyle(e).display)) === 'block', 'juste après le clic : la bonne réponse est en VERT, la progression « ' + (await p.locator('.mastery-line').innerText()).trim().slice(0, 40) + ' » et la barre d\'attente s\'affichent');
+  ok(await p.locator('.option.correct').isVisible() && (await p.locator('.mastery-line').innerText()).includes('1 / 2') && (await p.locator('.auto-next').evaluate(e => getComputedStyle(e).display)) === 'block', 'juste après le clic : la bonne réponse est en VERT, la progression « ' + (await p.locator('.mastery-line').innerText()).trim().slice(0, 40) + ' » et la barre d\'attente s\'affichent');
   ok((await label()).startsWith('Question 1 /'), 'on reste un instant sur la question (pas de saut immédiat)');
   await waitLabel('Question 2', 4000); const dt = Date.now() - t0;
   ok(dt >= 800 && dt < 2500, 'PASSAGE AUTOMATIQUE à la question 2, sans aucun clic, après ' + dt + ' ms');
@@ -95,7 +95,7 @@ const ZOO = ['sahara square', 'tundratown', 'downtown', 'rainforest district', '
   await p.click('.back');
 
   // ---------- la progression et la fin de partie fonctionnent comme avant ----------
-  ok((await p.evaluate(() => { const q = QUIZZES.find(x => x.id === 'zootopia'); return progressOf(q, q.questions[1]).ok; })) === 1, 'la progression est enregistrée comme avant (Q2 de Zootopia : 1 / 3)');
+  ok((await p.evaluate(() => { const q = QUIZZES.find(x => x.id === 'zootopia'); return progressOf(q, q.questions[1]).ok; })) === 1, 'la progression est enregistrée comme avant (Q2 de Zootopia : 1 / 2)');
   ok(errs.length === 0, 'aucune erreur JavaScript ' + JSON.stringify(errs));
   await b.close(); process.exit(summary() ? 1 : 0);
 })().catch(e => { console.log('ECHEC:', e.message.split('\n')[0]); process.exit(1); });

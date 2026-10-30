@@ -33,7 +33,9 @@ const URL_ = 'file://' + SRC + 'Index.html';
   const leoCards = await p.locator('.card h3').allInnerTexts();
   ok(JSON.stringify(leoCards) === JSON.stringify(['Grand quiz : Byzance et l\'Empire carolingien', 'Zootopia : les quartiers']), 'Léo voit ses 2 quiz : ' + leoCards.join(' / '));
   ok((await p.locator('#whoami-name').innerText()) === '👤 Léo · 5B', 'bandeau « 👤 Léo · 5B »');
-  ok((await p.locator('#count-quiz').innerText()) === '2' && (await p.locator('#count-programme').innerText()) === '40', 'compteurs : 2 quiz, 40 cartes à apprendre (30 + 10)');
+  ok((await p.locator('#count-quiz').innerText()) === '2', 'compteur : 2 leçons');
+  ok((await p.locator('#tab-programme').innerText()).includes('Mes progrès'), 'l\'onglet s\'appelle « Mes progrès »');
+  await p.click('#tab-programme'); ok((await p.locator('.progress-panel .score').innerText()) === '0 / 40', 'Mes progrès : 0 / 40 questions vérifiées (30 + 10)'); await p.click('#tab-quiz');
   ok((await p.locator('#rvStreak').innerText()) === '🔥 Série : 1 jour', 'série de jours de Léo : ' + await p.locator('#rvStreak').innerText());
   await p.click('#tab-flashcards');
   const leoDecks = await p.locator('.card h3').allInnerTexts();
@@ -56,7 +58,7 @@ const URL_ = 'file://' + SRC + 'Index.html';
   const emmaCards = await p.locator('.card h3').allInnerTexts();
   ok(JSON.stringify(emmaCards) === JSON.stringify(['Byzance et l\'Europe carolingienne', 'Maths']), 'Emma voit ses 2 quiz : ' + emmaCards.join(' / '));
   ok(!(await p.evaluate(() => JSON.stringify([QUIZZES, FLASHCARDS]))).match(/Zootopia|Grand quiz|Mots anglais/), 'aucun quiz ni paquet de Léo dans la page d\'Emma');
-  ok((await p.locator('#count-programme').innerText()) === '11', 'programme d\'Emma : 11 cartes (10 + 1), indépendant de celui de Léo');
+  await p.click('#tab-programme'); ok((await p.locator('.progress-panel .score').innerText()) === '0 / 11', 'Mes progrès d\'Emma : 0 / 11 questions (10 + 1), indépendant de celui de Léo'); await p.click('#tab-quiz');
   ok((await p.locator('#rvStreak').innerText()) === '🔥 Série : 1 jour', 'série d\'Emma indépendante');
   await p.click('#tab-flashcards');
   ok(!(await p.locator('.card h3').allInnerTexts()).includes('Mots anglais'), 'paquet « Mots anglais » (pour Léo) invisible pour Emma');
@@ -85,7 +87,7 @@ const URL_ = 'file://' + SRC + 'Index.html';
   // ---- 8. remise à zéro par l'admin : seulement l'élève visé ----
   w.run('resetProgress', PW, 'leo', 'all');
   await p.click('#logout'); await p.fill('#login-pin', '1234'); await p.click('#login-btn'); await p.waitForSelector('#app:not([hidden])');
-  ok((await p.locator('#count-programme').innerText()) === '40', 'remise à zéro de Léo : retour à 40 cartes à sa prochaine connexion');
+  await p.click('#tab-programme'); ok((await p.locator('.progress-panel .score').innerText()) === '0 / 40', 'remise à zéro de Léo : 0 / 40 questions vérifiées à sa prochaine connexion'); await p.click('#tab-quiz');
   await p.click('#logout'); await p.fill('#login-pseudo', 'Emma'); await p.fill('#login-pin', '4321'); await p.click('#login-btn'); await p.waitForSelector('#app:not([hidden])');
   ok(!Object.keys(w.props).some(k => k.startsWith('prog_leo__')), 'la remise à zéro de Léo a supprimé sa progression sur le serveur');
 
@@ -95,7 +97,7 @@ const URL_ = 'file://' + SRC + 'Index.html';
   await p.fill('.saisie', 'sahara square'); await p.keyboard.press('Enter'); await p.evaluate(() => revisionFlush());
   const c2 = await b.newContext({ viewport: { width: 1000, height: 900 } }); await install(c2, w);
   const p2 = await c2.newPage(); p2.on('pageerror', e => errs.push(e.message)); await p2.goto(URL_); await login(p2, LEO);
-  ok(await p2.evaluate(() => { const q = QUIZZES.find(x => x.id === 'zootopia'); return progressOf(q, q.questions[0]).ok === 1; }) && (await p2.locator('#count-programme').innerText()) === '40', 'AUTRE APPAREIL : Léo retrouve sa progression (Q1 : 1 / 3), sans rien avoir joué dessus');
+  ok(await p2.evaluate(() => { const q = QUIZZES.find(x => x.id === 'zootopia'); return progressOf(q, q.questions[0]).ok === 1; }) && (await (async () => { await p2.click('#tab-programme'); return p2.locator('.progress-panel .score').innerText(); })()) === '0 / 40', 'AUTRE APPAREIL : Léo retrouve sa progression (Q1 : 1 / 2), sans rien avoir joué dessus');
   await p2.close();
 
   // ---- 9. élève sans aucun quiz attribué ----

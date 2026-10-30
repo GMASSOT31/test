@@ -54,19 +54,20 @@ const CHAMPS_KEY = { 11: ['Alger', 'pneumonie'], 19: ['voix', 'instrument'], 21:
   }
   const final = (await p.locator('.final').innerText()).trim();
   ok(final === '40 / 40', 'RÉPONDRE AVEC LE CORRIGÉ OFFICIEL : score ' + final + ' (aucune réponse du corrigé refusée)');
-  ok(await p.evaluate(() => QUIZZES[0].questions.every(q => progressOf(QUIZZES[0], q).ok === 1)), 'les 40 questions ont 1 / 3 réussites au programme');
+  ok(await p.evaluate(() => QUIZZES[0].questions.every(q => progressOf(QUIZZES[0], q).ok === 1)), 'les 40 questions ont 1 / 2 réussites au programme');
 
   // ---- 3. cas limites des questions à plusieurs champs ----
   const goto = async i => { await p.evaluate(() => { activeTab = 'quiz'; renderList(); }); await p.locator('.card', { hasText: 'Musique descriptive' }).click(); for (let k = 0; k < i; k++) { if (Q.questions[k].options) await p.locator('.option').first().click(); else { await p.evaluate(() => { }); const ins = p.locator('.saisie'); for (let n = 0; n < await ins.count(); n++) await ins.nth(n).fill('x'); await p.keyboard.press('Enter'); if (await p.locator('text=Valider').count()) await p.locator('.panel .btn', { hasText: 'Valider' }).click(); } /* on avance sans valider : voir ci-dessous */ } };
   // plus simple : on saute directement à la question voulue en forçant l'index (la fonction startQuiz n'expose pas l'index) → on rejoue depuis le début avec « Voir la réponse »
   const open = async i => {
-    await p.evaluate(() => { activeTab = 'quiz'; renderList(); });
+    // nouveau passage côté page (la reprise ne redonne pas les questions déjà répondues) : on repart de la question 1
+    await p.evaluate(() => { const q = QUIZZES[0]; parcours[q.id] = { etape: 'quiz_initial', pass: { kind: 'initial', list: q.questions.map(qid), res: {} }, pile: null }; activeTab = 'quiz'; renderList(); });
     await p.locator('.card', { hasText: 'Musique descriptive' }).click();
     for (let k = 0; k < i; k++) {
       const qk = Q.questions[k];
       if (qk.options) { await p.locator('.option').first().click(); }
-      else if (qk.reponses) { for (let t = 0; t < 3; t++) { await p.fill('.saisie', 'zzz'); await p.keyboard.press('Enter'); } await p.locator('text=Voir la réponse').click(); }
-      else { const ins = p.locator('.saisie.champ'); for (let n = 0; n < await ins.count(); n++) await ins.nth(n).fill('zzz'); for (let t = 0; t < 3; t++) await p.locator('.panel .btn', { hasText: 'Valider' }).click(); await p.locator('text=Voir la réponse').click(); }
+      else if (qk.reponses) { for (let t = 0; t < 3; t++) { await p.fill('.saisie', 'zzz'); await p.keyboard.press('Enter'); } await p.locator('text=Je ne sais pas').click(); }
+      else { const ins = p.locator('.saisie.champ'); for (let n = 0; n < await ins.count(); n++) await ins.nth(n).fill('zzz'); for (let t = 0; t < 3; t++) await p.locator('.panel .btn', { hasText: 'Valider' }).click(); await p.locator('text=Je ne sais pas').click(); }
       await next();
     }
   };
@@ -83,7 +84,7 @@ const CHAMPS_KEY = { 11: ['Alger', 'pneumonie'], 19: ['voix', 'instrument'], 21:
   await fill(['', 'mp<f>mp']);
   ok(await p.locator('.feedback.ok').isVisible(), '« mp<f>mp » (sans espaces) accepté pour « mp < f > mp »');
   ok((await p.locator('.feedback').innerText()).includes('sans point') && (await p.locator('.score').innerText()) === scoreAvant, 'réussi au 2e essai : pas de point (score inchangé : ' + scoreAvant + ')');
-  ok((await p.locator('.mastery-line').innerText()).includes('repart à 0'), 'et la question repart à 0 / 3 au programme');
+  ok((await p.locator('.mastery-line').innerText()).includes('repart à 0'), 'et la question repart à 0 / 2 au programme');
 
   // 3b. catégories de hauteur, ordre libre (index 21)
   await open(21);
@@ -126,9 +127,9 @@ const CHAMPS_KEY = { 11: ['Alger', 'pneumonie'], 19: ['voix', 'instrument'], 21:
 
   // 3g. abandon après 3 validations ratées (Éléphant, index 33)
   await open(33);
-  for (let t = 0; t < 3; t++) await fill(['x', 'x', 'x', 'x']);
-  ok(await p.locator('text=Voir la réponse').isVisible(), '« Voir la réponse » après 3 validations ratées');
-  await p.locator('text=Voir la réponse').click();
+  ok(await p.locator('text=Je ne sais pas').isVisible(), '« Je ne sais pas » visible dès la première présentation (pas besoin de 3 validations ratées)');
+  await fill(['x', 'x', 'x', 'x']);
+  await p.locator('text=Je ne sais pas').click();
   ok(JSON.stringify((await p.locator('.saisie.champ').evaluateAll(l => l.map(i => i.value)))) === '["grave","mezzo forte","modéré","staccato"]', 'les bonnes réponses sont affichées dans les champs');
   ok(await p.locator('.saisie.champ').evaluateAll(l => l.every(i => i.disabled)) && await p.locator('.panel .btn', { hasText: /suivante/ }).isVisible(), 'champs verrouillés, bouton « Question suivante » disponible');
 

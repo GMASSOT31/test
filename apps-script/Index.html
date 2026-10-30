@@ -271,6 +271,19 @@
             .panel { padding: 20px; }
             .champ-row { grid-template-columns: 1fr; gap: 4px; }
         }
+        /* ===== Flashcards actives, statut des leçons ===== */
+        .card.lecon .verified { margin-top: 4px; font-size: .85rem; font-weight: 700; color: var(--muted); }
+        .action-pill { display: inline-block; margin-top: 10px; padding: 6px 14px; border-radius: 999px; background: var(--blue); color: #fff; font-weight: 800; font-size: .9rem; box-shadow: var(--sticker); }
+        .cards-count { font-size: .85rem; font-weight: 700; color: var(--muted); text-align: right; }
+        .face-hint { margin-top: 14px; color: var(--violet); font-weight: 800; font-size: .95rem; }
+        .face-expl { margin-top: 14px; padding: 10px 12px; border-radius: 12px; background: #fff6dc; border-left: 5px solid var(--gold); font-weight: 700; font-size: .95rem; text-align: left; }
+        .flashcard.flipped { cursor: default; }
+        .eval { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 14px; }
+        .eval-btn { flex: 1 1 110px; }
+        .eval-btn.oublie { background: #ffe3ee; color: #8a1740; }
+        .eval-btn.hesite { background: #fff0c9; color: #6b4a00; }
+        .eval-btn.trouve { background: #d9fff0; color: #07402a; }
+        .eval-btn:focus-visible, .flip-btn:focus-visible, .flashcard:focus-visible { outline: 3px solid var(--navy); outline-offset: 3px; }
         /* ===== Téléphone : bandeau très fin, connexion compacte, onglets en barre fine tout en bas ===== */
         .login-card label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
         .login-card input { margin-top: 10px; }
@@ -286,6 +299,7 @@
             .login-error { min-height: 0; margin: 6px 0; }
             .login-error:empty { display: none; }
             .whoami { padding: 6px 12px 0; gap: 8px; font-size: .9rem; }
+            html { scroll-padding-bottom: 84px; }
             .layout .content { padding-bottom: 76px; }
             /* barre fine fixée en bas : Mes leçons · Flashcards · Programme · Se déconnecter */
             .sidebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; width: 100%; flex-direction: row; gap: 4px;
@@ -431,7 +445,7 @@
             <nav class="sidebar" role="tablist" aria-label="Sections">
                 <button class="tab" role="tab" id="tab-quiz" data-tab="quiz"><span class="ico">🎓</span><span class="lbl">Mes leçons</span> <span class="count" id="count-quiz"></span></button>
                 <button class="tab" role="tab" id="tab-flashcards" data-tab="flashcards"><span class="ico">🃏</span><span class="lbl">Flashcards</span> <span class="count" id="count-flashcards"></span></button>
-                <button class="tab" role="tab" id="tab-programme" data-tab="programme"><span class="ico">📅</span><span class="lbl">Programme</span> <span class="count" id="count-programme"></span></button>
+                <button class="tab" role="tab" id="tab-programme" data-tab="programme"><span class="ico">📈</span><span class="lbl">Mes progrès</span> <span class="count" id="count-programme"></span></button>
             </nav>
             <main class="content" id="content" role="tabpanel"></main>
         </div>
@@ -487,15 +501,14 @@
         let inQuiz = false; // vrai pendant qu'un quiz ou un paquet est ouvert (évite de le remplacer par la liste)
 
         // ---------------- Programme de révision : progression par question ----------------
-        // Au départ, TOUTES les questions sont à apprendre. Une question est « sue » après MASTERY réussites
-        // d'affilée dans les quiz ; une erreur la remet à 0. Réussite = bonne réponse (réponse écrite : du premier coup).
+        // Au départ, TOUTES les questions sont à apprendre. Une question est « vérifiée » après MASTERY réussites
+        // consécutives dans les quiz ; une erreur la remet à 0. Réussite = bonne réponse (réponse écrite : du premier coup).
         // La progression est enregistrée sur le serveur, propre à chaque élève : l'administrateur la consulte et peut la
         // remettre à zéro. Chaque résultat y est envoyé ; la page la relit à la connexion.
-        const MASTERY = 3;
-        const PASSAGES = 3;  // passages de quiz à faire avant l'étape suivante du parcours
+        const MASTERY = 2;   // réussites consécutives aux quiz pour qu'une question soit « vérifiée »
         let progress = {};   // clé = quiz.id + "|" + énoncé  ->  { ok, fails }
         let doneCounts = {}; // quiz.id -> nombre de parties terminées par cet élève (cumulé)
-        let parcours = {};   // quiz.id -> { etape, passages, cycle } : où en est l'élève dans le parcours de chaque leçon
+        let parcours = {};   // quiz.id -> { etape, pass, pile, … } : état du parcours de chaque leçon, décidé par le serveur
         let session = null;  // identifiants de l'élève connecté (en mémoire), pour enregistrer ses résultats
 
         // Identifiant stable d'une question (la progression s'y rattache : corriger l'énoncé ne la fait pas perdre).
@@ -511,28 +524,45 @@
             progress = {};
             QUIZZES.forEach(quiz => quiz.questions.forEach(q => {
                 const r = ((fromServer || {})[quiz.id] || {})[qid(q)];
-                if (r) progress[keyOf(quiz, q)] = { ok: r[0], fails: r[1] };
+                if (r) progress[keyOf(quiz, q)] = { ok: Math.min(MASTERY, r[0]), fails: r[1] };
             }));
         }
-        // Envoi des résultats au serveur, un par un et dans l'ordre ; en cas d'échec réseau, 3 essais.
+        // Envoi au serveur, un appel après l'autre et dans l'ordre. Chaque appel a un identifiant d'opération (rejouer
+        // la même opération ne compte rien de plus) et 3 essais en cas de panne réseau. Il renvoie une promesse { ok, value | error }.
         let saveChain = Promise.resolve();
+        let pendingSaves = 0, syncTimer = null, syncFailed = false;
         function setSync(text) { const el = document.getElementById("sync-status"); if (el) el.textContent = text; }
-        // Appel serveur en file d'attente (ordre conservé), avec 3 essais en cas de panne réseau.
-        function enqueue(method, ...args) {
-            if (!hasServer || !session) return;
+        function newOp() { return Math.random().toString(36).slice(2, 10) + Date.now().toString(36); }
+        function enqueue(method, quizId, ...args) { return enqueueOp(newOp(), method, quizId, ...args); }
+        // Même chose avec un identifiant d'opération imposé : un nouvel essai manuel de la même action ne compte rien de plus
+        function enqueueOp(op, method, quizId, ...args) {
+            if (!hasServer || !session) return Promise.resolve({ ok: false, error: "Pas de connexion au serveur." });
             const c = session;
+            pendingSaves++; clearTimeout(syncTimer);
+            if (!syncFailed) setSync("⏳ Sauvegarde en attente…");
             const attempt = n => new Promise(resolve => google.script.run
-                .withSuccessHandler(() => { setSync(""); resolve(); })
+                .withSuccessHandler(value => resolve({ ok: true, value }))
                 .withFailureHandler(err => {
                     const msg = String(err && err.message);
-                    if (n < 3 && !/incorrect|Trop d'essais|inaccessible|inconnue|en cours/.test(msg)) setTimeout(() => attempt(n + 1).then(resolve), 1000 * n);
-                    else { setSync("⚠️ Ta progression n'a pas pu être enregistrée."); resolve(); }
+                    if (n < 3 && !/incorrect|Trop d'essais|inaccessible|inconnue|en cours|Choix invalide/.test(msg)) setTimeout(() => attempt(n + 1).then(resolve), 1000 * n);
+                    else resolve({ ok: false, error: cleanError(err) });
                 })
-                [method](c.classe, c.pseudo, c.pin, ...args));
-            saveChain = saveChain.then(() => attempt(1));
+                [method](c.classe, c.pseudo, c.pin, quizId, ...args, op));
+            const run = saveChain.then(() => attempt(1)).then(res => {
+                pendingSaves--;
+                // le serveur renvoie l'état du parcours après chaque transition : il fait foi
+                if (res.ok && res.value && res.value.parcours && session === c) parcours[quizId] = res.value.parcours;
+                if (!res.ok) { syncFailed = true; setSync("⚠️ Sauvegarde en attente : ta progression n'a pas pu être enregistrée."); }
+                else if (pendingSaves === 0) {
+                    syncFailed = false; setSync("✅ Progression enregistrée");
+                    syncTimer = setTimeout(() => { if (pendingSaves === 0) setSync(""); }, 3000);
+                }
+                return res;
+            });
+            saveChain = run;
+            return run;
         }
-        function sendResult(quizId, hash, success) { enqueue("saveResult", quizId, hash, success); }
-        function sendDone(quizId) { enqueue("finishQuiz", quizId); }
+        function sendResult(quizId, hash, success) { return enqueue("saveResult", quizId, hash, success); }
         window.revisionFlush = () => saveChain;   // attend la fin des envois en cours (utile aux tests)
         function answerOf(q) {
             if (q.champs) return q.champs.map(c => (c.label ? c.label + " : " : "") + c.reponses[0]).join(" · ");
@@ -631,7 +661,6 @@
         function updateCounts() {
             document.getElementById("count-quiz").textContent = QUIZZES.length;
             document.getElementById("count-flashcards").textContent = allDecks().length;
-            document.getElementById("count-programme").textContent = programmeStats().remaining;
         }
 
         // Étiquette « fait N fois » : nombre de parties terminées (cumulé, jamais remis à zéro)
@@ -641,29 +670,58 @@
         }
 
         // ---------------- Parcours de révision d'une leçon ----------------
-        // Étape 1 : le quiz, PASSAGES fois. Étape 2 : les flashcards des questions non sues, puis retour à l'étape 1
-        // (jusqu'à ce que tout soit su). Étape 3 : le paquet complet, sans choix proposés, puis validation par un adulte.
+        // Le serveur décide de l'étape (voir Code.gs) : quiz_initial (un seul passage complet) -> cartes_ciblees (questions ratées)
+        // -> verification (2 réussites consécutives) -> cartes_finales (paquet complet) -> attente_validation -> valide.
         function getParcours(quizId) {
-            if (!parcours[quizId]) parcours[quizId] = { etape: "quiz", passages: 0, cycle: 1 };
+            if (!parcours[quizId]) parcours[quizId] = { etape: "quiz_initial", pass: null, pile: null };
             return parcours[quizId];
         }
-        function unsuedCards(quiz) { return programmeCards(quiz); }
-        function etapeText(quiz) {
+        const plural = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`;
+        function verifiedCount(quiz) { return quiz.questions.filter(q => progressOf(quiz, q).ok >= MASTERY).length; }
+        function underCount(quiz) { return quiz.questions.length - verifiedCount(quiz); }
+        function pileLeft(pc) { return pc.pile ? pc.pile.ids.filter(id => !(pc.pile.etat[id] && pc.pile.etat[id].d === "trouve")).length : 0; }
+        // Statut courant d'une leçon et action unique qui reprend l'étape réelle
+        function lessonInfo(quiz) {
             const pc = getParcours(quiz.id);
-            const tour = pc.cycle > 1 ? " · tour " + pc.cycle : "";
-            if (pc.etape === "quiz") return `Étape 1 sur 3 · ${pc.cycle > 1 ? "Rattrapage des questions non sues" : `Quiz : ${pc.passages} / ${PASSAGES} passages faits`}`;
-            if (pc.etape === "cartes") return `Étape 2 sur 3 · Flashcards à revoir (${unsuedCards(quiz).length})${tour}`;
-            if (pc.etape === "revision") return "Étape 3 sur 3 · Apprendre sans choix proposés";
-            if (pc.etape === "fini") return "⏳ Parcours terminé : en attente de validation";
-            return "✅ Parcours validé";
+            const done = pc.pass ? Object.keys(pc.pass.res || {}).length : 0;
+            switch (pc.etape) {
+                case "quiz_initial":
+                    return done > 0
+                        ? { statut: `Quiz en cours : ${done} question${done > 1 ? "s" : ""} déjà répondue${done > 1 ? "s" : ""} sur ${pc.pass.list.length}`, action: "Reprendre le quiz" }
+                        : { statut: "Quiz initial : toutes les questions, une seule fois", action: "Commencer le quiz" };
+                case "cartes_ciblees":
+                    return { statut: `Cartes à revoir : ${pileLeft(pc)} sur ${pc.pile.ids.length}`, action: "Revoir mes cartes" };
+                case "verification":
+                    return { statut: `Vérification : ${plural(underCount(quiz), "question à vérifier", "questions à vérifier")}`, action: "Continuer la vérification" };
+                case "cartes_finales":
+                    return { statut: `Paquet final : ${pileLeft(pc)} carte${pileLeft(pc) > 1 ? "s" : ""} sur ${pc.pile.ids.length} à valider`, action: "Réviser toutes les cartes" };
+                case "attente_validation":
+                    return { statut: "⏳ En attente de validation par un adulte", action: "Voir la demande de validation" };
+                default:
+                    return { statut: "✅ Parcours validé", action: "Voir le parcours validé" };
+            }
         }
-        // Les trois étapes : faites, en cours, à venir
+        // Les étapes : faites, en cours, à venir
+        const ETAPE_RANG = { quiz_initial: 1, cartes_ciblees: 2, verification: 3, cartes_finales: 4, attente_validation: 5, valide: 5 };
         function stepsEl(quiz) {
-            const pc = getParcours(quiz.id);
-            const cur = pc.etape === "quiz" ? 1 : pc.etape === "cartes" ? 2 : pc.etape === "revision" ? 3 : 4;
+            const cur = ETAPE_RANG[getParcours(quiz.id).etape] || 1;
             return h("div", { class: "etape-dots", "aria-hidden": "true" },
-                ["1 Quiz", "2 Cartes", "3 Appris"].map((t, i) =>
+                ["1 Quiz", "2 Cartes", "3 Vérification", "4 Paquet final"].map((t, i) =>
                     h("span", { class: "dot " + (i + 1 < cur ? "done" : i + 1 === cur ? "on" : "") }, t)));
+        }
+        function lessonCard(q, extra) {
+            const info = lessonInfo(q);
+            const v = verifiedCount(q), n = q.questions.length;
+            return h("button", { class: "card lecon", onclick: () => openLesson(q) },
+                h("span", { class: "fois" }, foisLabel(q.id)),
+                h("div", { class: "emoji" }, q.emoji),
+                h("h3", {}, q.titre),
+                h("div", { class: "meta" }, `${q.matiere} · ${n} questions`),
+                stepsEl(q),
+                h("div", { class: "etape" }, info.statut),
+                h("div", { class: "verified" }, `Questions vérifiées : ${v} sur ${n}`),
+                extra || null,
+                h("span", { class: "action-pill" }, info.action));
         }
 
         function setTab(tab) {
@@ -683,17 +741,7 @@
                     content.append(h("div", { class: "empty" }, "Aucune leçon pour le moment."));
                     return;
                 }
-                content.append(h("div", { class: "grid" }, QUIZZES.map(q =>
-                    h("button", { class: "card lecon", onclick: () => openLesson(q) },
-                        h("span", { class: "fois" }, foisLabel(q.id)),
-                        h("div", { class: "emoji" }, q.emoji),
-                        h("h3", {}, q.titre),
-                        h("div", { class: "meta" }, `${q.matiere} · ${q.questions.length} questions`),
-                        stepsEl(q),
-                        h("div", { class: "etape" }, etapeText(q)),
-                        h("p", { class: "desc" }, q.description)
-                    )
-                )));
+                content.append(h("div", { class: "grid" }, QUIZZES.map(q => lessonCard(q))));
             } else if (activeTab === "programme") {
                 renderProgramme();
             } else {
@@ -715,30 +763,27 @@
         }
 
         // ---------------- Quiz ----------------
+        // Un passage = les questions de pass.list, données par le serveur : toutes les questions au quiz initial,
+        // seulement celles dont la série est < MASTERY pendant la vérification. Les réponses déjà enregistrées (pass.res)
+        // ne sont pas redemandées : on reprend à la première question sans réponse.
         function startQuiz(quiz) {
             inQuiz = true;
-            let index = 0;
-            let score = 0;
-            // Après les flashcards (tour 2 et suivants), seules les questions encore non sues sont reposées.
-            const pc0 = getParcours(quiz.id);
-            const rattrapage = pc0.etape === "quiz" && pc0.cycle > 1;
-            // Le rattrapage se poursuit tour après tour (sans erreur) jusqu'à ce que toutes ces questions soient sues.
-            const toLearn = () => quiz.questions.filter(q => progressOf(quiz, q).ok < MASTERY);
-            let qs = rattrapage ? toLearn() : quiz.questions;
-            if (rattrapage && qs.length === 0) qs = quiz.questions.slice();
-            let total = qs.length;        // questions posées depuis le début de ce passage
-            let roundFailed = false;      // une erreur dans le tour en cours met fin au rattrapage (retour aux flashcards)
+            const pass = getParcours(quiz.id).pass;
+            if (!pass) { renderList(); return; }
+            const byId = new Map(quiz.questions.map(q => [qid(q), q]));
+            const qs = pass.list.map(id => byId.get(id)).filter(Boolean);
+            const res = pass.res || {};
+            let index = qs.findIndex(q => res[qid(q)] === undefined);
+            if (index < 0) index = qs.length;
+            let score = qs.filter(q => res[qid(q)] === 1).length;
+            const total = qs.length;
+            const initial = pass.kind === "initial";
+            let autoTimer = null;
 
             const back = () => h("button", { class: "back", onclick: renderList }, "← Retour aux leçons");
-            // Bandeau « Étape 1 sur 3 · Passage 2 sur 3 »
-            const etapeBanner = () => {
-                const pc = getParcours(quiz.id);
-                return pc.etape === "quiz"
-                    ? h("div", { class: "etape-banner" }, pc.cycle > 1
-                        ? `Étape 1 sur 3 · Rattrapage : ${qs.length} question${qs.length > 1 ? "s" : ""} à retravailler`
-                        : `Étape 1 sur 3 · Passage ${pc.passages + 1} sur ${PASSAGES}`)
-                    : null;
-            };
+            const etapeBanner = () => h("div", { class: "etape-banner" }, initial
+                ? "Quiz initial · toutes les questions, une seule fois"
+                : `Vérification · ${plural(total, "question à vérifier", "questions à vérifier")}`);
 
             function showQuestion() {
                 const q = qs[index];
@@ -751,16 +796,12 @@
                 const goNext = () => {
                     if (advanced) return;
                     advanced = true;
+                    clearTimeout(autoTimer);
                     index++;
-                    if (index < qs.length) return showQuestion();
-                    if (rattrapage && !roundFailed) {
-                        const again = toLearn();
-                        if (again.length) { qs = again; total += again.length; index = 0; return showQuestion(); }
-                    }
-                    showResult();
+                    index < qs.length ? showQuestion() : showResult();
                 };
                 const next = h("button", { class: "btn", style: "display:none", onclick: goNext },
-                    index + 1 < qs.length ? "Question suivante ➔" : rattrapage ? "Continuer ➔" : "Voir le résultat ➔");
+                    index + 1 < qs.length ? "Question suivante ➔" : "Voir le résultat ➔");
                 // Barre qui se remplit pendant l'attente avant le passage automatique
                 const autoBar = h("div", { class: "auto-next", style: "display:none", "aria-hidden": "true" });
                 // Appelé quand la question est terminée : montre l'explication et le bouton suivant
@@ -773,7 +814,6 @@
                     if (settled) return;
                     settled = true;
                     succeeded = success;
-                    if (!success) roundFailed = true;
                     level = recordResult(quiz, q, success);
                 };
                 const progressLine = h("div", { class: "mastery-line", style: "display:none" });
@@ -781,8 +821,8 @@
                     progressLine.textContent = !succeeded
                         ? `↩️ Cette question repart à 0 / ${MASTERY} : on la revoit !`
                         : level >= MASTERY
-                            ? `🎉 Question sue ! ${MASTERY} réussites d'affilée.`
-                            : `📈 Cette question : ${masteryDots(level)} ${level} / ${MASTERY} réussites d'affilée.`;
+                            ? `🎉 Question vérifiée ! ${MASTERY} réussites consécutives.`
+                            : `📈 Cette question : ${masteryDots(level)} ${level} / ${MASTERY} réussites consécutives.`;
                     progressLine.style.display = "block";
                     if (explication) explication.style.display = "block";
                     next.style.display = "block";
@@ -796,7 +836,8 @@
                         autoBar.style.animationDuration = delay + "ms";
                         autoBar.style.display = "block";
                         // si l'élève a quitté la question (retour aux leçons…), le bouton n'est plus dans la page : on ne fait rien
-                        setTimeout(() => { if (next.isConnected) goNext(); }, delay);
+                        clearTimeout(autoTimer);
+                        autoTimer = setTimeout(() => { if (next.isConnected) goNext(); }, delay);
                     }
                 };
                 const addPoint = () => { score++; scoreEl.textContent = `Score : ${score}`; settle(true); };
@@ -851,7 +892,7 @@
             }
 
             // Question à réponse écrite : on réessaie jusqu'à trouver ; le point n'est donné qu'au premier essai.
-            // Après 3 erreurs, un bouton permet de voir la réponse (sans point).
+            // « Je ne sais pas » est disponible tout de suite : il montre la réponse et compte zéro (une seule erreur par question).
             function typedBody(q, addPoint, fail, reveal) {
                 let tries = 0;
                 let done = false;
@@ -859,7 +900,7 @@
                     autocomplete: "off", autocapitalize: "off", spellcheck: "false", "aria-label": "Ta réponse" });
                 const feedback = h("div", { class: "feedback", role: "status" });
                 const check = h("button", { class: "btn", onclick: validate }, "Valider ✔️");
-                const showAnswer = h("button", { class: "btn secondary", style: "display:none", onclick: giveUp }, "Voir la réponse");
+                const showAnswer = h("button", { class: "btn secondary", onclick: giveUp }, "Je ne sais pas");
 
                 function finish(ok, text) {
                     done = true;
@@ -889,11 +930,12 @@
                         input.classList.add("input-wrong", "shake");
                         feedback.className = "feedback ko";
                         feedback.textContent = "❌ Oups, essaie encore !";
-                        if (tries >= 3) showAnswer.style.display = "inline-block";
                         input.select();
                     }
                 }
                 function giveUp() {
+                    if (done) return;
+                    fail();
                     input.classList.add("input-wrong");
                     finish(false, "La réponse était : " + q.reponses[0]);
                 }
@@ -907,7 +949,7 @@
             // Question à plusieurs champs à remplir : q.champs = [{ label, reponses: [réponses acceptées], groupe? }].
             // q.libre : l'ordre des champs n'a pas d'importance. groupe : seuls les champs d'un même groupe sont interchangeables.
             // Chaque champ est validé séparément : les bons se verrouillent en vert, les autres restent à corriger.
-            // Le point n'est donné que si tout est juste du premier coup ; après 3 validations ratées, « Voir la réponse ».
+            // Le point n'est donné que si tout est juste du premier coup ; « Je ne sais pas » est disponible tout de suite.
             function fieldsBody(q, addPoint, fail, reveal) {
                 let tries = 0;
                 let done = false;
@@ -939,7 +981,7 @@
 
                 const feedback = h("div", { class: "feedback", role: "status" });
                 const check = h("button", { class: "btn", onclick: validate }, "Valider ✔️");
-                const showAnswer = h("button", { class: "btn secondary", style: "display:none", onclick: giveUp }, "Voir la réponse");
+                const showAnswer = h("button", { class: "btn secondary", onclick: giveUp }, "Je ne sais pas");
 
                 function finish(success, text) {
                     done = true;
@@ -974,10 +1016,11 @@
                     pending.forEach(r => { r.input.classList.remove("shake"); void r.input.offsetWidth; r.input.classList.add("input-wrong", "shake"); });
                     feedback.className = "feedback ko";
                     feedback.textContent = `❌ ${pending.length} champ${pending.length > 1 ? "s" : ""} à corriger : les bonnes réponses restent en vert.`;
-                    if (tries >= 3) showAnswer.style.display = "inline-block";
                     pending[0].input.focus();
                 }
                 function giveUp() {
+                    if (done) return;
+                    fail();
                     keys.forEach(k => {
                         const free = freeExpected(k);
                         rows.filter((r, i) => rowKey(i) === k && !r.locked).forEach((r, j) => {
@@ -999,207 +1042,270 @@
 
             function showResult() {
                 doneCounts[quiz.id] = (doneCounts[quiz.id] || 0) + 1;   // partie terminée : jusqu'au résultat
-                sendDone(quiz.id);
-                let emoji, msg;
-                if (score === total) {
-                    emoji = "👑"; msg = "Impérial ! Tu connais ce cours sur le bout des doigts !";
-                } else if (score >= total * 0.7) {
-                    emoji = "🛡️"; msg = "Très bon travail ! Tes révisions portent leurs fruits.";
-                } else if (score >= total * 0.5) {
-                    emoji = "📜"; msg = "C'est un bon début, une petite relecture du cours te permettrait d'être parfait.";
-                } else {
-                    emoji = "💪"; msg = "Ne te décourage pas ! Relis tes fiches et relance le quiz, tu vas y arriver !";
-                }
-                // Parcours : ce passage compte, et on dit à l'élève combien il lui en reste.
-                // L'étape suivante est calculée de la même façon que sur le serveur (finishQuiz).
-                const pc = getParcours(quiz.id);
-                let etapeMsg = "", nextLabel = null;
-                if (pc.etape === "quiz") {
-                    const need = rattrapage ? 1 : PASSAGES;
-                    pc.passages = Math.min(need, pc.passages + 1);
-                    if (pc.passages >= need) {
-                        const reste = unsuedCards(quiz).length;
-                        pc.etape = reste > 0 ? "cartes" : "revision";
-                        const intro = rattrapage ? "Rattrapage terminé" : `Tes ${PASSAGES} passages sont faits`;
-                        etapeMsg = reste > 0
-                            ? `🎯 ${intro} ! Prochaine étape : revoir les ${reste} flashcard${reste > 1 ? "s" : ""} des questions que tu ne sais pas encore.`
-                            : `🎯 ${intro} et tu sais tout ! Dernière étape : apprendre le paquet complet de flashcards.`;
-                        nextLabel = "Étape suivante →";
-                    } else {
-                        const rest = PASSAGES - pc.passages;
-                        etapeMsg = `📈 Passage ${pc.passages} sur ${PASSAGES} terminé. Il te reste ${rest} passage${rest > 1 ? "s" : ""} avant l'étape suivante.`;
-                        nextLabel = "Passage suivant →";
-                    }
+                const errs = total - score;
+                const parfait = errs === 0;
+                const emoji = parfait ? "✅" : score >= total * 0.5 ? "📝" : "💪";
+                const msg = parfait
+                    ? "Toutes les réponses de ce passage sont justes."
+                    : "Les questions ratées vont être retravaillées avec des cartes, puis vérifiées à nouveau.";
+                const status = h("div", { class: "etape-msg", role: "status" }, "Enregistrement en cours…");
+                const actions = h("div", { class: "actions" });
+                const op = newOp();   // le même pour tous les essais : le serveur ne compte la fin de ce passage qu'une fois
+                const retour = () => h("button", { class: "btn secondary", onclick: renderList }, "Retour aux leçons");
+                function save() {
+                    status.textContent = "Enregistrement en cours…";
+                    actions.replaceChildren();
+                    enqueueOp(op, "finishQuiz", quiz.id).then(r => {
+                        if (!r.ok) {
+                            status.textContent = "⚠️ Sauvegarde en attente : le résultat n'a pas pu être enregistré. Vérifie ta connexion puis réessaie.";
+                            actions.append(h("button", { class: "btn", onclick: save }, "Réessayer"), retour());
+                            return;
+                        }
+                        const pc = getParcours(quiz.id);
+                        const verifs = `Questions vérifiées : ${verifiedCount(quiz)} sur ${quiz.questions.length} (deux réussites consécutives aux quiz).`;
+                        let label;
+                        if (pc.etape === "cartes_ciblees") {
+                            status.textContent = `${plural(pc.pile.ids.length, "question à retravailler", "questions à retravailler")}. Prochaine étape : revoir tes cartes. ${verifs}`;
+                            label = "Revoir mes cartes";
+                        } else if (pc.etape === "verification") {
+                            const n = pc.pass ? pc.pass.list.length : underCount(quiz);
+                            status.textContent = `Prochaine étape : ${initial ? "vérifier tes réponses" : "continuer la vérification"}. Questions restant à vérifier : ${n}. ${verifs}`;
+                            label = initial ? "Vérifier mes réponses" : "Continuer la vérification";
+                        } else if (pc.etape === "cartes_finales") {
+                            status.textContent = `Toutes tes questions sont vérifiées (deux réussites consécutives). Dernière étape : réviser toutes les cartes. ${verifs}`;
+                            label = "Réviser toutes les cartes";
+                        } else {
+                            status.textContent = verifs;
+                            label = null;
+                        }
+                        if (label) actions.append(h("button", { class: "btn", onclick: () => openLesson(quiz) }, label));
+                        actions.append(retour());
+                    });
                 }
                 content.replaceChildren(h("div", { class: "panel result" },
-                    h("h2", {}, "Quiz terminé !"),
+                    h("h2", {}, initial ? "Quiz initial terminé !" : "Passage de vérification terminé !"),
                     h("div", { class: "big-emoji" }, emoji),
-                    h("p", {}, "Ton score final est de :"),
+                    h("p", {}, initial ? "Ton score au premier essai :" : "Ton score sur les questions de ce passage :"),
                     h("div", { class: "final" }, `${score} / ${total}`),
-                    h("p", { class: "msg" }, msg),
-                    etapeMsg ? h("div", { class: "etape-msg", role: "status" }, etapeMsg) : null,
-                    h("div", { class: "actions" },
-                        nextLabel ? h("button", { class: "btn", onclick: () => openLesson(quiz) }, nextLabel) : null,
-                        h("button", { class: "btn secondary", onclick: renderList }, "Retour aux leçons")
-                    )
-                ));
+                    h("p", { class: "msg" }, msg + (parfait ? "" : ` ${plural(errs, "question à retravailler", "questions à retravailler")}.`)),
+                    status, actions));
+                save();
             }
 
-            showQuestion();
+            index < qs.length ? showQuestion() : showResult();
         }
 
-        // ---------------- Programme de révision ----------------
+        // ---------------- Mes progrès ----------------
         function renderProgramme() {
-            content.append(h("h2", {}, "Programme de révision"));
+            content.append(h("h2", {}, "Mes progrès"));
             const { total, remaining } = programmeStats();
             const sues = total - remaining;
             const pct = total ? Math.round(sues / total * 100) : 0;
 
             content.append(h("div", { class: "panel progress-panel" },
-                h("div", { class: "progress" }, h("span", {}, "Questions sues"), h("span", { class: "score" }, `${sues} / ${total}`)),
+                h("div", { class: "progress" }, h("span", {}, "Questions vérifiées"), h("span", { class: "score" }, `${sues} / ${total}`)),
                 h("div", { class: "bar", role: "progressbar", "aria-valuenow": String(pct), "aria-valuemin": "0", "aria-valuemax": "100" },
                     h("span", { style: `width:${pct}%` })),
-                h("p", { class: "hint-small" }, `Une question est sue après ${MASTERY} réussites d'affilée dans les quiz. Une erreur la remet à 0.`)));
+                h("p", { class: "hint-small" }, `Deux réussites consécutives aux quiz = question vérifiée. Une erreur ou « Je ne sais pas » remet la série à zéro.`)));
 
-            if (remaining === 0) {
-                content.append(h("div", { class: "empty", style: "margin-top:16px" }, "🎉 Bravo, tu sais toutes tes questions !"));
+            if (QUIZZES.length === 0) {
+                content.append(h("div", { class: "empty", style: "margin-top:16px" }, "Aucune leçon pour le moment."));
+                return;
             }
-
-            // Un paquet de flashcards à apprendre par quiz
-            content.append(h("h3", { class: "pile-title" }, "Mes paquets de flashcards à apprendre"));
+            // Le bouton de chaque leçon reprend la même étape que « Mes leçons »
+            content.append(h("h3", { class: "pile-title" }, "Mes leçons"));
             content.append(h("div", { class: "grid" }, QUIZZES.map(quiz => {
-                const cards = programmeCards(quiz);
-                const n = quiz.questions.length;
-                const done = cards.length === 0;
-                const quizPct = n ? Math.round((n - cards.length) / n * 100) : 0;
-                const pile = h("button", { class: "card" + (done ? " done" : ""), onclick: () => startDeck({ titre: "À apprendre · " + quiz.titre, cartes: programmeCards(quiz) }, true) },
-                    h("div", { class: "emoji" }, quiz.emoji),
-                    h("h3", {}, quiz.titre),
-                    h("div", { class: "meta" }, done
-                        ? "✅ Tout su !"
-                        : `${cards.length} carte${cards.length > 1 ? "s" : ""} restante${cards.length > 1 ? "s" : ""} sur ${n}`),
-                    h("div", { class: "bar small" }, h("span", { style: `width:${quizPct}%` })),
-                    h("p", { class: "desc" }, `${n - cards.length} / ${n} questions sues`)
-                );
-                pile.disabled = done;
-                return pile;
+                const n = quiz.questions.length, v = verifiedCount(quiz);
+                return lessonCard(quiz, h("div", { class: "bar small" }, h("span", { style: `width:${n ? Math.round(v / n * 100) : 0}%` })));
             })));
         }
 
-        // ---------------- Flashcards ----------------
-        // learn = true : paquet « à apprendre » (cartes pas encore sues). Chaque carte montre sa progression.
-        // opts (facultatif) : { intro, finishLabel, onFinish, back } pour les étapes 2 et 3 d'une leçon :
-        // un message en tête, et un bouton qui apparaît quand l'élève arrive à la dernière carte.
-        function startDeck(deck, learn, opts) {
-            opts = opts || {};
+        // ---------------- Flashcards actives ----------------
+        // Chaque carte : question seule, « Voir la réponse », puis trois choix (Oublié, Hésité, Trouvé). Oublié et Hésité reviennent
+        // dans la même séance jusqu'à Trouvé. La séance ne se termine que lorsque CHAQUE carte a été retournée, évaluée et finit Trouvé.
+        // cfg : { titre, cartes: [{ id, recto, verso, explication? }], etat?: { id: { d, n } }, snapshot?, intro, finishLabel,
+        //         onRate(id, verdict, snapshot), onFinish(setStatus) -> promesse, back }
+        // Les évaluations sont déclaratives et ne changent jamais les séries des quiz.
+        function runCards(cfg) {
             inQuiz = true;
-            let cards = deck.cartes.slice();
-            let index = 0;
-            let flipped = false;
+            const cards = new Map(cfg.cartes.map(c => [c.id, c]));
+            const ids = cfg.cartes.map(c => c.id);
+            const N = ids.length;
+            const etat = cfg.etat || {};
+            const trouve = new Set(ids.filter(id => etat[id] && etat[id].d === "trouve"));
+            const seen = new Set(ids.filter(id => etat[id] && etat[id].n > 0));
+            const snap = cfg.snapshot || {};
+            const valid = list => (Array.isArray(list) ? list : []).filter((id, i, a) => cards.has(id) && !trouve.has(id) && a.indexOf(id) === i);
+            let fresh = valid(snap.f), oub = valid(snap.o), hes = valid(snap.h);
+            const wait = Object.assign({}, snap.w || {});
+            let cur = cards.has(snap.c) && !trouve.has(snap.c) ? snap.c : "";
+            let last = cards.has(snap.l) ? snap.l : "";
+            // aucune carte ne se perd : celles qui ne sont ni Trouvé ni dans une file sont à présenter
+            ids.forEach(id => { if (!trouve.has(id) && id !== cur && !fresh.includes(id) && !oub.includes(id) && !hes.includes(id)) fresh.push(id); });
 
-            const card = h("button", { class: "flashcard", "aria-label": "Retourner la carte", onclick: () => { flipped = !flipped; draw(); } });
-            const counter = h("span", {});
-            const prev = h("button", { class: "btn secondary", onclick: () => go(-1) }, "← Précédente");
-            const next = h("button", { class: "btn", onclick: () => go(1) }, "Suivante →");
-            const mix = h("button", { class: "btn secondary", onclick: () => { cards = shuffle(cards); index = 0; flipped = false; draw(); } }, "🔀 Mélanger");
-            const finish = opts.onFinish
-                ? h("button", { class: "btn finish-btn", style: "display:none", onclick: opts.onFinish }, opts.finishLabel)
-                : null;
+            // Prochaine carte : d'abord toutes les cartes jamais présentées ; ensuite les Oublié, puis les Hésité, une carte
+            // revenant après l'évaluation d'au plus 3 autres cartes et jamais deux fois de suite si une autre est disponible.
+            function pick() {
+                if (fresh.length) return fresh[0];
+                const ready = list => list.find(id => (wait[id] || 0) <= 0 && id !== last);
+                const id = ready(oub) || ready(hes);
+                if (id) return id;
+                const pool = oub.concat(hes);
+                return pool.find(x => x !== last) || pool[0] || "";
+            }
+            function take() {
+                const id = pick();
+                fresh = fresh.filter(x => x !== id); oub = oub.filter(x => x !== id); hes = hes.filter(x => x !== id);
+                cur = id;
+            }
+            if (!cur) take();
+            const snapshot = () => ({ f: fresh.slice(), o: oub.slice(), h: hes.slice(), w: Object.assign({}, wait), c: cur, l: last });
 
-            function go(delta) { index += delta; flipped = false; draw(); }
-
-            function draw() {
-                const c = cards[index];
-                card.classList.toggle("flipped", flipped);
-                // (replaceChildren écrirait « null » pour un argument nul : on n'ajoute la ligne que si elle existe)
-                const faces = [
-                    h("div", { class: "face-label" }, (flipped ? "Réponse" : "Question") + (learn && c.quiz ? " · " + c.quiz : "")),
-                    h("div", { class: "face-text" }, flipped ? c.verso : c.recto)];
-                if (learn) faces.push(h("div", { class: "mastery-line" }, `${masteryDots(c.ok)} ${c.ok} / ${MASTERY} réussites d'affilée`));
-                card.replaceChildren(...faces);
-                counter.textContent = `Carte ${index + 1} / ${cards.length}`;
-                prev.disabled = index === 0;
-                next.disabled = index === cards.length - 1;
-                if (finish) finish.style.display = index === cards.length - 1 ? "block" : "none";
+            function rate(verdict) {
+                const id = cur;
+                if (!id) return;
+                seen.add(id);
+                Object.keys(wait).forEach(k => { if (k !== id) wait[k] = Math.max(0, wait[k] - 1); });
+                if (verdict === "trouve") { trouve.add(id); delete wait[id]; }
+                else {
+                    trouve.delete(id);
+                    wait[id] = Math.min(3, fresh.length + oub.length + hes.length);
+                    (verdict === "oublie" ? oub : hes).push(id);
+                }
+                last = id; cur = "";
+                take();
+                if (cfg.onRate) cfg.onRate(id, verdict, snapshot());
+                flipped = false;
+                draw();
             }
 
+            let flipped = false;
+            const header = h("div", { class: "progress" }, h("span", {}, cfg.titre), h("span", { class: "cards-count", "aria-live": "polite" }));
+            const stage = h("div", {});
+            const status = h("div", { class: "etape-msg", role: "status", style: "display:none" });
             content.replaceChildren(h("div", { class: "panel" },
-                h("button", { class: "back", onclick: renderList }, opts.back || (learn ? "← Retour au programme" : "← Retour à la liste")),
-                opts.intro ? h("div", { class: "etape-intro", role: "status" }, opts.intro) : null,
-                h("div", { class: "progress" }, h("span", {}, deck.titre), counter),
-                card,
-                h("div", { class: "deck-nav" }, prev, mix, next),
-                finish ? h("div", { class: "finish-zone" }, finish) : null,
-                h("p", { class: "hint-small" }, opts.onFinish
-                    ? "Clique sur la carte pour la retourner. Le bouton apparaît à la dernière carte."
-                    : learn
-                        ? `Relis ces cartes, puis rejoue les quiz : une question est sue après ${MASTERY} réussites d'affilée.`
-                        : "Clique sur la carte pour la retourner.")
-            ));
+                h("button", { class: "back", onclick: renderList }, cfg.back || "← Retour aux leçons"),
+                cfg.intro ? h("div", { class: "etape-intro", role: "status" }, cfg.intro) : null,
+                header, stage, status));
+
+            function counters() {
+                header.querySelector(".cards-count").textContent =
+                    `Cartes travaillées ${seen.size} sur ${N} · Cartes encore à revoir ${N - trouve.size}`;
+            }
+            function draw() {
+                counters();
+                status.style.display = "none";
+                if (!cur) return drawEnd();
+                const c = cards.get(cur);
+                if (!flipped) {
+                    const flip = () => { flipped = true; draw(); };
+                    stage.replaceChildren(
+                        h("button", { class: "flashcard", "aria-label": "Voir la réponse", onclick: flip },
+                            h("div", { class: "face-label" }, "Question"),
+                            h("div", { class: "face-text" }, c.recto),
+                            h("div", { class: "face-hint" }, "Cherche ta réponse")),
+                        h("div", { class: "deck-nav" },
+                            h("button", { class: "btn secondary", onclick: () => { fresh = shuffle(fresh); draw(); } }, "🔀 Mélanger"),
+                            h("button", { class: "btn flip-btn", onclick: flip }, "Voir la réponse")));
+                    return;
+                }
+                const guard = { done: false };
+                const choose = v => () => { if (guard.done) return; guard.done = true; rate(v); };
+                const evalBar = h("div", { class: "eval", role: "group", "aria-label": "Comment était cette carte ?" },
+                    h("button", { class: "btn eval-btn oublie", onclick: choose("oublie") }, "❌ Oublié"),
+                    h("button", { class: "btn eval-btn hesite", onclick: choose("hesite") }, "🤔 Hésité"),
+                    h("button", { class: "btn eval-btn trouve", onclick: choose("trouve") }, "✅ Trouvé"));
+                stage.replaceChildren(
+                    h("div", { class: "flashcard flipped", role: "group", "aria-label": "Réponse" },
+                        h("div", { class: "face-label" }, "Réponse"),
+                        h("div", { class: "face-text" }, c.verso),
+                        c.explication ? h("div", { class: "face-expl" }, c.explication) : null),
+                    evalBar);
+                evalBar.querySelector("button").focus();
+                evalBar.scrollIntoView({ block: "nearest" });   // jamais masqué par la barre du bas (scroll-padding)
+            }
+            function drawEnd() {
+                const finish = h("button", { class: "btn finish-btn", onclick: () => {
+                    finish.disabled = true;
+                    status.style.display = "block"; status.textContent = "Enregistrement en cours…";
+                    Promise.resolve(cfg.onFinish((text, retry) => { status.style.display = "block"; status.textContent = text; finish.disabled = false; return retry; }))
+                        .then(() => { /* la suite est gérée par onFinish */ });
+                } }, cfg.finishLabel);
+                stage.replaceChildren(h("div", { class: "panel result" },
+                    h("div", { class: "big-emoji" }, "🎉"),
+                    h("h2", {}, "Toutes les cartes sont trouvées !"),
+                    h("div", { class: "finish-zone" }, finish)));
+            }
             draw();
+            // pour les tests et la reprise : état courant lisible
+            window.revisionCards = () => ({ cur, trouve: [...trouve], seen: [...seen], fresh: fresh.slice(), oub: oub.slice(), hes: hes.slice(), N });
+        }
+
+        // Flashcards libres (onglet Flashcards) : même interaction, sans aucun effet sur le parcours obligatoire
+        function startDeck(deck) {
+            runCards({
+                titre: deck.titre,
+                cartes: deck.cartes.map((c, i) => ({ id: "c" + i, recto: c.recto, verso: c.verso })),
+                back: "← Retour à la liste",
+                finishLabel: "Terminer la séance",
+                onFinish: () => { renderList(); }
+            });
+        }
+
+        // Étapes 2 et 4 d'une leçon : pile ciblée (questions ratées) ou paquet final (toutes les questions)
+        function startPile(quiz) {
+            const pc = getParcours(quiz.id), pile = pc.pile;
+            const finale = pc.etape === "cartes_finales";
+            const byId = new Map(quiz.questions.map(q => [qid(q), q]));
+            const cartes = pile.ids.filter(id => byId.has(id)).map(id => {
+                const q = byId.get(id);
+                return { id, recto: q.question, verso: answerOf(q), explication: q.explication || "" };
+            });
+            const label = finale ? "👩‍🏫 Faire valider par un adulte" : "Vérifier mes réponses";
+            const redo = () => {   // renvoie les évaluations finales puis réessaie
+                cartes.forEach(c => enqueue("rateCard", quiz.id, c.id, "trouve", null));
+            };
+            const finishOp = newOp();
+            const finishCall = setStatus => {
+                const call = () => enqueueOp(finishOp, finale ? "requestValidation" : "cardsDone", quiz.id).then(r => {
+                    if (r.ok) { openLesson(quiz); return; }
+                    if (/pas en cours/.test(r.error)) { openLesson(quiz); return; }
+                    setStatus("⚠️ Sauvegarde en attente : " + (/pas encore/.test(r.error) ? "une évaluation n'a pas été enregistrée, on la renvoie. " : "") + "Appuie de nouveau sur le bouton pour réessayer.", null);
+                    if (/pas encore|en cours/.test(r.error)) redo();
+                });
+                return call();
+            };
+            runCards({
+                titre: (finale ? "Paquet final · " : "Cartes ciblées · ") + quiz.titre,
+                cartes, etat: pile.etat, snapshot: pile.q,
+                intro: finale
+                    ? "Dernière étape : toutes les questions de la leçon deviennent des cartes. Retourne chaque carte, puis choisis Oublié, Hésité ou Trouvé."
+                    : "Voici les cartes des questions ratées. Retourne chaque carte, puis choisis Oublié, Hésité ou Trouvé : les cartes oubliées ou hésitées reviennent jusqu'à ce que tu les aies trouvées.",
+                finishLabel: label,
+                onRate: (id, verdict, snapshot) => { pile.etat[id] = { d: verdict, n: ((pile.etat[id] || {}).n || 0) + 1 }; pile.q = snapshot; enqueue("rateCard", quiz.id, id, verdict, snapshot); },
+                onFinish: finishCall
+            });
         }
 
         // ---------------- Ouverture d'une leçon : l'étape en cours ----------------
         function openLesson(quiz) {
             const pc = getParcours(quiz.id);
-            if (pc.etape === "quiz") return startQuiz(quiz);
-            if (pc.etape === "cartes") return startCartes(quiz);
-            if (pc.etape === "revision") return startRevision(quiz);
+            if (pc.etape === "quiz_initial" || pc.etape === "verification") return startQuiz(quiz);
+            if (pc.etape === "cartes_ciblees" || pc.etape === "cartes_finales") return startPile(quiz);
             return showFini(quiz);
         }
 
-        // Étape 2 : les flashcards des questions non sues, puis « C'est bon, j'ai mémorisé » -> retour à l'étape 1
-        function startCartes(quiz) {
-            const cartes = unsuedCards(quiz);
-            const onFinish = () => {
-                const pc = getParcours(quiz.id);
-                parcours[quiz.id] = { etape: "quiz", passages: 0, cycle: (pc.cycle || 1) + 1 };
-                enqueue("cardsDone", quiz.id);
-                startQuiz(quiz);
-            };
-            if (cartes.length === 0) {
-                content.replaceChildren(h("div", { class: "panel result" },
-                    h("h2", {}, "Tu connais déjà toutes les cartes !"),
-                    h("div", { class: "etape-msg" }, "Il ne reste aucune carte à revoir. Tu peux passer au rattrapage."),
-                    h("div", { class: "actions" },
-                        h("button", { class: "btn", onclick: onFinish }, "✅ C'est bon, j'ai mémorisé"),
-                        h("button", { class: "btn secondary", onclick: renderList }, "Retour aux leçons"))));
-                return;
-            }
-            startDeck({ titre: "Étape 2 · À revoir : " + quiz.titre, cartes }, true, {
-                back: "← Retour aux leçons",
-                intro: `Étape 2 sur 3 : révise ces ${cartes.length} flashcard${cartes.length > 1 ? "s" : ""}, celles des questions que tu ne sais pas encore. À la dernière carte, clique sur « C'est bon, j'ai mémorisé » : tu referas seulement ces questions-là, pas tout le quiz.`,
-                finishLabel: "✅ C'est bon, j'ai mémorisé",
-                onFinish
-            });
-        }
-
-        // Étape 3 : le paquet complet, sans choix proposés, puis validation par un adulte
-        function startRevision(quiz) {
-            const deck = decksFromQuizzes().find(d => d.id === "quiz-" + quiz.id);
-            startDeck({ titre: "Étape 3 · Paquet complet : " + quiz.titre, cartes: deck.cartes }, false, {
-                back: "← Retour aux leçons",
-                intro: "Maintenant apprends les réponses mais sans choix proposés.",
-                finishLabel: "👩‍🏫 Faire valider par un adulte",
-                onFinish: () => {
-                    getParcours(quiz.id).etape = "fini";
-                    enqueue("requestValidation", quiz.id);
-                    showFini(quiz);
-                }
-            });
-        }
-
-        // Parcours terminé : en attente de validation, puis validé par l'administrateur
+        // En attente de validation par un adulte, puis validé par l'administrateur
         function showFini(quiz) {
             inQuiz = true;
             const valide = getParcours(quiz.id).etape === "valide";
             content.replaceChildren(h("div", { class: "panel result" },
-                h("div", { class: "big-emoji" }, valide ? "✅" : "🎉"),
-                h("h2", {}, valide ? "Parcours validé !" : "Parcours terminé !"),
+                h("div", { class: "big-emoji" }, valide ? "✅" : "⏳"),
+                h("h2", {}, valide ? "Parcours validé" : "En attente de validation"),
                 h("p", { class: "msg" }, quiz.titre),
                 h("div", { class: "etape-msg", role: "status" }, valide
                     ? "Un adulte a validé ton parcours sur cette leçon. Bravo !"
-                    : "Tu as fini ton parcours sur cette leçon. Montre-le maintenant à un adulte pour qu'il le valide."),
+                    : "Ta demande est enregistrée. Montre ton travail à un adulte : il validera ton parcours depuis l'administration."),
                 h("div", { class: "actions" }, h("button", { class: "btn", onclick: renderList }, "Retour aux leçons"))));
         }
 

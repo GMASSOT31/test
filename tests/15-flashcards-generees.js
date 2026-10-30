@@ -31,8 +31,7 @@ const ok = (c, m) => console.log((c ? 'OK   ' : 'ECHEC'), m);
   ok((await p.locator('.face-text').innerText()).startsWith("En quelle année s'effondre"), 'recto de la carte 1');
   await p.locator('.flashcard').click();
   ok((await p.locator('.face-text').innerText()) === '476', 'verso de la carte 1 = 476');
-  ok((await p.locator('.progress').innerText()).includes('Carte 1 / 30'), 'paquet de 30 cartes');
-  await p.screenshot({ path: 'deck-auto.png' });
+  ok((await p.locator('.progress').innerText()).includes('Cartes travaillées 0 sur 30') && (await p.locator('.progress').innerText()).includes('Cartes encore à revoir 30'), 'paquet de 30 cartes distinctes : « Cartes travaillées 0 sur 30 · Cartes encore à revoir 30 »');
   // Zootopia
   await p.click('text=Retour à la liste');
   await p.locator('.card', { hasText: 'Zootopia' }).click();

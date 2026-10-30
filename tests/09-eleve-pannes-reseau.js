@@ -21,9 +21,9 @@ const { makeWorld, bridge, ok, summary, login, LEO, PW, SRC } = require('./harne
 
   // 1. panne passagère : 2 échecs puis succès
   failures = 2; await p.fill('.saisie', 'sahara square'); await p.keyboard.press('Enter');
-  ok(await p.evaluate(() => { const z = QUIZZES[0]; return progressOf(z, z.questions[0]).ok === 1; }), 'pendant la panne, la page affiche quand même la progression (1 / 3) : l\'élève n\'est pas bloqué');
+  ok(await p.evaluate(() => { const z = QUIZZES[0]; return progressOf(z, z.questions[0]).ok === 1; }), 'pendant la panne, la page affiche quand même la progression (1 / 2) : l\'élève n\'est pas bloqué');
   await p.evaluate(() => revisionFlush());
-  ok(srv() === 1 && log.length === 3 && (await sync()) === '', 'PANNE PASSAGÈRE : 3 tentatives (2 échecs, 1 succès), résultat finalement enregistré, aucun avertissement');
+  ok(srv() === 1 && log.length === 3 && (await sync()) === '✅ Progression enregistrée', 'PANNE PASSAGÈRE : 3 tentatives (2 échecs, 1 succès), résultat finalement enregistré, « Progression enregistrée » sans avertissement');
   await p.locator('.panel .btn', { hasText: /suivante/ }).click();
 
   // 2. l'ordre des envois est conservé
@@ -34,17 +34,17 @@ const { makeWorld, bridge, ok, summary, login, LEO, PW, SRC } = require('./harne
   await p.evaluate(() => revisionFlush());
   ok(/^true:.{4},false:.{4}$/.test(log.join(',')), 'ordre des envois conservé : ' + log.join(' → '));
   const z = JSON.parse(w.props['prog_leo__zootopia']).q;
-  ok(Object.keys(z).length === 3 && Object.values(z).filter(v => v[0] === 1 && v[1] === 0).length === 2 && Object.values(z).filter(v => v[0] === 0 && v[1] === 1).length === 1, 'serveur : Q1 et Q2 réussies (1 / 3), Q3 ratée au 1er essai (remise à 0, 1 erreur) → ' + JSON.stringify(z));
+  ok(Object.keys(z).length === 3 && Object.values(z).filter(v => v[0] === 1 && v[1] === 0).length === 2 && Object.values(z).filter(v => v[0] === 0 && v[1] === 1).length === 1, 'serveur : Q1 et Q2 réussies (1 / 2), Q3 ratée au 1er essai (remise à 0, 1 erreur) → ' + JSON.stringify(z));
 
   // 3. panne durable : avertissement visible, puis il disparaît au prochain succès
   await p.locator('.panel .btn', { hasText: /suivante/ }).click();
   failures = 99; log.length = 0;
   await p.fill('.saisie', 'rainforest district'); await p.keyboard.press('Enter'); await p.evaluate(() => revisionFlush());
-  ok(log.length === 3 && (await sync()).includes('pas pu être enregistrée'), 'PANNE DURABLE : 3 tentatives puis avertissement « ' + await sync() + ' »');
+  ok(log.length === 3 && (await sync()).includes('Sauvegarde en attente') && (await sync()).includes('pas pu être enregistrée'), 'PANNE DURABLE : 3 tentatives puis avertissement « ' + await sync() + ' »');
   ok(await p.evaluate(() => { const q = QUIZZES[0]; return progressOf(q, q.questions[3]).ok === 1; }), 'et la page continue de compter la progression localement');
   failures = 0; await p.locator('.panel .btn', { hasText: /suivante/ }).click();
   await p.fill('.saisie', 'skyscrapers'); await p.keyboard.press('Enter'); await p.evaluate(() => revisionFlush());
-  ok((await sync()) === '', 'dès qu\'un envoi réussit, l\'avertissement disparaît');
+  ok((await sync()) === '✅ Progression enregistrée', 'dès qu\'un envoi réussit, l\'avertissement disparaît et « Progression enregistrée » s\'affiche');
 
   // 4. une erreur d'authentification n'est pas rejouée (pas de blocage de compte par insistance)
   log.length = 0; w.run('saveStudent', PW, { id: 'leo', classe: '5B', pseudo: 'Léo', pin: '7777' });   // le PIN change pendant que l'élève joue

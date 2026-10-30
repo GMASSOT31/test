@@ -475,7 +475,7 @@
         <div class="pane" id="pane-programmes" role="tabpanel" aria-labelledby="tab-programmes" hidden>
             <section>
                 <h2>📅 Programmes de révision</h2>
-                <p class="hint">Pour chaque élève et chaque leçon : questions sues (3 réussites d'affilée), en cours et à apprendre. Seul l'administrateur peut remettre une progression à zéro, leçon par leçon, pour un élève précis ou pour tous. L'élève retrouve sa leçon vide à sa prochaine connexion ou actualisation.</p>
+                <p class="hint">Pour chaque élève et chaque leçon : questions vérifiées (deux réussites consécutives aux quiz), en cours et à apprendre. Seul l'administrateur peut remettre une progression à zéro, leçon par leçon, pour un élève précis ou pour tous. L'élève retrouve sa leçon vide à sa prochaine connexion ou actualisation.</p>
                 <label for="prog-filtre">Afficher</label>
                 <select id="prog-filtre"></select>
                 <div class="status" id="prog-status" role="status"></div>
@@ -677,7 +677,7 @@
                         h("div", {}, "👤"),
                         h("div", { class: "info" },
                             h("strong", {}, s.pseudo),
-                            h("span", {}, r.lecons ? r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") + " · " + r.sues + " / " + r.total + " questions sues (" + r.pct + " %)" : "Aucune leçon attribuée")),
+                            h("span", {}, r.lecons ? r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") + " · " + r.sues + " / " + r.total + " questions vérifiées (" + r.pct + " %)" : "Aucune leçon attribuée")),
                         h("button", { class: "btn secondary small", type: "button", onclick: () => { progFilter = "s:" + s.id; openDetails.add(s.id); renderProgrammes(); go("programmes"); } }, "Progression"),
                         h("button", { class: "btn secondary small", type: "button", onclick: () => loadStudent(s) }, "Modifier"),
                         h("button", { class: "btn danger", type: "button", onclick: () => removeStudent(s) }, "Supprimer"));
@@ -1138,14 +1138,14 @@
                 h("summary", {}, "Classe " + g.label + " · " + g.students.length + " élève" + (g.students.length > 1 ? "s" : "")),
                 g.students.map(s => studentCard(s)))));
         }
-        // Où en est l'élève dans le parcours de la leçon (étape 1 : quiz, 2 : flashcards non sues, 3 : paquet complet, puis validation)
+        // Où en est l'élève dans le parcours de la leçon (quiz initial, cartes ciblées, vérification, paquet final, validation adulte)
         function parcoursText(pc) {
-            const tour = pc.cycle > 1 ? " · tour " + pc.cycle : "";
-            if (pc.etape === "quiz") return "Étape 1 · " + pc.passages + " / 3 passages" + tour;
-            if (pc.etape === "cartes") return "Étape 2 · flashcards à revoir" + tour;
-            if (pc.etape === "revision") return "Étape 3 · apprend sans choix";
-            if (pc.etape === "fini") return "⏳ À valider";
-            return "✅ Validé le " + dateFr(pc.valide);
+            if (pc.etape === "quiz_initial") return "Étape 1 · quiz initial" + (pc.passage ? " (" + pc.passage.repondues + " / " + pc.passage.total + ")" : "");
+            if (pc.etape === "cartes_ciblees") return "Étape 2 · cartes ciblées" + (pc.pile ? " (" + pc.pile.trouvees + " / " + pc.pile.total + " trouvées)" : "");
+            if (pc.etape === "verification") return "Étape 3 · vérification" + (pc.passage ? " (" + pc.passage.repondues + " / " + pc.passage.total + ")" : "");
+            if (pc.etape === "cartes_finales") return "Étape 4 · paquet final" + (pc.pile ? " (" + pc.pile.trouvees + " / " + pc.pile.total + " trouvées)" : "");
+            if (pc.etape === "attente_validation") return "⏳ En attente de validation";
+            return "✅ Parcours validé le " + dateFr(pc.valide);
         }
         async function validateParcours(studentId, lesson, pseudo) {
             if (!confirm("Valider le parcours de " + pseudo + " sur la leçon « " + lesson.titre + " » ?")) return;
@@ -1179,7 +1179,7 @@
             const lessons = (DATA.progress[s.id] || []).slice().sort((a, b) => a.titre.localeCompare(b.titre, "fr", { sensitivity: "base" }));
             const r = lessonsSummary(s.id);
             const detail = h("div", { class: "prog-detail" },
-                h("p", { class: "total" }, r.lecons ? r.sues + " / " + r.total + " questions sues (" + r.pct + " %) sur " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") : "Aucune leçon attribuée"));
+                h("p", { class: "total" }, r.lecons ? r.sues + " / " + r.total + " questions vérifiées (" + r.pct + " %) sur " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") : "Aucune leçon attribuée"));
             if (lessons.length === 0) {
                 detail.append(h("p", { class: "hint" }, "Donne-lui un quiz depuis « Liste des quiz » pour suivre sa progression."));
                 return detail;
@@ -1191,15 +1191,15 @@
                 detail.append(h("div", { class: "lesson", "data-quiz": l.id },
                     h("div", { class: "lesson-title" }, h("strong", {}, (l.emoji || "📘") + " " + l.titre),
                         h("span", { class: "badges" },
-                            h("span", { class: "parcours-admin" + (l.parcours.etape === "fini" ? " attente" : ""), "data-etape": l.parcours.etape }, parcoursText(l.parcours)),
+                            h("span", { class: "parcours-admin" + (l.parcours.etape === "attente_validation" ? " attente" : ""), "data-etape": l.parcours.etape }, parcoursText(l.parcours)),
                             h("span", { class: "fois-admin", title: l.derniere ? "Dernière partie terminée : " + dateFr(l.derniere) : "" }, foisText(l.fois)),
                             h("span", { class: "niveau" }, niveau))),
                     bar(pct),
                     h("div", { class: "lesson-detail" },
-                        h("span", {}, l.sues + (l.sues > 1 ? " sues" : " sue") + " · " + l.enCours + " en cours · " + aApprendre + " à apprendre · " + l.erreurs + " erreur" + (l.erreurs > 1 ? "s" : "")),
+                        h("span", {}, l.sues + (l.sues > 1 ? " vérifiées" : " vérifiée") + " · " + l.enCours + " en cours · " + aApprendre + " à apprendre · " + l.erreurs + " erreur" + (l.erreurs > 1 ? "s" : "")),
                         h("span", {}, l.maj ? "Dernière activité : " + dateFr(l.maj) : "Jamais jouée")),
                     h("div", { class: "lesson-actions" },
-                        l.parcours.etape === "fini" ? h("button", { class: "btn small", type: "button", onclick: () => validateParcours(s.id, l, s.pseudo) }, "✅ Valider le parcours") : null,
+                        l.parcours.etape === "attente_validation" ? h("button", { class: "btn small", type: "button", onclick: () => validateParcours(s.id, l, s.pseudo) }, "✅ Valider le parcours") : null,
                         h("button", { class: "btn secondary small", type: "button", onclick: () => resetProgress(s.id, l.id, "la leçon « " + l.titre + " » de " + s.pseudo) }, "Remettre cette leçon à zéro"))));
             });
             detail.append(h("div", { class: "detail-actions" },
