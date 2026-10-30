@@ -1,5 +1,6 @@
-const { makeWorld, ok, summary, PW } = require('./harness');
+const { makeWorld, ok, summary, PW, sr: sr_ } = require('./harness');
 const w = makeWorld();
+const sr = (...a) => sr_(w, ...a);   // chaque appel = une nouvelle présentation de la question
 w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' });
 w.run('saveStudent', PW, { classe: '5B', pseudo: 'Emma', pin: '4321' });
 w.run('saveStudent', PW, { classe: '6A', pseudo: 'Nina', pin: '2468' });
@@ -17,13 +18,13 @@ ok(zoo.questions.every(q => w.ctx.qhash_(q.question) === fnvPage(q.question)) &&
 ok(new Set(w.ctx.BUILTIN_QUIZZES.flatMap(q => q.questions.map(x => w.ctx.qhash_(x.question)))).size === w.ctx.BUILTIN_QUIZZES.reduce((n, q) => n + q.questions.length, 0), 'aucune collision d\'empreinte entre les ' + w.ctx.BUILTIN_QUIZZES.reduce((n, q) => n + q.questions.length, 0) + ' questions intégrées');
 
 // ---- enregistrement des résultats ----
-ok(JSON.stringify(w.run('saveResult', ...L, 'zootopia', h(0), true)) === '{"ok":1,"fails":0}', 'réussite : 1 / 3');
-w.run('saveResult', ...L, 'zootopia', h(0), true);
-ok(w.run('saveResult', ...L, 'zootopia', h(0), true).ok === 3, '3 réussites d\'affilée : 3 / 3 (sue)');
-ok(w.run('saveResult', ...L, 'zootopia', h(0), true).ok === 3, 'une 4e réussite ne dépasse pas 3');
-ok(JSON.stringify(w.run('saveResult', ...L, 'zootopia', h(0), false)) === '{"ok":0,"fails":1}', 'une erreur remet à 0 et compte 1 erreur');
-w.run('saveResult', ...L, 'zootopia', h(1), true);
-ok(w.run('saveResult', ...L, 'zootopia', h(0), false).fails === 2, 'les erreurs s\'accumulent (2)');
+{ const x = sr(...L, 'zootopia', h(0), true); ok(x.ok === 1 && x.fails === 0, 'réussite : 1 / 2'); }
+sr(...L, 'zootopia', h(0), true);
+ok(sr(...L, 'zootopia', h(0), true).ok === 2, '2 réussites consécutives : 2 / 2 (vérifiée)');
+ok(sr(...L, 'zootopia', h(0), true).ok === 2, 'une 3e réussite ne dépasse pas 2');
+{ const x = sr(...L, 'zootopia', h(0), false); ok(x.ok === 0 && x.fails === 1, 'une erreur remet à 0 et compte 1 erreur'); }
+sr(...L, 'zootopia', h(1), true);
+ok(sr(...L, 'zootopia', h(0), false).fails === 2, 'les erreurs s\'accumulent (2)');
 const d = w.run('getStudentData', ...L);
 ok(d.progress.zootopia[h(0)].join() === '0,2' && d.progress.zootopia[h(1)].join() === '1,0', 'getStudentData renvoie la progression : ' + JSON.stringify(d.progress.zootopia).slice(0, 80));
 ok(!('byzance' in d.progress), 'seuls les quiz déjà joués ont une progression');
@@ -36,14 +37,14 @@ ok(w.try('saveResult', ...L, 'zootopia', 'deadbeef', true).err === 'Question inc
 ok(w.try('saveResult', ...L, 'zootopia', 'pas-une-empreinte', true).err === 'Question inconnue.', 'format d\'empreinte invalide refusé');
 ok(w.try('saveResult', ...L, '__proto__', h(0), true).err === 'Quiz inaccessible.', 'identifiant de quiz piégé refusé');
 ok(!Object.keys(w.props).some(k => k.startsWith('prog_emma__')), 'Emma n\'a aucune progression : les écritures de Léo ne la touchent pas');
-w.run('saveResult', ...E, 'zootopia', h(0), true);
+sr(...E, 'zootopia', h(0), true);
 ok(w.run('getStudentData', ...E).progress.zootopia[h(0)].join() === '1,0' && w.run('getStudentData', ...L).progress.zootopia[h(0)].join() === '0,2', 'la progression d\'Emma est indépendante de celle de Léo sur le même quiz');
 const eC = w.run('getStudentData', ...E).quizzes.find(q => q.id === custom.id);
-w.run('saveResult', ...E, custom.id, cqid, true);
+sr(...E, custom.id, cqid, true);
 ok(w.run('getStudentData', ...E).progress[custom.id][cqid].join() === '1,0', 'progression aussi enregistrée sur un quiz créé depuis l\'administration');
 
 // ---- résumé pour l'administration ----
-for (let i = 2; i < 5; i++) { for (let k = 0; k < 3; k++) w.run('saveResult', ...L, 'zootopia', h(i), true); }
+for (let i = 2; i < 5; i++) { for (let k = 0; k < 2; k++) sr(...L, 'zootopia', h(i), true); }
 const adm = w.run('adminData', PW);
 const lz = adm.progress.leo.find(x => x.id === 'zootopia');
 ok(lz.total === 10 && lz.sues === 3 && lz.enCours === 1 && lz.erreurs === 2 && lz.maj > 0, 'résumé de Léo sur Zootopia : ' + JSON.stringify(lz));
@@ -56,23 +57,23 @@ ok(!JSON.stringify(adm).includes('1234') && !JSON.stringify(adm.progress).includ
 ok(w.try('resetProgress', 'faux', 'leo', 'zootopia').err === 'Mot de passe incorrect.', 'remise à zéro refusée sans mot de passe');
 ok(w.try('resetProgress', PW, 'inconnu', 'zootopia').err === 'Élève inconnu.', 'élève inconnu refusé');
 ok(w.try('resetProgress', PW, 'leo', 'Pas Valide!').err === 'Identifiant de quiz invalide.', 'identifiant de quiz invalide refusé');
-w.run('saveResult', ...L, 'byzance', w.ctx.qhash_(w.ctx.BUILTIN_QUIZZES[0].questions[0].question), true);
-ok(w.run('resetProgress', PW, 'leo', 'zootopia').supprimes === 1, 'remise à zéro d\'UNE leçon pour UN élève : 1 enregistrement supprimé');
+sr(...L, 'byzance', w.ctx.qhash_(w.ctx.BUILTIN_QUIZZES[0].questions[0].question), true);
+ok(w.run('resetProgress', PW, 'leo', 'zootopia').supprimes === 2, 'remise à zéro d\'UNE leçon pour UN élève : progression + parcours supprimés');
 const after = w.run('adminData', PW);
 ok(after.progress.leo.find(x => x.id === 'zootopia').sues === 0 && after.progress.leo.find(x => x.id === 'byzance').enCours === 1, 'Léo : Zootopia remis à 0, mais Byzance conservé');
 ok(after.progress.emma.find(x => x.id === 'zootopia').enCours === 1 && after.progress.emma.find(x => x.id === 'maths').enCours === 1, 'Emma n\'est pas touchée (Zootopia et Maths conservés)');
 ok(Object.keys(w.run('getStudentData', ...L).progress).join() === 'byzance', 'à sa reconnexion, Léo retrouve Zootopia vide et Byzance intact');
 w.run('resetProgress', PW, 'leo', 'all');
 ok(!Object.keys(w.props).some(k => k.startsWith('prog_leo__')) && Object.keys(w.props).some(k => k.startsWith('prog_emma__')), 'toutes les leçons d\'un élève : Léo vidé, Emma intacte');
-w.run('saveResult', ...L, 'zootopia', h(0), true);
-ok(w.run('resetProgress', PW, 'all', 'zootopia').supprimes === 2, 'une leçon pour tous les élèves : 2 enregistrements supprimés (Léo et Emma)');
+sr(...L, 'zootopia', h(0), true);
+ok(w.run('resetProgress', PW, 'all', 'zootopia').supprimes === 4, 'une leçon pour tous les élèves : progression et parcours de Léo et d\'Emma supprimés');
 ok(w.run('adminData', PW).progress.emma.find(x => x.id === 'maths').enCours === 1, '… mais pas les autres leçons d\'Emma');
 w.run('resetProgress', PW, 'all', 'all');
 ok(!Object.keys(w.props).some(k => k.startsWith('prog_')), 'tout pour tous : plus aucune progression');
 ok(typeof w.ctx.resetProgramme === 'undefined', 'l\'ancienne remise à zéro globale n\'existe plus');
 
 // ---- nettoyage à la suppression ----
-w.run('saveResult', ...E, custom.id, cqid, true); w.run('saveResult', ...L, 'byzance', w.ctx.qhash_(w.ctx.BUILTIN_QUIZZES[0].questions[0].question), true);
+sr(...E, custom.id, cqid, true); sr(...L, 'byzance', w.ctx.qhash_(w.ctx.BUILTIN_QUIZZES[0].questions[0].question), true);
 w.run('deleteQuiz', PW, custom.id);
 ok(!Object.keys(w.props).some(k => k.startsWith('prog_') && k.endsWith('__' + custom.id)) && Object.keys(w.props).some(k => k.startsWith('prog_leo__byzance')), 'supprimer un quiz efface sa progression (pour tous), pas celle des autres quiz');
 w.run('deleteStudent', PW, 'leo');

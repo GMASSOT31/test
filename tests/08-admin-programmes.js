@@ -1,17 +1,17 @@
 const { chromium } = require('playwright');
-const { makeWorld, install, ok, summary, login, LEO, EMMA, PW, SRC } = require('./harness');
+const { makeWorld, install, ok, summary, login, LEO, EMMA, PW, SRC, sr } = require('./harness');
 
 (async () => {
   const w = makeWorld();
   for (const [c, p, n] of [['5B', 'Léo', '1234'], ['5B', 'Emma', '4321'], ['6A', 'Nina', '2468'], ['5e A', 'Zoé', '1357']]) w.run('saveStudent', PW, { classe: c, pseudo: p, pin: n });
   w.run('setBuiltinAssign', PW, 'zootopia', ['leo', 'emma']); w.run('setBuiltinAssign', PW, 'byzance-30', ['leo']); w.run('setBuiltinAssign', PW, 'musique-carnaval', ['emma', 'nina']);
   const zoo = w.ctx.BUILTIN_QUIZZES.find(q => q.id === 'zootopia'), byz = w.ctx.BUILTIN_QUIZZES.find(q => q.id === 'byzance-30');
-  const play = (cred, quiz, i, success, times = 1) => { for (let k = 0; k < times; k++) w.run('saveResult', ...cred, quiz.id, w.ctx.qhash_(quiz.questions[i].question), success); };
+  const play = (cred, quiz, i, success, times = 1) => { for (let k = 0; k < times; k++) sr(w, ...cred, quiz.id, w.ctx.qhash_(quiz.questions[i].question), success); };
   const L = ['5B', 'Léo', '1234'], E = ['5B', 'Emma', '4321'];
-  for (let i = 0; i < 4; i++) play(L, zoo, i, true, 3);          // Léo : 4 questions sues sur Zootopia
+  for (let i = 0; i < 4; i++) play(L, zoo, i, true, 2);          // Léo : 4 questions sues sur Zootopia
   play(L, zoo, 5, true); play(L, zoo, 6, false);                  // 1 en cours, 1 erreur
-  play(L, byz, 0, true, 3);                                       // Léo : 1 sue sur le grand quiz
-  play(E, zoo, 0, true, 2);                                       // Emma : 1 en cours sur Zootopia
+  play(L, byz, 0, true, 2);                                       // Léo : 1 sue sur le grand quiz
+  play(E, zoo, 0, true, 1);                                       // Emma : 1 en cours sur Zootopia
 
   const b = await chromium.launch();
   const c = await b.newContext({ viewport: { width: 1200, height: 1000 } }); await install(c, w);
@@ -37,15 +37,15 @@ const { makeWorld, install, ok, summary, login, LEO, EMMA, PW, SRC } = require('
   ok(JSON.stringify(heads) === JSON.stringify(['Classe 5B · 2 élèves', 'Classe 5e A · 1 élève', 'Classe 6A · 1 élève']), 'élèves rangés par classe : ' + heads.join(' | '));
   ok((await a.locator('.prog-card').count()) === 4, 'une fiche par élève (4)');
   const lz = await lesson('leo', 'zootopia').innerText();
-  ok(lz.includes('4 sues') && lz.includes('1 en cours') && lz.includes('5 à apprendre') && lz.includes('1 erreur') && lz.includes('En cours') && lz.includes('Dernière activité'), 'LÉO / Zootopia : ' + lz.replace(/\s+/g, ' ').slice(0, 130));
+  ok(lz.includes('4 vérifiées') && lz.includes('1 en cours') && lz.includes('5 à apprendre') && lz.includes('1 erreur') && lz.includes('En cours') && lz.includes('Dernière activité'), 'LÉO / Zootopia : ' + lz.replace(/\s+/g, ' ').slice(0, 130));
   ok((await lesson('leo', 'zootopia').locator('.bar').getAttribute('aria-valuenow')) === '40', 'barre de progression Zootopia de Léo : 40 %');
   const lb = await lesson('leo', 'byzance-30').innerText();
-  ok(lb.includes('1 sue') && lb.includes('29 à apprendre') && lb.includes('0 erreur'), 'LÉO / Grand quiz : ' + lb.replace(/\s+/g, ' ').slice(0, 110));
+  ok(lb.includes('1 vérifiée') && lb.includes('29 à apprendre') && lb.includes('0 erreur'), 'LÉO / Grand quiz : ' + lb.replace(/\s+/g, ' ').slice(0, 110));
   const le = await lesson('emma', 'zootopia').innerText();
-  ok(le.includes('0 sue') && le.includes('1 en cours'), 'EMMA / Zootopia : ' + le.replace(/\s+/g, ' ').slice(0, 90));
+  ok(le.includes('0 vérifiée') && le.includes('1 en cours'), 'EMMA / Zootopia : ' + le.replace(/\s+/g, ' ').slice(0, 90));
   ok((await lesson('emma', 'musique-carnaval').innerText()).includes('Jamais jouée') && (await lesson('emma', 'musique-carnaval').innerText()).includes('Pas commencée'), 'leçon jamais jouée : « Pas commencée · Jamais jouée »');
   ok((await card('zoe').innerText()).includes('Aucune leçon attribuée') && (await card('zoe').locator('button').count()) === 1, 'élève sans leçon : message dans le détail, aucun bouton de remise à zéro (seul « Masquer »)');
-  ok((await card('leo').locator('.prog-detail .total').innerText()).includes('5 / 40 questions sues (13 %) sur 2 leçons'), 'total de Léo (dans le détail) : ' + (await card('leo').locator('.prog-detail .total').innerText()));
+  ok((await card('leo').locator('.prog-detail .total').innerText()).includes('5 / 40 questions vérifiées (13 %) sur 2 leçons'), 'total de Léo (dans le détail) : ' + (await card('leo').locator('.prog-detail .total').innerText()));
   ok((await a.locator('.prog-card[data-student="leo"] .lesson').count()) === 2 && (await a.locator('.prog-card[data-student="emma"] .lesson').count()) === 2 && (await a.locator('.prog-card[data-student="nina"] .lesson').count()) === 1, 'chaque élève n\'a que ses propres leçons (Léo 2, Emma 2, Nina 1)');
 
   // ---- 2. filtres ----
@@ -67,8 +67,8 @@ const { makeWorld, install, ok, summary, login, LEO, EMMA, PW, SRC } = require('
   await a.waitForSelector('#prog-status.ok');
   ok((await a.locator('#prog-status').innerText()).includes('Zootopia') && (await a.locator('#prog-status').innerText()).includes('Léo'), 'confirmation : « ' + await a.locator('#prog-status').innerText() + ' »');
   const lz2 = await lesson('leo', 'zootopia').innerText();
-  ok(lz2.includes('0 sue') && lz2.includes('Jamais jouée') && lz2.includes('Pas commencée'), 'Zootopia de Léo remis à zéro : ' + lz2.replace(/\s+/g, ' ').slice(0, 80));
-  ok((await lesson('leo', 'byzance-30').innerText()).includes('1 sue'), 'MAIS son grand quiz est conservé (1 sue)');
+  ok(lz2.includes('0 vérifiée') && lz2.includes('Jamais jouée') && lz2.includes('Pas commencée'), 'Zootopia de Léo remis à zéro : ' + lz2.replace(/\s+/g, ' ').slice(0, 80));
+  ok((await lesson('leo', 'byzance-30').innerText()).includes('1 vérifiée'), 'MAIS son grand quiz est conservé (1 vérifiée)');
   ok((await lesson('emma', 'zootopia').innerText()).includes('1 en cours'), 'ET Zootopia d\'Emma n\'est pas touché (1 en cours)');
   ok(!Object.keys(w.props).includes('prog_leo__zootopia') && Object.keys(w.props).includes('prog_leo__byzance-30') && Object.keys(w.props).includes('prog_emma__zootopia'), 'côté serveur : seul l\'enregistrement Léo / Zootopia a disparu');
   // rien à remettre à zéro : message honnête
@@ -77,18 +77,18 @@ const { makeWorld, install, ok, summary, login, LEO, EMMA, PW, SRC } = require('
 
   // ---- 4. l'élève retrouve sa leçon vide, ses autres leçons intactes (chez lui) ----
   const sp = await c.newPage(); sp.on('pageerror', e => errs.push(e.message)); await sp.goto('file://' + SRC + 'Index.html'); await login(sp, LEO);
-  ok(await sp.evaluate(() => { const z = QUIZZES.find(q => q.id === 'zootopia'), g = QUIZZES.find(q => q.id === 'byzance-30'); return progressOf(z, z.questions[0]).ok === 0 && progressOf(g, g.questions[0]).ok === 3; }) && (await sp.locator('#count-programme').innerText()) === '39', 'CHEZ LÉO : Zootopia vide, grand quiz conservé (39 cartes à apprendre)');
+  ok(await sp.evaluate(() => { const z = QUIZZES.find(q => q.id === 'zootopia'), g = QUIZZES.find(q => q.id === 'byzance-30'); return progressOf(z, z.questions[0]).ok === 0 && progressOf(g, g.questions[0]).ok === 2; }) && (await (async () => { await sp.click('#tab-programme'); return sp.locator('.progress-panel .score').innerText(); })()) === '1 / 40', 'CHEZ LÉO : Zootopia vide, grand quiz conservé (1 / 40 questions vérifiées)');
 
   // ---- 5. ce que l'élève joue se voit dans l'admin ----
   await sp.click('#tab-quiz'); await sp.locator('.card', { hasText: 'Zootopia' }).click();
   await sp.fill('.saisie', 'sahara square'); await sp.keyboard.press('Enter'); await sp.evaluate(() => revisionFlush());
   await a.click('#unlock'); await a.waitForSelector('#lock-status.ok'); await a.click('#tab-programmes');
   const lz3 = await lesson('leo', 'zootopia').innerText();
-  ok(lz3.includes('0 sue') && lz3.includes('1 en cours') && lz3.includes('Dernière activité'), 'LÉO vient de répondre juste : l\'admin voit « 1 en cours » et la date : ' + lz3.replace(/\s+/g, ' ').slice(0, 100));
+  ok(lz3.includes('0 vérifiée') && lz3.includes('1 en cours') && lz3.includes('Dernière activité'), 'LÉO vient de répondre juste : l\'admin voit « 1 en cours » et la date : ' + lz3.replace(/\s+/g, ' ').slice(0, 100));
 
   // ---- 6. remise à zéro de toutes les leçons d'UN élève ----
   await card('emma').locator('text=Tout remettre à zéro pour Emma').click(); await a.waitForSelector('#prog-status.ok');
-  ok((await lesson('emma', 'zootopia').innerText()).includes('Jamais jouée') && (await lesson('leo', 'zootopia').innerText()).includes('1 en cours') && (await lesson('leo', 'byzance-30').innerText()).includes('1 sue'), 'Emma remise à zéro partout ; Léo intact');
+  ok((await lesson('emma', 'zootopia').innerText()).includes('Jamais jouée') && (await lesson('leo', 'zootopia').innerText()).includes('1 en cours') && (await lesson('leo', 'byzance-30').innerText()).includes('1 vérifiée'), 'Emma remise à zéro partout ; Léo intact');
 
   // ---- 7. remise à zéro générale (zone dangereuse) ----
   await a.click('#reset-all'); await a.waitForSelector('#prog-status.ok');
