@@ -88,7 +88,7 @@ const orig = w.ctx.BUILTIN_QUIZZES.map(q => JSON.stringify(q)).join();
   await a.goto('file://' + SRC + 'admin.html'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])');
   await a.click('#tab-quiz-liste');
   const row = id => a.locator(`.builtin[data-id="${id}"]`);
-  ok((await a.locator('.builtin button', { hasText: 'Modifier' }).count()) === 4 && (await a.locator('.builtin button', { hasText: 'Rétablir' }).count()) === 1, 'LISTE DES QUIZ : un bouton « Modifier » sur chacun des 4 quiz intégrés ; « Rétablir l\'original » seulement sur celui déjà modifié (musique)');
+  ok((await a.locator('.builtin button', { hasText: 'Modifier' }).count()) === 5 && (await a.locator('.builtin button', { hasText: 'Rétablir' }).count()) === 1, 'LISTE DES QUIZ : un bouton « Modifier » sur chacun des 5 quiz intégrés ; « Rétablir l\'original » seulement sur celui déjà modifié (musique)');
   ok((await row('musique-carnaval').locator('.badge-modifie').count()) === 1 && (await row('zootopia').locator('.badge-modifie').count()) === 0, 'pastille « ✏️ modifié » sur le bon quiz');
   // modifier Zootopia depuis l'interface (correction d'une faute)
   await row('zootopia').locator('text=Modifier').click();

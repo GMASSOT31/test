@@ -74,7 +74,7 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
   await a.click('#save-quiz'); await waitOk('#quizlist-status');
   const quizId = Object.keys(w.props).find(k => k.startsWith('quiz_'));
   ok(JSON.stringify(JSON.parse(w.props[quizId]).pour) === '["emma"]' && (await visiblePane()) === 'pane-quiz-liste', 'quiz enregistré pour Emma, retour à « Liste des quiz »');
-  ok((await a.locator('#quiz-list .item').innerText()).includes('Pour : Emma') && (await a.locator('#count-quiz').innerText()) === '5', 'liste des quiz : « Pour : Emma » ; pastille 5 (1 créé + 4 intégrés)');
+  ok((await a.locator('#quiz-list .item').innerText()).includes('Pour : Emma') && (await a.locator('#count-quiz').innerText()) === '6', 'liste des quiz : « Pour : Emma » ; pastille 6 (1 créé + 5 intégrés)');
   await tab('quiz-ajout'); await a.fill('#titre', 'Brouillon'); await a.fill('.q-text', 'q ?');
   const o2 = a.locator('.question').nth(0).locator('.opt-text'); await o2.nth(0).fill('a'); await o2.nth(1).fill('b');
   await a.click('#save-quiz'); await waitOk('#quizlist-status');
@@ -86,7 +86,7 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
   // ---- 6. quiz intégrés (dans « Liste des quiz ») ----
   await tab('quiz-liste');
   const rows = await a.locator('#builtin-list .builtin strong').allInnerTexts();
-  ok(rows.length === 4, '4 quiz intégrés listés : ' + rows.map(r => r.slice(0, 22)).join(' | '));
+  ok(rows.length === 5, '5 quiz intégrés listés : ' + rows.map(r => r.slice(0, 22)).join(' | '));
   for (const id of ['byzance-30', 'zootopia']) {
     const row = a.locator(`#builtin-list .builtin[data-id="${id}"]`);
     await row.locator('.pour-item', { hasText: 'Léo' }).locator('input').check(); await row.locator('text=Enregistrer l\'accès').click();
