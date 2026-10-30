@@ -215,6 +215,30 @@
             .tab { width: auto; flex: 1 1 150px; padding: 10px; font-size: .9rem; transform: none !important; }
             .lockbar input { max-width: none; }
         }
+        /* ===== Téléphone : bandeau très fin, onglets en symboles sur une seule ligne ===== */
+        @media (max-width: 760px) {
+            .rv-banner { padding: 6px 12px; border-bottom-width: 2px; }
+            .rv-sticker, .rv-sub, .rv-chips, .rv-ticker, .rv-float { display: none; }
+            .rv-title { margin: 0; font-size: 18px; letter-spacing: -.5px; text-shadow: 0 2px 0 rgba(15,23,80,.35); }
+            .lockbar { margin: 8px 12px 0; padding: 6px 8px; gap: 6px; border-radius: 12px; }
+            .lockbar label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+            .lockbar input { flex: 1 1 120px; min-width: 0; padding: 8px 10px; }
+            .lockbar .btn { padding: 8px 12px; white-space: nowrap; }
+            .lockbar .status { flex-basis: 100%; margin: 0; }
+            .lockbar .status:empty { display: none; }
+            .locked-hint { display: none; }
+            .shell { margin: 6px auto 40px; gap: 8px; }
+            .sidebar { flex-direction: row; align-items: center; gap: 4px; position: sticky; top: 0; z-index: 20; padding: 4px 0; background: var(--bg); }
+            .tabs { flex: 1; min-width: 0; flex-wrap: nowrap; gap: 4px; }
+            .tab { flex: 1 1 0; min-width: 0; justify-content: center; padding: 6px 0; font-size: 0; position: relative; border-radius: 10px; }
+            .tab::before { content: attr(data-ico); font-size: 1.15rem; line-height: 1.2; }
+            .tab .count { position: absolute; top: -5px; right: -2px; margin: 0; padding: 0 5px; font-size: .6rem; }
+            .lockbar.docked { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 4px; padding: 0; background: transparent; box-shadow: none; }
+            .lockbar.docked label, .lockbar.docked input, .lockbar.docked .status { display: none !important; }
+            .lockbar.docked .btn { width: 38px; padding: 6px 0; font-size: 0; }
+            .lockbar.docked #unlock::before { content: "↻"; font-size: 1.1rem; }
+            .lockbar.docked #lock::before { content: "🔒"; font-size: 1.1rem; }
+        }
         /* Programmes de révision : un nom par élève, le détail se déplie */
         .prog-card.compact { padding: 10px 14px; margin: 8px 0; }
         .prog-card.compact .prog-head { margin-bottom: 0; }
@@ -266,9 +290,9 @@
 
     <div class="lockbar" id="lockbar">
         <label for="password">🔑 Mot de passe administrateur</label>
-        <input type="password" id="password" autocomplete="current-password" placeholder="ADMIN_PASSWORD">
-        <button class="btn" id="unlock" type="button">Déverrouiller</button>
-        <button class="btn secondary" id="lock" type="button" hidden>🔒 Verrouiller</button>
+        <input type="password" id="password" autocomplete="current-password" placeholder="🔑 Mot de passe">
+        <button class="btn" id="unlock" type="button" title="Actualiser">Déverrouiller</button>
+        <button class="btn secondary" id="lock" type="button" title="Verrouiller" aria-label="Verrouiller" hidden>🔒 Verrouiller</button>
         <span class="status inline" id="lock-status" role="status"></span>
     </div>
 
@@ -277,12 +301,12 @@
     <div class="shell" id="admin-area" hidden>
         <aside class="sidebar">
         <nav class="tabs" role="tablist" aria-label="Sections de l'administration">
-            <button class="tab" role="tab" id="tab-eleve-ajout" data-tab="eleve-ajout">➕ Ajouter un élève</button>
-            <button class="tab" role="tab" id="tab-eleves" data-tab="eleves">👥 Liste des élèves <span class="count" id="count-eleves"></span></button>
-            <button class="tab" role="tab" id="tab-quiz-ajout" data-tab="quiz-ajout">➕ Ajouter un quiz</button>
-            <button class="tab" role="tab" id="tab-quiz-liste" data-tab="quiz-liste">📋 Liste des quiz <span class="count" id="count-quiz"></span></button>
-            <button class="tab" role="tab" id="tab-fc-ajout" data-tab="fc-ajout">🃏 Ajouter des flashcards <span class="count" id="count-decks"></span></button>
-            <button class="tab" role="tab" id="tab-programmes" data-tab="programmes">📅 Programmes de révision</button>
+            <button class="tab" role="tab" id="tab-eleve-ajout" data-tab="eleve-ajout" data-ico="🙋" aria-label="Ajouter un élève" title="Ajouter un élève">➕ Ajouter un élève</button>
+            <button class="tab" role="tab" id="tab-eleves" data-tab="eleves" data-ico="👥" aria-label="Liste des élèves" title="Liste des élèves">👥 Liste des élèves <span class="count" id="count-eleves"></span></button>
+            <button class="tab" role="tab" id="tab-quiz-ajout" data-tab="quiz-ajout" data-ico="🧠" aria-label="Ajouter un quiz" title="Ajouter un quiz">➕ Ajouter un quiz</button>
+            <button class="tab" role="tab" id="tab-quiz-liste" data-tab="quiz-liste" data-ico="📋" aria-label="Liste des quiz" title="Liste des quiz">📋 Liste des quiz <span class="count" id="count-quiz"></span></button>
+            <button class="tab" role="tab" id="tab-fc-ajout" data-tab="fc-ajout" data-ico="🃏" aria-label="Ajouter des flashcards" title="Ajouter des flashcards">🃏 Ajouter des flashcards <span class="count" id="count-decks"></span></button>
+            <button class="tab" role="tab" id="tab-programmes" data-tab="programmes" data-ico="📅" aria-label="Programmes de révision" title="Programmes de révision">📅 Programmes de révision</button>
         </nav>
         <div id="lock-dock"></div>
         </aside>
