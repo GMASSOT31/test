@@ -1333,5 +1333,389 @@ var BUILTIN_QUIZZES = [
         ]
       }
     ]
+  },
+  {
+    "id": "histoire-revolution",
+    "emoji": "👑",
+    "matiere": "Histoire",
+    "titre": "De 1789 à l'exécution du Roi",
+    "description": "La société d'Ancien Régime, les Lumières, 1789 et la fin de la monarchie. 30 questions.",
+    "questions": [
+      {
+        "question": "En combien d'ordres la population était-elle divisée sous l'Ancien Régime ?",
+        "options": [
+          "2 ordres",
+          "3 ordres",
+          "4 ordres"
+        ],
+        "correct": 1
+      },
+      {
+        "question": "Quels sont les noms des trois ordres de la société ?",
+        "champs": [
+          {
+            "label": "Ordre",
+            "reponses": [
+              "tiers-état",
+              "tiers état",
+              "le tiers-état",
+              "le tiers état"
+            ]
+          },
+          {
+            "label": "Ordre",
+            "reponses": [
+              "noblesse",
+              "la noblesse"
+            ]
+          },
+          {
+            "label": "Ordre",
+            "reponses": [
+              "clergé",
+              "le clergé",
+              "clerge"
+            ]
+          }
+        ],
+        "libre": true
+      },
+      {
+        "question": "Quel pourcentage de la population française représentait le Tiers-État ?",
+        "options": [
+          "50 %",
+          "75 %",
+          "97 %"
+        ],
+        "correct": 2
+      },
+      {
+        "question": "Qui faisait partie du Tiers-État ?",
+        "champs": [
+          {
+            "label": "Qui",
+            "reponses": [
+              "paysans",
+              "les paysans",
+              "paysan"
+            ]
+          },
+          {
+            "label": "Qui",
+            "reponses": [
+              "artisans",
+              "les artisans",
+              "artisan"
+            ]
+          },
+          {
+            "label": "Qui",
+            "reponses": [
+              "commerçants",
+              "les commerçants",
+              "commerçant"
+            ]
+          }
+        ],
+        "libre": true
+      },
+      {
+        "question": "Vrai ou Faux : La Noblesse et le Clergé travaillaient dur et payaient tous les impôts.",
+        "options": [
+          "Vrai",
+          "Faux"
+        ],
+        "correct": 1,
+        "explication": "Faux. Ils avaient des privilèges, ne travaillaient pas et ne payaient pas d'impôts."
+      },
+      {
+        "question": "De quoi vivaient la Noblesse et le Clergé ?",
+        "options": [
+          "Des impôts perçus sur la population",
+          "De leur travail dans les champs",
+          "Du commerce avec l'étranger"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quel ordre regroupait les prêtres ?",
+        "reponses": [
+          "le clergé",
+          "clergé",
+          "clerge"
+        ],
+        "explication": "Le Clergé représentait 1 % de la population."
+      },
+      {
+        "question": "Qui appelait-on « les Lumières » ?",
+        "options": [
+          "Les soldats du roi",
+          "Des philosophes et des scientifiques",
+          "Les paysans du Tiers-État"
+        ],
+        "correct": 1
+      },
+      {
+        "question": "Que remettaient en cause les Lumières ?",
+        "options": [
+          "La toute-puissance du roi et les privilèges",
+          "La culture du blé",
+          "L'armée française"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quels manques dans la société les Lumières dénonçaient-ils ?",
+        "champs": [
+          {
+            "label": "Manque 1",
+            "reponses": [
+              "d'instruction",
+              "instruction",
+              "le manque d'instruction",
+              "manque d'instruction"
+            ],
+            "groupe": "m"
+          },
+          {
+            "label": "Manque 2",
+            "reponses": [
+              "de liberté",
+              "liberté",
+              "le manque de liberté",
+              "manque de liberté"
+            ],
+            "groupe": "m"
+          }
+        ],
+        "libre": true
+      },
+      {
+        "question": "Pour quelles raisons le royaume de France était-il gravement endetté avant 1789 ?",
+        "options": [
+          "À cause des guerres et des dépenses excessives de la cour",
+          "À cause de mauvaises récoltes et de la famine",
+          "À cause de la construction de nouvelles cathédrales"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Pourquoi Louis XVI n'a-t-il pas réussi à réformer les impôts ?",
+        "options": [
+          "Car la noblesse et le clergé ont refusé de perdre leurs privilèges",
+          "Car le Tiers-État refusait de payer plus",
+          "Car le roi ne voulait pas changer les impôts"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Que s'est-il passé en 1788 qui a fait monter le prix du pain ?",
+        "options": [
+          "De très mauvaises récoltes",
+          "Une grande guerre contre l'Angleterre",
+          "La construction du château de Versailles"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quelle a été la conséquence de la famine sur le Tiers-État ?",
+        "options": [
+          "Il souffrait de la faim, ce qui a provoqué des révoltes",
+          "Il est parti vivre à l'étranger",
+          "Il a obtenu plus de privilèges"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Cite trois grandes idées défendues par les Lumières.",
+        "champs": [
+          {
+            "label": "Idée",
+            "reponses": [
+              "liberté",
+              "la liberté"
+            ]
+          },
+          {
+            "label": "Idée",
+            "reponses": [
+              "égalité",
+              "l'égalité",
+              "egalite"
+            ]
+          },
+          {
+            "label": "Idée",
+            "reponses": [
+              "souveraineté du peuple",
+              "la souveraineté du peuple",
+              "souveraineté"
+            ]
+          }
+        ],
+        "libre": true
+      },
+      {
+        "question": "À quelle date et dans quelle ville Louis XVI réunit-il les États Généraux ?",
+        "champs": [
+          {
+            "label": "Date",
+            "reponses": [
+              "5 mai 1789",
+              "le 5 mai 1789"
+            ]
+          },
+          {
+            "label": "Ville",
+            "reponses": [
+              "versailles",
+              "à versailles"
+            ]
+          }
+        ]
+      },
+      {
+        "question": "Que sont les « États Généraux » ?",
+        "options": [
+          "La réunion des représentants des 3 ordres de la société",
+          "Le nom de l'armée du roi",
+          "Une grande fête organisée à Versailles"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Pourquoi la réunion des États Généraux a-t-elle été un échec ?",
+        "options": [
+          "Parce que les 3 ordres ne se sont pas entendus sur la façon de réduire la dette",
+          "Parce que le roi n'est pas venu",
+          "Parce que le Tiers-État n'avait pas été invité"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Que s'est-il passé de très important le 14 juillet 1789 ?",
+        "options": [
+          "La prise de la Bastille par la foule",
+          "L'exécution du roi",
+          "La fuite du roi à Varennes"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Que symbolisait la prison de la Bastille aux yeux du peuple ?",
+        "options": [
+          "L'autorité royale injuste",
+          "La richesse de la noblesse",
+          "La puissance de l'armée"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Dans la nouvelle organisation du pouvoir, qui élit les électeurs ?",
+        "reponses": [
+          "les citoyens",
+          "citoyens",
+          "des citoyens"
+        ]
+      },
+      {
+        "question": "Qui l'Assemblée Législative représente-t-elle et quels sont ses deux rôles principaux ?",
+        "champs": [
+          {
+            "label": "Elle est élue par",
+            "reponses": [
+              "les électeurs",
+              "électeurs",
+              "des électeurs"
+            ]
+          },
+          {
+            "label": "Rôle 1",
+            "reponses": [
+              "voter les lois",
+              "voter des lois",
+              "voter la loi"
+            ],
+            "groupe": "r"
+          },
+          {
+            "label": "Rôle 2",
+            "reponses": [
+              "décider de la guerre",
+              "déclarer la guerre",
+              "décider la guerre"
+            ],
+            "groupe": "r"
+          }
+        ]
+      },
+      {
+        "question": "Dans ce nouveau système, le pouvoir du Roi est-il absolu ou limité ?",
+        "options": [
+          "Absolu",
+          "Limité"
+        ],
+        "correct": 1
+      },
+      {
+        "question": "Qui est chargé de rendre la justice dans cette nouvelle organisation politique ?",
+        "reponses": [
+          "les tribunaux",
+          "tribunaux",
+          "les tribunals",
+          "un tribunal",
+          "des tribunaux"
+        ]
+      },
+      {
+        "question": "Vrai ou Faux : Le roi Louis XVI était très heureux de partager son pouvoir avec le peuple.",
+        "options": [
+          "Vrai",
+          "Faux"
+        ],
+        "correct": 1,
+        "explication": "Faux. Louis XVI ne supportait pas de perdre son pouvoir."
+      },
+      {
+        "question": "Que tente de faire le roi Louis XVI en juin 1791 ?",
+        "options": [
+          "Fuir le pays",
+          "Déclarer la guerre à l'Angleterre",
+          "Réunir de nouveau les États Généraux"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Dans quelle ville le roi Louis XVI est-il arrêté lors de sa fuite en juin 1791 ?",
+        "reponses": [
+          "varennes",
+          "à varennes"
+        ]
+      },
+      {
+        "question": "Que se passe-t-il pour le roi après son arrestation à Varennes ?",
+        "options": [
+          "Il se fait emprisonner",
+          "Il est libéré aussitôt",
+          "Il quitte la France"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "En quelle année le roi Louis XVI a-t-il été guillotiné ?",
+        "reponses": [
+          "1793"
+        ]
+      },
+      {
+        "question": "Quel grand changement politique l'exécution du roi marque-t-elle en France ?",
+        "options": [
+          "La fin de la monarchie",
+          "Le retour des privilèges",
+          "La réunion des États Généraux"
+        ],
+        "correct": 0
+      }
+    ]
   }
 ];
