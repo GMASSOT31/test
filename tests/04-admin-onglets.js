@@ -87,12 +87,19 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
   await tab('quiz-liste');
   const rows = await a.locator('#builtin-list .builtin strong').allInnerTexts();
   ok(rows.length === 6, '6 quiz intégrés listés : ' + rows.map(r => r.slice(0, 22)).join(' | '));
+  ok((await a.locator('#builtin-list .builtin-details:visible').count()) === 0 && (await a.locator('#builtin-list .builtin').first().innerText()).replace(/\s+/g, ' ').trim().split(' ').length < 12, 'LISTE COMPACTE : seuls les noms des quiz sont visibles (détails repliés)');
+  ok((await a.locator('#builtin-list .builtin-toggle').first().getAttribute('aria-expanded')) === 'false', 'un bouton « Détails » par quiz (replié)');
   for (const id of ['byzance-30', 'zootopia']) {
     const row = a.locator(`#builtin-list .builtin[data-id="${id}"]`);
+    await row.locator('.builtin-toggle').click();
+    ok(await row.locator('.builtin-details').isVisible() && (await row.locator('.builtin-toggle').getAttribute('aria-expanded')) === 'true', 'Détails dépliés : ' + id);
     await row.locator('.pour-item', { hasText: 'Léo' }).locator('input').check(); await row.locator('text=Enregistrer l\'accès').click();
     await a.waitForFunction(i => document.querySelector(`.builtin[data-id="${i}"] .info span:last-child`).textContent.includes('Pour : Léo'), id);
   }
   ok(JSON.parse(w.props.builtin_assign)['zootopia'].join() === 'leo', 'accès aux quiz intégrés enregistré : ' + w.props.builtin_assign);
+  ok(await a.locator('#builtin-list .builtin[data-id="zootopia"] .builtin-details').isVisible(), 'après enregistrement, le quiz reste déplié');
+  await a.locator('#builtin-list .builtin[data-id="zootopia"] .builtin-toggle').click();
+  ok(await a.locator('#builtin-list .builtin[data-id="zootopia"] .builtin-details').isHidden(), 'un second clic replie les détails');
 
   // ---- 7. ajouter des flashcards (liste des paquets sous le formulaire) ----
   await tab('fc-ajout');

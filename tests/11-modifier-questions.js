@@ -88,10 +88,11 @@ const orig = w.ctx.BUILTIN_QUIZZES.map(q => JSON.stringify(q)).join();
   await a.goto('file://' + SRC + 'admin.html'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])');
   await a.click('#tab-quiz-liste');
   const row = id => a.locator(`.builtin[data-id="${id}"]`);
+  const openRow = async id => { if (await row(id).locator('.builtin-details').isHidden()) await row(id).locator('.builtin-toggle').click(); };
   ok((await a.locator('.builtin button', { hasText: 'Modifier' }).count()) === 6 && (await a.locator('.builtin button', { hasText: 'Rétablir' }).count()) === 1, 'LISTE DES QUIZ : un bouton « Modifier » sur chacun des 6 quiz intégrés ; « Rétablir l\'original » seulement sur celui déjà modifié (musique)');
   ok((await row('musique-carnaval').locator('.badge-modifie').count()) === 1 && (await row('zootopia').locator('.badge-modifie').count()) === 0, 'pastille « ✏️ modifié » sur le bon quiz');
   // modifier Zootopia depuis l'interface (correction d'une faute)
-  await row('zootopia').locator('text=Modifier').click();
+  await openRow('zootopia'); await row('zootopia').locator('text=Modifier').click();
   ok((await a.locator('.pane:visible').getAttribute('id')) === 'pane-quiz-ajout' && (await a.locator('#quiz-form-title').innerText()).includes('quiz intégré') && await a.locator('#builtin-note').isVisible(), '« Modifier » : formulaire ouvert, titre « ' + await a.locator('#quiz-form-title').innerText() + ' », avertissement affiché');
   ok((await a.locator('#questions .question').count()) === 10 && (await a.locator('#quiz-pour input:checked').evaluateAll(l => l.map(i => i.value))).join() === 'leo', '10 questions chargées, destinataire actuel coché (Léo seul)');
   ok((await a.locator('#q-count').innerText()) === '10 questions', 'compteur : « ' + await a.locator('#q-count').innerText() + ' »');
@@ -110,12 +111,12 @@ const orig = w.ctx.BUILTIN_QUIZZES.map(q => JSON.stringify(q)).join();
   ok((await row('zootopia').locator('.badge-modifie').count()) === 1 && (await row('zootopia').locator('text=Rétablir').count()) === 1, 'Zootopia est maintenant « modifié » et peut être rétabli');
   ok(w.run('getStudentData', ...L).quizzes.find(q => q.id === 'zootopia').questions[0].question.includes('(en anglais)') && JSON.stringify(prog(L, 'zootopia')[hz]) === '[2,0]', 'côté élève : énoncé corrigé ET progression intacte (2 / 2)');
   // musique : l'icône du lien survit à une modification par l'interface
-  await row('musique-carnaval').locator('text=Modifier').click();
+  await openRow('musique-carnaval'); await row('musique-carnaval').locator('text=Modifier').click();
   ok((await a.locator('#lien-icone').inputValue()) === '🎧' && (await a.locator('#lien-url').inputValue()).includes('digipad') && (await a.locator('#questions .question').count()) === 40, 'quiz de musique chargé : 40 questions, lien et icône 🎧 dans le formulaire');
   await a.click('#save-quiz'); await a.waitForSelector('#quizlist-status.ok');
   ok(quizOf(L, 'musique-carnaval').lien.icone === '🎧' && quizOf(L, 'musique-carnaval').questions.filter(q => q.champs).length === 12, 'ré-enregistré sans rien changer : icône, champs et questions conservés');
   // rétablir depuis l'interface
-  await row('zootopia').locator('text=Rétablir').click(); await a.waitForFunction(() => document.querySelector('#quizlist-status').textContent.includes('rétablie'));
+  await openRow('zootopia'); await row('zootopia').locator('text=Rétablir').click(); await a.waitForFunction(() => document.querySelector('#quizlist-status').textContent.includes('rétablie'));
   ok((await row('zootopia').locator('.badge-modifie').count()) === 0 && quizOf(L, 'zootopia').questions[0].question === zoo.questions[0].question, 'RÉTABLIR : la version d\'origine revient (énoncé d\'origine, pastille retirée)');
   // modifier un quiz créé : la progression suit aussi
   await a.click('#tab-quiz-liste'); await a.locator('#quiz-list .item', { hasText: 'Ancien' }).locator('text=Modifier').click();

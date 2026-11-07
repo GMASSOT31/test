@@ -154,6 +154,10 @@
         .builtin:first-child { border-top: 0; }
         .builtin .info strong { display: block; }
         .builtin .info span { display: block; font-size: .85rem; color: var(--muted); }
+        .builtin .builtin-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+        .builtin .builtin-head strong { flex: 1 1 140px; min-width: 0; }
+        .builtin .builtin-details { margin-top: 8px; }
+        .builtin .builtin-details[hidden] { display: none; }
         .item .info span { display: block; }
         .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .fields-rows { display: grid; gap: 8px; margin: 8px 0; }
@@ -1061,6 +1065,7 @@
         }
 
         // ================= QUIZ INTÉGRÉS =================
+        const openBuiltins = new Set();   // quiz intégrés dont les détails sont dépliés
         function renderBuiltins() {
             const list = $("builtin-list");
             list.replaceChildren(...DATA.builtins.map(q => {
@@ -1076,12 +1081,26 @@
                 } }, "Enregistrer l'accès");
                 const edit = h("button", { class: "btn secondary small", type: "button", onclick: () => editBuiltin(q) }, "✏️ Modifier");
                 const restore = q.modifie ? h("button", { class: "btn danger", type: "button", onclick: () => restoreBuiltin(q) }, "Rétablir l'original") : null;
-                return h("div", { class: "builtin", "data-id": q.id },
+                const open = openBuiltins.has(q.id);
+                const details = h("div", { class: "builtin-details" },
                     h("div", { class: "info" },
-                        h("strong", {}, (q.emoji || "📘") + " " + q.titre, q.modifie ? h("span", { class: "badge-modifie" }, "✏️ modifié") : null),
                         h("span", {}, q.matiere + " · " + q.questions + " questions"),
                         h("span", { class: (q.pour || []).length ? "" : "warn" }, pourText(q.pour))),
                     boxes, h("div", { class: "actions", style: "margin-top:8px" }, save, edit, restore, status));
+                details.hidden = !open;
+                const toggle = h("button", { class: "btn secondary small builtin-toggle", type: "button", "aria-expanded": String(open),
+                    onclick: () => {
+                        const now = details.hidden;
+                        details.hidden = !now;
+                        toggle.setAttribute("aria-expanded", String(now));
+                        toggle.textContent = now ? "▲ Masquer les détails" : "▼ Détails";
+                        if (now) openBuiltins.add(q.id); else openBuiltins.delete(q.id);
+                    } }, open ? "▲ Masquer les détails" : "▼ Détails");
+                return h("div", { class: "builtin", "data-id": q.id },
+                    h("div", { class: "builtin-head" },
+                        h("strong", {}, (q.emoji || "📘") + " " + q.titre, q.modifie ? h("span", { class: "badge-modifie" }, "✏️ modifié") : null),
+                        toggle),
+                    details);
             }));
         }
         // Charge la version en vigueur d'un quiz intégré dans le formulaire (l'original reste intact côté serveur)
