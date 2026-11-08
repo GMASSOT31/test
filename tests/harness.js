@@ -68,31 +68,43 @@ async function login(p, c = { classe: '5B', pseudo: 'Léo', pin: '1234' }) {
   await p.waitForSelector('#app:not([hidden])', { timeout: 8000 });
 }
 const LEO = { classe: '5B', pseudo: 'Léo', pin: '1234' }, EMMA = { classe: '5B', pseudo: 'Emma', pin: '4321' };
-// Simule une NOUVELLE présentation d'une question : efface sa réponse déjà comptée dans le passage en cours
-// (le serveur ne compte une question qu'une fois par passage). Les tests de séries l'utilisent pour enchaîner les réussites.
-function again(world, cred, quizId, qid) {
-  const sid = { 'Léo': 'leo', 'Emma': 'emma', 'Nina': 'nina' }[cred[1]];
-  const k = 'parcours_' + sid + '__' + quizId;
-  if (!world.props[k]) return;
-  const pc = JSON.parse(world.props[k]);
-  if (pc.pass && pc.pass.res) { delete pc.pass.res[qid]; world.props[k] = JSON.stringify(pc); }
+// ---- aides pour les séances (parcours v3) ----
+const esc = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Ouvre une leçon et lance une séance ; à la première ouverture, répond à « Quand est ton contrôle ? » et « déjà travaillée ? »
+async function startLesson(p, title, { exam = 'Pas de contrôle prévu', tf = true } = {}) {
+  await p.locator('.card.lecon', { hasText: title }).first().click();
+  if (await p.locator('.setup').count()) {
+    await p.locator('.choice', { hasText: exam }).first().click();
+    await p.locator('.choice.wide', { hasText: tf ? 'Oui' : 'Non' }).click();
+    await p.click('.setup .actions .btn');
+  } else await p.locator('.lesson-screen .big-btn').click();
+  await p.waitForSelector('.session-head');
 }
-function sr(world, ...a) { again(world, a.slice(0, 3), a[3], a[4]); return world.run('saveResult', ...a); }
-// Joue une « partie » complète pour un compteur ou un test d'état : répond à tout le passage en cours (good = réussite ou erreur) puis
-// le clôture ; si le parcours est à une étape de cartes, évalue toutes les cartes « Trouvé » et passe à la suite. Renvoie le résultat de finishQuiz.
-function party(world, cred, quizId, good = false) {
-  const get = () => world.run('getStudentData', ...cred).parcours[quizId];
-  let pc = get();
-  for (let i = 0; i < 6; i++) {
-    if (pc.pass) {
-      pc.pass.list.forEach(id => { if (pc.pass.res[id] === undefined) world.run('saveResult', ...cred, quizId, id, good); });
-      return world.run('finishQuiz', ...cred, quizId);
-    }
-    if (!pc.pile) return null;
-    pc.pile.ids.forEach(id => world.run('rateCard', ...cred, quizId, id, 'trouve', null));
-    world.run(pc.etape === 'cartes_finales' ? 'requestValidation' : 'cardsDone', ...cred, quizId);
-    pc = get();
-  }
-  return null;
+// Répond à l'écran en cours d'une séance (carte : « J'ai lu »), juste ou faux, puis passe à la suite
+async function answerCurrent(p, good = true, { next = true } = {}) {
+  if (await p.locator('.flashcard.learn').count()) { await p.click('.panel.session .actions .btn'); return 'carte'; }
+  const info = await p.evaluate(() => {
+    const t = document.querySelector('.panel.session .question').textContent;
+    for (const z of QUIZZES) { const q = z.questions.find(x => x.question === t); if (q) return { right: q.champs ? q.champs.map(c => c.reponses[0]) : q.reponses ? q.reponses[0] : q.options[q.correct], rappel: q.rappel ? q.rappel[0] : null, champs: !!q.champs }; }
+    return null;
+  });
+  if (await p.locator('.masked-btns').count()) await p.locator('.masked-btns .btn').first().click();
+  if (await p.locator('.option').count()) {
+    if (good) await p.locator('.option').filter({ hasText: new RegExp('^' + esc(info.right) + '$') }).first().click();
+    else await p.locator('.option').filter({ hasNotText: info.right }).first().click();
+  } else if (info.champs) {
+    const ins = p.locator('.saisie.champ');
+    for (let k = 0; k < info.right.length; k++) await ins.nth(k).fill(good ? info.right[k] : 'zzz');
+    await p.locator('.panel .btn', { hasText: 'Valider' }).click();
+  } else { await p.fill('.panel.session .saisie', good ? (info.rappel || info.right) : 'zzz'); await p.keyboard.press('Enter'); }
+  if (next) await p.click('.next-btn');
+  return 'question';
 }
-Object.assign(module.exports, { seed, login, LEO, EMMA, PW, again, sr, party });
+// Termine la séance en cours (tout juste, ou avec good(n) pour choisir)
+async function finishSession(p, good = () => true) {
+  let n = 0;
+  while (await p.locator('.session-head').count() && n < 200) { const kind = await answerCurrent(p, good(n)); if (kind === 'question') n++; }
+  await p.waitForSelector('.result .actions');
+  return n;
+}
+Object.assign(module.exports, { seed, login, LEO, EMMA, PW, startLesson, answerCurrent, finishSession, esc });

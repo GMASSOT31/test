@@ -79,6 +79,6 @@ for (const f of ['students_', 'authStudent_', 'list_', 'hashPin_', 'checkAdmin_'
   ok(!JSON.stringify(w.run('adminData', pw)).includes('"leo"'), 'élève supprimé retiré des attributions (quiz intégrés, quiz, paquets, remises à zéro)');
   const leo2 = w.run('saveStudent', pw, { classe: '5B', pseudo: 'Léo', pin: '1111' });
   const L2 = w.run('getStudentData', '5B', 'Léo', '1111');
-  ok(leo2.id === 'leo' && L2.quizzes.length === 0 && L2.decks.length === 0 && Object.keys(L2.progress).length === 0 && !Object.keys(w.props).some(k => k.startsWith('prog_leo__')), 'un nouvel élève de même pseudo ne récupère AUCUN accès de l\'ancien (ni quiz, ni paquet, ni progression)');
+  ok(leo2.id === 'leo' && L2.quizzes.length === 0 && L2.decks.length === 0 && Object.keys(L2.srs).length === 0 && !Object.keys(w.props).some(k => k.startsWith('srs_leo__')), 'un nouvel élève de même pseudo ne récupère AUCUN accès de l\'ancien (ni quiz, ni paquet, ni progression)');
   console.log(); process.exit(summary() ? 1 : 0);
 })();

@@ -27,9 +27,9 @@ function doGet(e) {
 //   override_<id>  version modifiée d'un quiz intégré (voir Contenu.gs) ; l'original n'est jamais modifié
 //   builtin_assign  à qui est donné chaque quiz intégré (voir Contenu.gs)
 // Un élément trop gros pour une propriété (9 Ko) est découpé en morceaux : <clé>~0, <clé>~1…
-//   prog_<idÉlève>__<idQuiz>  la progression d'un élève dans un quiz (réussites d'affilée par question)
-//   done_<idÉlève>__<idQuiz>  combien de fois l'élève a terminé ce quiz (historique : la remise à zéro de la progression n'y touche pas)
-//   parcours_<idÉlève>__<idQuiz>  où en est l'élève dans le parcours de révision de cette leçon (voir plus bas)
+//   srs_<idÉlève>__<idQuiz>  la révision espacée d'un élève sur une leçon : niveau et échéance de chaque question,
+//                            date du contrôle, plan de séances, historique (voir « Révision espacée »)
+//   schema_version  '3' une fois les anciennes données (prog_, done_, parcours_) effacées
 // Le mot de passe administrateur est la propriété ADMIN_PASSWORD.
 //
 // Séparation des élèves : le serveur ne renvoie à un élève que les quiz et paquets qui lui sont destinés
@@ -43,7 +43,6 @@ var BUILTIN_ASSIGN_KEY = 'builtin_assign';
 var PROGRESS_PREFIX = 'prog_';
 var DONE_PREFIX = 'done_';
 var PARCOURS_PREFIX = 'parcours_';
-var MASTERY = 2;            // réussites consécutives aux quiz pour qu'une question soit vérifiée
 var MAX_QUESTIONS = 50;
 var MAX_CARDS = 150;
 var MAX_FIELDS = 12;       // champs maximum dans une question à plusieurs champs
@@ -59,141 +58,133 @@ var LOCK_SECONDS = 300;     // durée du blocage (5 minutes)
 // Connexion + données de l'élève en un seul appel. Les identifiants sont revérifiés à chaque appel.
 function getStudentData(classe, pseudo, pin) {
   var st = authStudent_(classe, pseudo, pin);
+  migrateV3_();
   var quizzes = quizzesOf_(st.id);
   var decks = list_(DECK_PREFIX).filter(function (d) { return isFor_(d, st.id); }).map(withoutPour_);
   var props = PropertiesService.getScriptProperties().getProperties();
-  var progress = {};
-  var fois = {};
-  var parcours = {};
-  quizzes.forEach(function (q) {
-    var rec = parseJson_(props[progressKey_(st.id, q.id)]);
-    parcours[q.id] = presentParcours_(readParcours_(props[parcoursKey_(st.id, q.id)], q, rec), q);
-    if (rec && rec.q) progress[q.id] = rec.q;
-    var done = parseJson_(props[doneKey_(st.id, q.id)]);
-    if (done && done.n) fois[q.id] = done.n;
-  });
+  var srs = {};
+  quizzes.forEach(function (q) { srs[q.id] = presentSrs_(readSrs_(props[srsKey_(st.id, q.id)])); });
   return {
     student: { id: st.id, classe: st.classe, pseudo: st.pseudo },
     quizzes: quizzes.map(withoutPour_),
     decks: decks,
-    progress: progress,
-    fois: fois,
-    parcours: parcours
+    srs: srs,
+    now: Date.now()
   };
 }
 
-// Enregistre le résultat d'une question pendant un passage de quiz (quiz initial ou vérification).
-// Réussite du premier essai => une réussite d'affilée de plus (MASTERY = 2 : question « vérifiée », plafonnée) ;
-// erreur ou « Je ne sais pas » => retour à 0 et une erreur de plus. Une question n'est comptée qu'UNE fois par passage
-// (double envoi, nouvelle tentative réseau, opId rejoué : sans effet). Hors passage de quiz, le résultat est ignoré.
-// Les identifiants sont revérifiés ; seul un quiz auquel l'élève a accès, et une question de ce passage, sont acceptés.
-function saveResult(classe, pseudo, pin, quizId, qhash, success, opId) {
-  var st = authStudent_(classe, pseudo, pin);
-  var quiz = quizzesOf_(st.id).filter(function (q) { return q.id === quizId; })[0];
-  if (!quiz) throw new Error('Quiz inaccessible.');
-  if (!/^[0-9a-f]{8}$/.test(String(qhash)) || !quiz.questions.some(function (q) { return qid_(q) === qhash; })) {
-    throw new Error('Question inconnue.');
-  }
+// ---------------- Révision espacée (parcours v3) ----------------
+// Chaque question d'une leçon a un niveau : 0 Nouvelle, 1 Découverte (réussie en QCM), 2 Rappelée (réussie sans choix),
+// 3 Ancrée, 4 Maîtrisée. Un succès au PREMIER essai d'une séance fait monter d'un niveau (un QCM ne dépasse pas le
+// niveau 1) et repousse la prochaine révision ; une erreur ou « Je ne sais pas » renvoie au niveau 1, révision au plus tôt.
+// Sans date de contrôle : révision dans INTERVAL_DAYS[niveau] jours. Avec une date : la leçon suit un plan de séances
+// (makePlan_) qui finit juste avant le contrôle ; contrôle le lendemain = mode express (séances espacées d'EXPRESS_GAP_MIN).
+// Une séance « bonus » (question pas encore à réviser) n'avance pas le plan ; ses erreurs comptent.
+// Enregistrement srs_<élève>__<quiz> :
+//   { v:3, it:{ idQuestion: [niveau, échéance(ms), erreurs, réussites, erreursSûres] }, exam:'AAAA-MM-JJ'|'', plan:[ms…],
+//     tf: commencer par tester, mode:'actif'|'entretien'|'archive', ses:[[début, durée(s), questions, réussies, bonus]],
+//     cur:{ s: séance, f:{ id:1 } }, ops:[…] }
+var SRS_PREFIX = 'srs_';
+var SCHEMA_KEY = 'schema_version';
+var LEVEL_MAX = 4;
+var INTERVAL_DAYS = [0, 1, 3, 7, 14];
+var MAINTENANCE_DAYS = 30;
+var EXPRESS_GAP_MIN = 60;
+var DAY_MS = 86400000, MIN_MS = 60000;
+var MAX_SESSIONS_KEPT = 30;
+
+function srsKey_(studentId, quizId) { return SRS_PREFIX + studentId + '__' + quizId; }
+function defaultSrs_() { return { v: 3, it: {}, exam: '', plan: [], tf: false, mode: 'actif', ses: [], maj: 0 }; }
+function readSrs_(raw) { var r = parseJson_(raw); return r && r.v === 3 ? r : defaultSrs_(); }
+// Version envoyée aux pages : sans la séance en cours ni les identifiants d'opérations
+function presentSrs_(r) {
+  return { it: r.it, exam: r.exam || '', plan: r.plan || [], tf: !!r.tf, cfg: !!r.cfg, mode: r.mode || 'actif', ses: (r.ses || []).slice(-MAX_SESSIONS_KEPT) };
+}
+
+// Passage au parcours v3 : une seule fois, on efface les anciennes progressions, parcours et compteurs (décision du 8/11/2026).
+// Comptes, quiz, paquets et attributions sont conservés.
+function migrateV3_() {
+  var store = PropertiesService.getScriptProperties();
+  if (store.getProperty(SCHEMA_KEY) === '3') return;
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var store = PropertiesService.getScriptProperties();
-    var key = progressKey_(st.id, quizId);
-    var rec = parseJson_(store.getProperty(key)) || { q: {}, maj: 0 };
-    var pc = readParcours_(store.getProperty(parcoursKey_(st.id, quizId)), quiz, rec);
-    var cur = rec.q[qhash] || [0, 0];
-    var out = function (extra) { var o = { ok: Math.min(MASTERY, cur[0]), fails: cur[1], parcours: presentParcours_(pc, quiz) }; for (var k in extra) o[k] = extra[k]; return o; };
-    if (seenOp_(pc, opId)) return out({ rejoue: true });
-    if (pc.etape === 'quiz_initial' && !pc.pass) pc.pass = { kind: 'initial', list: quizIds_(quiz), res: {} };
-    if (!pc.pass) return out({ ignore: true });
-    if (pc.pass.list.indexOf(qhash) < 0) throw new Error('Question inconnue pour ce passage.');
-    if (pc.pass.res[qhash] !== undefined) { rememberOp_(pc, opId); store.setProperty(parcoursKey_(st.id, quizId), JSON.stringify(pc)); return out({ rejoue: true }); }
-    // une série déjà au-dessus du seuil (anciennes données) n'est pas abaissée par une réussite
-    cur = success === true ? [cur[0] >= MASTERY ? cur[0] : cur[0] + 1, cur[1]] : [0, cur[1] + 1];
-    rec.q[qhash] = cur;
-    rec.maj = Date.now();
-    pc.pass.res[qhash] = success === true ? 1 : 0;
-    rememberOp_(pc, opId); pc.maj = rec.maj;
-    store.setProperty(key, JSON.stringify(rec));
-    store.setProperty(parcoursKey_(st.id, quizId), JSON.stringify(pc));
-    return out({});
+    if (store.getProperty(SCHEMA_KEY) === '3') return;
+    Object.keys(store.getProperties()).forEach(function (k) {
+      if (k.indexOf(PROGRESS_PREFIX) === 0 || k.indexOf(DONE_PREFIX) === 0 || k.indexOf(PARCOURS_PREFIX) === 0) store.deleteProperty(k);
+    });
+    store.setProperty(SCHEMA_KEY, '3');
   } finally {
     lock.releaseLock();
   }
 }
 
-// ---------------- Parcours de révision d'une leçon (schemaVersion 2) ----------------
-//   quiz_initial       un seul passage COMPLET du quiz (toutes les questions) ;
-//   cartes_ciblees     flashcards des questions ratées (ou « Je ne sais pas ») ; chaque carte doit être retournée, évaluée
-//                      (Oublié / Hésité / Trouvé) et finir Trouvé ; puis vérification ;
-//   verification       passages de quiz sur les questions dont la série est < MASTERY (2 réussites consécutives) ;
-//                      une erreur renvoie aux cartes ciblées, sinon passage suivant tant qu'il reste des questions à 1 sur 2 ;
-//   cartes_finales     paquet complet (toutes les questions), même règle que les cartes ciblées ;
-//   attente_validation « Faire valider par un adulte » demandé ; valide : validé par l'administrateur (validateParcours).
-// Le serveur décide de l'étape. L'auto-évaluation des cartes est déclarative : elle ne modifie jamais les séries du quiz.
-// Enregistrement : { v:2, etape, pass:{kind,list,res}|null, pile:{kind,ids,etat:{id:{d,n}},q}|null, fini, valide, maj, ops:[opId], v1? }
-function defaultParcours_() { return { v: 2, etape: 'quiz_initial', pass: null, pile: null, maj: 0 }; }
-function parcoursKey_(studentId, quizId) { return PARCOURS_PREFIX + studentId + '__' + quizId; }
-
-function quizIds_(quiz) { return quiz.questions.map(qid_); }
-function serie_(rec, id) { var r = rec && rec.q && rec.q[id]; return r ? r[0] : 0; }
-// Identifiants des questions dont la série est sous le seuil (dans l'ordre du quiz)
-function underIds_(quiz, rec) { return quizIds_(quiz).filter(function (id) { return serie_(rec, id) < MASTERY; }); }
-
-function enterCiblees_(pc, ids) { pc.etape = 'cartes_ciblees'; pc.pass = null; pc.pile = { kind: 'ciblees', ids: ids, etat: {}, q: null }; }
-function enterVerification_(pc, ids) { pc.etape = 'verification'; pc.pile = null; pc.pass = { kind: 'verif', list: ids, res: {} }; }
-function enterFinales_(pc, quiz) { pc.etape = 'cartes_finales'; pc.pass = null; pc.pile = { kind: 'finales', ids: quizIds_(quiz), etat: {}, q: null }; }
-// Après une erreur, ou à l'issue d'une vérification sans erreur : quelle étape suit ?
-function nextStep_(pc, quiz, rec) {
-  var under = underIds_(quiz, rec);
-  if (under.length) enterVerification_(pc, under); else enterFinales_(pc, quiz);
+// ---- dates (fuseau du script : Europe/Paris) ----
+function tzOffsetMin_(ms) {
+  try {
+    var z = Utilities.formatDate(new Date(ms), 'Europe/Paris', 'Z');
+    return (z.charAt(0) === '-' ? -1 : 1) * (parseInt(z.substr(1, 2), 10) * 60 + parseInt(z.substr(3, 2), 10));
+  } catch (e) {
+    return -new Date(ms).getTimezoneOffset();
+  }
+}
+function dayStart_(ms) { var off = tzOffsetMin_(ms) * MIN_MS; return Math.floor((ms + off) / DAY_MS) * DAY_MS - off; }
+function dateStart_(str) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(str || ''));
+  if (!m) return 0;
+  var utc = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+  var d = new Date(utc);
+  if (d.getUTCFullYear() !== +m[1] || d.getUTCMonth() !== +m[2] - 1 || d.getUTCDate() !== +m[3]) return 0;
+  return utc - tzOffsetMin_(utc) * MIN_MS;
 }
 
-// Lecture d'un enregistrement (migration à la volée de l'ancien format, sans rien écrire : la première écriture le fait)
-function readParcours_(raw, quiz, rec) {
-  var pc = parseJson_(raw);
-  if (!pc) return defaultParcours_();
-  if (pc.v === 2) return pc;
-  return migrateParcours_(pc, quiz, rec);
+// Plan de séances jusqu'au contrôle (instant de chaque séance). Contrôle demain : maintenant, +1 h, le matin du contrôle.
+// Sinon : aujourd'hui, demain, puis des écarts croissants (3, 7, 15 jours…) et toujours la veille du contrôle.
+function makePlan_(now, exam) {
+  var E = dateStart_(exam), today = dayStart_(now);
+  if (!E) return [];
+  var d = Math.round((E - today) / DAY_MS);
+  if (d <= 0) return [now];
+  if (d === 1) return now + EXPRESS_GAP_MIN * MIN_MS < E ? [now, now + EXPRESS_GAP_MIN * MIN_MS, E] : [now, E];
+  var offsets = [0, 1], next = 3;
+  while (next < d - 1) { offsets.push(next); next = next * 2 + 1; }
+  if (offsets[offsets.length - 1] < d - 1) offsets.push(d - 1);
+  var plan = offsets.map(function (o) { return o === 0 ? now : today + o * DAY_MS; });
+  if (d === 2) plan.push(E);   // dernier coup d'œil le matin du contrôle
+  return plan;
+}
+function isExpress_(r, now) {
+  var E = dateStart_(r.exam);
+  return !!E && Math.round((E - dayStart_(now)) / DAY_MS) <= 1;
+}
+// Prochaine séance du plan (au moins EXPRESS_GAP_MIN plus tard en express, sinon un autre jour), 0 s'il n'y en a plus
+function nextSlot_(r, now) {
+  var express = isExpress_(r, now);
+  var min = express ? now + (EXPRESS_GAP_MIN - 1) * MIN_MS : dayStart_(now) + DAY_MS;
+  var plan = r.plan || [];
+  for (var i = 0; i < plan.length; i++) if (plan[i] >= min) return plan[i];
+  return 0;
+}
+function lastSlot_(r) { var p = r.plan || []; return p.length ? p[p.length - 1] : 0; }
+function examActive_(r, now) { var E = dateStart_(r.exam); return !!E && E + DAY_MS > now; }
+
+// Échéance d'une question qui vient de passer au niveau lvl
+function dueFor_(r, lvl, now) {
+  if (examActive_(r, now)) {
+    var nxt = nextSlot_(r, now);
+    if (lvl >= 3) { var last = lastSlot_(r); if (last > now + MIN_MS && (!nxt || last >= nxt)) return last; }
+    if (nxt) return nxt;
+    // plus de séance prévue avant le contrôle : on revient au rythme normal
+  }
+  var days = lvl >= LEVEL_MAX && r.it && r.mode === 'entretien' ? MAINTENANCE_DAYS : INTERVAL_DAYS[Math.max(1, Math.min(lvl, LEVEL_MAX))];
+  return dayStart_(now) + days * DAY_MS;
 }
 
-// Migration v1 -> v2 (voir docs/REPRISE.md). Les séries sont conservées (plafonnées à l'usage) ; l'ancien enregistrement est gardé dans pc.v1.
-//   valide -> valide ; fini -> attente_validation ; revision -> cartes_finales (ou vérification s'il reste des questions < 2) ;
-//   cartes -> cartes_ciblees recalculée depuis les questions sous le seuil ; quiz avec au moins un passage fait -> cartes ciblées / paquet final ;
-//   quiz sans passage -> quiz_initial. Aucune carte n'est marquée « Trouvé » rétroactivement.
-function migrateParcours_(old, quiz, rec) {
-  var pc = defaultParcours_();
-  pc.v1 = old; pc.maj = old.maj || 0;
-  var under = underIds_(quiz, rec);
-  if (old.etape === 'valide') { pc.etape = 'valide'; pc.valide = old.valide || 0; pc.fini = old.fini || 0; }
-  else if (old.etape === 'fini') { pc.etape = 'attente_validation'; pc.fini = old.fini || 0; }
-  else if (old.etape === 'revision') { if (under.length) enterVerification_(pc, under); else enterFinales_(pc, quiz); }
-  else if (old.etape === 'cartes') { if (under.length) enterCiblees_(pc, under); else enterFinales_(pc, quiz); }
-  else if ((old.passages || 0) > 0 || (old.cycle || 1) > 1) { if (under.length) enterCiblees_(pc, under); else enterFinales_(pc, quiz); }
-  return pc;
-}
+function seenOpSrs_(r, opId) { return !!opId && (r.ops || []).indexOf(String(opId)) >= 0; }
+function rememberOpSrs_(r, opId) { if (opId) r.ops = (r.ops || []).concat(String(opId).slice(0, 40)).slice(-40); }
 
-function seenOp_(pc, opId) { return !!opId && (pc.ops || []).indexOf(String(opId)) >= 0; }
-function rememberOp_(pc, opId) {
-  if (!opId) return;
-  pc.ops = (pc.ops || []).concat(String(opId).slice(0, 40)).slice(-30);
-}
-
-// Version envoyée au navigateur : sans sauvegarde de migration ni identifiants d'opérations ; le passage initial est présenté d'avance.
-function presentParcours_(pc, quiz) {
-  var out = {};
-  Object.keys(pc).forEach(function (k) { if (k !== 'v1' && k !== 'ops') out[k] = pc[k]; });
-  if (out.etape === 'quiz_initial' && !out.pass) out.pass = { kind: 'initial', list: quizIds_(quiz), res: {} };
-  return out;
-}
-
-function pileDone_(pile, live) {
-  return !!pile && pile.ids.filter(function (id) { return live.indexOf(id) >= 0; }).every(function (id) { return pile.etat[id] && pile.etat[id].d === 'trouve'; });
-}
-
-// Fin d'un passage de quiz : le compteur « fait N fois » augmente (une seule fois par passage : un renvoi est sans effet),
-// puis le serveur décide de l'étape suivante à partir des réponses du passage. Un passage inachevé est refusé.
-function finishQuiz(classe, pseudo, pin, quizId, opId) {
+// Accès commun : élève authentifié, leçon attribuée, enregistrement lu sous verrou puis écrit
+function withSrs_(classe, pseudo, pin, quizId, fn) {
   var st = authStudent_(classe, pseudo, pin);
   var quiz = quizzesOf_(st.id).filter(function (q) { return q.id === quizId; })[0];
   if (!quiz) throw new Error('Quiz inaccessible.');
@@ -201,102 +192,101 @@ function finishQuiz(classe, pseudo, pin, quizId, opId) {
   lock.waitLock(10000);
   try {
     var store = PropertiesService.getScriptProperties();
-    var key = doneKey_(st.id, quizId);
-    var rec = parseJson_(store.getProperty(key)) || { n: 0, last: 0 };
-    var prog = parseJson_(store.getProperty(progressKey_(st.id, quizId)));
-    var pk = parcoursKey_(st.id, quizId);
-    var pc = readParcours_(store.getProperty(pk), quiz, prog);
-    if (seenOp_(pc, opId)) return { n: rec.n, parcours: presentParcours_(pc, quiz), rejoue: true };
-    if (pc.etape === 'quiz_initial' && !pc.pass) pc.pass = { kind: 'initial', list: quizIds_(quiz), res: {} };
-    if (!pc.pass) return { n: rec.n, parcours: presentParcours_(pc, quiz), rejoue: true };
-    var live = quizIds_(quiz);
-    var list = pc.pass.list.filter(function (id) { return live.indexOf(id) >= 0; });
-    if (!list.every(function (id) { return pc.pass.res[id] !== undefined; })) throw new Error('Ce passage est en cours : réponds à toutes les questions.');
-    rec.n += 1; rec.last = Date.now();
-    store.setProperty(key, JSON.stringify(rec));
-    var erreurs = list.filter(function (id) { return pc.pass.res[id] === 0; });
-    var bilan = { total: list.length, bons: list.length - erreurs.length, erreurs: erreurs.length, genre: pc.pass.kind };
-    if (erreurs.length) enterCiblees_(pc, erreurs); else nextStep_(pc, quiz, prog);
-    bilan.restant = underIds_(quiz, prog).length;
-    rememberOp_(pc, opId); pc.maj = Date.now();
-    store.setProperty(pk, JSON.stringify(pc));
-    return { n: rec.n, parcours: presentParcours_(pc, quiz), bilan: bilan };
+    var key = srsKey_(st.id, quizId);
+    var r = readSrs_(store.getProperty(key));
+    var out = fn(r, quiz, Date.now());
+    r.maj = Date.now();
+    store.setProperty(key, JSON.stringify(r));
+    return out;
   } finally {
     lock.releaseLock();
   }
 }
 
-// Auto-évaluation d'une carte (« oublie », « hesite », « trouve ») : suppose que la carte a été retournée.
-// q = instantané de la file de répétition (pour reprendre une pile : cartes à présenter, files Oublié / Hésité, carte courante).
-function rateCard(classe, pseudo, pin, quizId, cardId, verdict, snapshot, opId) {
-  var st = authStudent_(classe, pseudo, pin);
-  var quiz = quizzesOf_(st.id).filter(function (q) { return q.id === quizId; })[0];
-  if (!quiz) throw new Error('Quiz inaccessible.');
-  if (['oublie', 'hesite', 'trouve'].indexOf(verdict) < 0) throw new Error('Choix invalide.');
-  var lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-  try {
-    var store = PropertiesService.getScriptProperties();
-    var pk = parcoursKey_(st.id, quizId);
-    var pc = readParcours_(store.getProperty(pk), quiz, parseJson_(store.getProperty(progressKey_(st.id, quizId))));
-    if (pc.etape !== 'cartes_ciblees' && pc.etape !== 'cartes_finales') throw new Error("Cette étape n'est pas en cours.");
-    if (seenOp_(pc, opId)) return { parcours: presentParcours_(pc, quiz), rejoue: true };
-    if (pc.pile.ids.indexOf(cardId) < 0) throw new Error('Carte inconnue.');
-    var prev = pc.pile.etat[cardId] || { d: '', n: 0 };
-    pc.pile.etat[cardId] = { d: verdict, n: prev.n + 1 };
-    pc.pile.q = cleanSnapshot_(snapshot, pc.pile.ids);
-    rememberOp_(pc, opId); pc.maj = Date.now();
-    store.setProperty(pk, JSON.stringify(pc));
-    return { parcours: presentParcours_(pc, quiz) };
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-// Ne garde de l'instantané que des identifiants de la pile (f : à présenter, o : Oublié, h : Hésité, c : carte courante)
-function cleanSnapshot_(s, ids) {
-  if (!s || typeof s !== 'object') return null;
-  var keep = function (list) { return (Array.isArray(list) ? list : []).filter(function (id) { return ids.indexOf(id) >= 0; }).slice(0, ids.length); };
-  var waits = {};
-  if (s.w && typeof s.w === 'object') Object.keys(s.w).forEach(function (id) { if (ids.indexOf(id) >= 0) waits[id] = Math.max(0, Math.min(3, Number(s.w[id]) || 0)); });
-  return { f: keep(s.f), o: keep(s.o), h: keep(s.h), w: waits, c: ids.indexOf(s.c) >= 0 ? s.c : '', l: ids.indexOf(s.l) >= 0 ? s.l : '' };
-}
-
-// Cartes ciblées terminées -> vérification. Refusé tant qu'une carte n'a pas été évaluée et ne finit pas « Trouvé ».
-function cardsDone(classe, pseudo, pin, quizId, opId) {
-  return moveParcours_(classe, pseudo, pin, quizId, 'cartes_ciblees', opId, function (pc, quiz, prog) {
-    nextStep_(pc, quiz, prog);
+// Une réponse : stage 'qcm' (reconnaissance) ou 'rappel' (sans choix) ; ok = juste du premier essai ; conf = 'sur' | 'doute' | '' ;
+// sid = identifiant de la séance (seule la PREMIÈRE réponse d'une question dans une séance fait avancer le plan).
+function answer(classe, pseudo, pin, quizId, qid, stage, ok, conf, sid, opId) {
+  return withSrs_(classe, pseudo, pin, quizId, function (r, quiz, now) {
+    if (!/^[0-9a-f]{8}$/.test(String(qid)) || !quiz.questions.some(function (q) { return qid_(q) === qid; })) throw new Error('Question inconnue.');
+    if (seenOpSrs_(r, opId)) return { qid: qid, item: r.it[qid] || [0, 0, 0, 0, 0], rejoue: true };
+    rememberOpSrs_(r, opId);
+    sid = String(sid || '').slice(0, 30);
+    if (!r.cur || r.cur.s !== sid) r.cur = { s: sid, f: {} };
+    var it = r.it[qid] || [0, 0, 0, 0, 0];
+    var lvl = it[0];
+    var first = !r.cur.f[qid];
+    r.cur.f[qid] = 1;
+    if (r.plan && r.plan.length && !examActive_(r, now)) { r.plan = []; }
+    if (!first) {
+      // nouvel essai dans la même séance (après correction) : une question nouvelle apprise passe au niveau 1
+      if (ok === true && lvl === 0) { it[0] = 1; it[1] = dueFor_(r, 1, now); }
+      r.it[qid] = it;
+      return { qid: qid, item: it };
+    }
+    var due = lvl > 0 && it[1] <= now + 5 * MIN_MS;
+    if (ok === true) {
+      it[3] += 1;
+      if (lvl === 0) lvl = 1;
+      else if (due) lvl = stage === 'rappel' && conf !== 'doute' ? Math.min(LEVEL_MAX, lvl + 1) : lvl;
+      else { r.it[qid] = it; return { qid: qid, item: it, bonus: true }; }   // révision en avance : le plan ne change pas
+      it[0] = lvl; it[1] = dueFor_(r, lvl, now);
+    } else {
+      it[2] += 1;
+      if (conf === 'sur') it[4] += 1;
+      it[0] = lvl === 0 ? 0 : 1;
+      it[1] = dueFor_(r, 1, now);
+    }
+    r.it[qid] = it;
+    return { qid: qid, item: it };
   });
 }
 
-// Paquet final terminé -> « En attente de validation » (réservé à l'adulte ensuite). Exige toutes les questions vérifiées.
-function requestValidation(classe, pseudo, pin, quizId, opId) {
-  return moveParcours_(classe, pseudo, pin, quizId, 'cartes_finales', opId, function (pc, quiz, prog) {
-    if (underIds_(quiz, prog).length) throw new Error("Des questions ne sont pas encore vérifiées (pas en cours d'étape).");
-    pc.etape = 'attente_validation'; pc.fini = Date.now(); pc.pile = null;
+// Fin de séance : ajoutée à l'historique (affiché à l'élève et au parent)
+function endSession(classe, pseudo, pin, quizId, sid, stats, opId) {
+  return withSrs_(classe, pseudo, pin, quizId, function (r, quiz, now) {
+    if (seenOpSrs_(r, opId)) return { ses: r.ses };
+    rememberOpSrs_(r, opId);
+    var s = stats || {};
+    var n = Math.max(0, Math.min(500, Number(s.n) || 0)), okN = Math.max(0, Math.min(n, Number(s.ok) || 0));
+    var dur = Math.max(0, Math.min(4 * 3600, Math.round(Number(s.dur) || 0)));
+    r.ses = (r.ses || []).concat([[now - dur * 1000, dur, n, okN, s.bonus ? 1 : 0]]).slice(-MAX_SESSIONS_KEPT);
+    if (r.cur && r.cur.s === String(sid || '').slice(0, 30)) delete r.cur;
+    return { ses: r.ses };
   });
 }
 
-function moveParcours_(classe, pseudo, pin, quizId, from, opId, change) {
-  var st = authStudent_(classe, pseudo, pin);
-  var quiz = quizzesOf_(st.id).filter(function (q) { return q.id === quizId; })[0];
-  if (!quiz) throw new Error('Quiz inaccessible.');
-  var lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-  try {
-    var store = PropertiesService.getScriptProperties();
-    var pk = parcoursKey_(st.id, quizId);
-    var prog = parseJson_(store.getProperty(progressKey_(st.id, quizId)));
-    var pc = readParcours_(store.getProperty(pk), quiz, prog);
-    if (seenOp_(pc, opId)) return { parcours: presentParcours_(pc, quiz), rejoue: true };
-    if (pc.etape !== from) throw new Error("Cette étape n'est pas en cours.");
-    if (!pileDone_(pc.pile, quizIds_(quiz))) throw new Error("Cartes en cours : toutes ne sont pas encore évaluées « Trouvé ».");
-    change(pc, quiz, prog);
-    rememberOp_(pc, opId); pc.maj = Date.now();
-    store.setProperty(pk, JSON.stringify(pc));
-    return { parcours: presentParcours_(pc, quiz) };
-  } finally {
-    lock.releaseLock();
+// Date du contrôle ('' = pas de contrôle) et préférence « commencer par tester » ; refait le plan à partir de maintenant.
+function setLessonPlan(classe, pseudo, pin, quizId, exam, testFirst) {
+  return withSrs_(classe, pseudo, pin, quizId, function (r, quiz, now) { applyPlan_(r, exam, testFirst, now); return presentSrs_(r); });
+}
+function applyPlan_(r, exam, testFirst, now) {
+  exam = String(exam || '');
+  if (exam) {
+    var E = dateStart_(exam);
+    if (!E) throw new Error('Date invalide.');
+    if (E < dayStart_(now) || E > now + 366 * DAY_MS) throw new Error('Choisis une date entre aujourd\'hui et dans un an.');
+  }
+  r.exam = exam;
+  r.plan = exam ? makePlan_(now, exam) : [];
+  if (typeof testFirst === 'boolean') { r.tf = testFirst; r.cfg = 1; }
+  r.mode = 'actif';
+  // les questions déjà travaillées suivent le nouveau plan : à revoir à la prochaine séance
+  Object.keys(r.it).forEach(function (id) {
+    var it = r.it[id];
+    if (it[0] > 0 && exam) it[1] = Math.min(it[1], nextSlot_(r, now) || r.plan[0] || now);
+  });
+}
+
+// Après le contrôle : 'entretien' (rappels espacés longs), 'archive' (hors révision du jour) ou 'actif'
+function setLessonMode(classe, pseudo, pin, quizId, mode) {
+  return withSrs_(classe, pseudo, pin, quizId, function (r, quiz, now) { applyMode_(r, mode, now); return presentSrs_(r); });
+}
+function applyMode_(r, mode, now) {
+  if (['actif', 'entretien', 'archive'].indexOf(mode) < 0) throw new Error('Choix invalide.');
+  r.mode = mode;
+  if (mode !== 'actif') { r.exam = ''; r.plan = []; }
+  if (mode === 'entretien') {
+    Object.keys(r.it).forEach(function (id) { var it = r.it[id]; if (it[0] > 0) it[1] = Math.max(it[1], dayStart_(now) + INTERVAL_DAYS[Math.min(it[0], LEVEL_MAX)] * DAY_MS); });
   }
 }
 
@@ -304,6 +294,7 @@ function moveParcours_(classe, pseudo, pin, quizId, from, opId, change) {
 
 function adminData(password) {
   checkAdmin_(password);
+  migrateV3_();
   var props = PropertiesService.getScriptProperties().getProperties();
   var assigned = builtinAssign_();
   var students = students_();
@@ -316,7 +307,7 @@ function adminData(password) {
   students.forEach(function (st) {
     progress[st.id] = allQuizzes
       .filter(function (q) { return quizFor_(q, st.id, assigned); })
-      .map(function (q) { return lessonSummary_(q, parseJson_(props[progressKey_(st.id, q.id)]), parseJson_(props[doneKey_(st.id, q.id)]), readParcours_(props[parcoursKey_(st.id, q.id)], q, parseJson_(props[progressKey_(st.id, q.id)]))); });
+      .map(function (q) { return lessonSummary_(q, readSrs_(props[srsKey_(st.id, q.id)])); });
   });
   return {
     students: students.map(publicStudent_),
@@ -325,7 +316,8 @@ function adminData(password) {
     builtins: builtins.map(function (q) {
       return { id: q.id, titre: q.titre, emoji: q.emoji, matiere: q.matiere, questions: q.questions.length, pour: assigned[q.id] || [], modifie: !!modifies[q.id] };
     }),
-    progress: progress
+    progress: progress,
+    now: Date.now()
   };
 }
 
@@ -378,8 +370,6 @@ function deleteStudent(password, id) {
   var store = PropertiesService.getScriptProperties();
   store.deleteProperty(STUDENT_PREFIX + id);
   deleteProgress_(id, 'all');
-  deleteDone_(id, 'all');
-  deleteParcours_(id, 'all');
   var assigned = builtinAssign_();
   Object.keys(assigned).forEach(function (k) { assigned[k] = assigned[k].filter(function (x) { return x !== id; }); });
   store.setProperty(BUILTIN_ASSIGN_KEY, JSON.stringify(assigned));
@@ -408,8 +398,6 @@ function deleteQuiz(password, id) {
   checkAdmin_(password);
   remove_(QUIZ_PREFIX, id);
   deleteProgress_('all', id);
-  deleteDone_('all', id);
-  deleteParcours_('all', id);
   return true;
 }
 
@@ -468,23 +456,28 @@ function restoreBuiltin(password, quizId) {
   return true;
 }
 
-// Valide le parcours d'un élève sur une leçon (il l'a terminé et demandé la validation d'un adulte).
-function validateParcours(password, studentId, quizId) {
+// Le parent fixe ou corrige la date du contrôle d'une leçon pour un élève ('' = pas de contrôle), ou change son mode.
+function setLessonPlanAdmin(password, studentId, quizId, exam) {
+  return withSrsAdmin_(password, studentId, quizId, function (r, now) { applyPlan_(r, exam, undefined, now); });
+}
+function setLessonModeAdmin(password, studentId, quizId, mode) {
+  return withSrsAdmin_(password, studentId, quizId, function (r, now) { applyMode_(r, mode, now); });
+}
+function withSrsAdmin_(password, studentId, quizId, fn) {
   checkAdmin_(password);
   if (!students_().some(function (s) { return s.id === studentId; })) throw new Error('Élève inconnu.');
-  if (!/^[a-z0-9-]{1,60}$/.test(String(quizId))) throw new Error('Identifiant de quiz invalide.');
+  var quiz = quizzesOf_(studentId).filter(function (q) { return q.id === quizId; })[0];
+  if (!quiz) throw new Error("Cette leçon n'est pas attribuée à cet élève.");
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     var store = PropertiesService.getScriptProperties();
-    var pk = parcoursKey_(studentId, quizId);
-    var quiz = builtins_().concat(list_(QUIZ_PREFIX).map(withQids_)).filter(function (q) { return q.id === quizId; })[0];
-    if (!quiz) throw new Error('Quiz inconnu.');
-    var pc = readParcours_(store.getProperty(pk), quiz, parseJson_(store.getProperty(progressKey_(studentId, quizId))));
-    if (pc.etape !== 'attente_validation') throw new Error("Ce parcours n'attend pas de validation.");
-    pc.etape = 'valide'; pc.valide = Date.now(); pc.maj = pc.valide;
-    store.setProperty(pk, JSON.stringify(pc));
-    return { parcours: slimParcours_(pc) };
+    var key = srsKey_(studentId, quizId);
+    var r = readSrs_(store.getProperty(key));
+    fn(r, Date.now());
+    r.maj = Date.now();
+    store.setProperty(key, JSON.stringify(r));
+    return lessonSummary_(quiz, r);
   } finally {
     lock.releaseLock();
   }
@@ -498,7 +491,7 @@ function resetProgress(password, studentId, quizId) {
   quizId = quizId || 'all';
   if (studentId !== 'all' && !students_().some(function (s) { return s.id === studentId; })) throw new Error('Élève inconnu.');
   if (quizId !== 'all' && !/^[a-z0-9-]{1,60}$/.test(String(quizId))) throw new Error('Identifiant de quiz invalide.');
-  return { supprimes: deleteProgress_(studentId, quizId) + deleteParcours_(studentId, quizId) };
+  return { supprimes: deleteProgress_(studentId, quizId) };
 }
 
 // ---------------- Fonctions internes (le _ final les rend non appelables depuis les pages) ----------------
@@ -553,8 +546,6 @@ function builtins_() {
   return BUILTIN_QUIZZES.map(function (q) { return withQids_(ov[q.id] ? ov[q.id] : q); });
 }
 
-function progressKey_(studentId, quizId) { return PROGRESS_PREFIX + studentId + '__' + quizId; }
-function doneKey_(studentId, quizId) { return DONE_PREFIX + studentId + '__' + quizId; }
 
 // Le quiz est-il destiné à cet élève ? (quiz intégré attribué, ou quiz créé pour lui)
 function quizFor_(quiz, studentId, assigned) {
@@ -566,64 +557,46 @@ function quizzesOf_(studentId) {
   return builtins_().concat(list_(QUIZ_PREFIX).map(withQids_)).filter(function (q) { return quizFor_(q, studentId, assigned); });
 }
 
-// Résumé d'une leçon pour l'administration : questions sues / en cours / à apprendre, erreurs, dernière activité.
-function lessonSummary_(quiz, rec, done, parcours) {
-  var q = (rec && rec.q) || {};
-  var sues = 0, enCours = 0, erreurs = 0;
+// Résumé d'une leçon pour le suivi parent : questions par niveau, à réviser maintenant, prête pour le contrôle,
+// questions difficiles, date du contrôle et plan, historique des séances.
+function lessonSummary_(quiz, r) {
+  var now = Date.now();
+  var niveaux = [0, 0, 0, 0, 0], erreurs = 0, aReviser = 0, maj = r.maj || 0;
+  var difficiles = [];
   quiz.questions.forEach(function (question) {
-    var r = q[qid_(question)] || [0, 0];
-    if (r[0] >= MASTERY) sues++; else if (r[0] > 0) enCours++;
-    erreurs += r[1];
+    var it = r.it[qid_(question)] || [0, 0, 0, 0, 0];
+    niveaux[Math.min(it[0], LEVEL_MAX)]++;
+    erreurs += it[2];
+    if (it[0] > 0 && it[1] <= now) aReviser++;
+    if (it[2] > 0) difficiles.push({ question: question.question, erreurs: it[2], sures: it[4], niveau: it[0] });
   });
+  difficiles.sort(function (a, b) { return b.erreurs - a.erreurs || a.niveau - b.niveau; });
+  var total = quiz.questions.length;
   return {
-    id: quiz.id, titre: quiz.titre, emoji: quiz.emoji, matiere: quiz.matiere,
-    total: quiz.questions.length, sues: sues, enCours: enCours, erreurs: erreurs, maj: (rec && rec.maj) || 0,
-    fois: (done && done.n) || 0, derniere: (done && done.last) || 0,
-    parcours: slimParcours_(parcours || defaultParcours_())
+    id: quiz.id, titre: quiz.titre, emoji: quiz.emoji, matiere: quiz.matiere, total: total,
+    niveaux: niveaux, erreurs: erreurs, aReviser: aReviser, maj: maj,
+    pret: total ? Math.round((niveaux[2] + niveaux[3] + niveaux[4]) / total * 100) : 0,
+    difficiles: difficiles.slice(0, 5),
+    exam: r.exam || '', plan: r.plan || [], mode: r.mode || 'actif',
+    seances: (r.ses || []).slice(-10).reverse().map(function (x) { return { debut: x[0], duree: x[1], questions: x[2], reussies: x[3], bonus: !!x[4] }; }),
+    nbSeances: (r.ses || []).length
   };
 }
 
-// Version courte pour l'administration : étape, dates et avancement du passage ou de la pile en cours
-function slimParcours_(pc) {
-  var out = { etape: pc.etape, maj: pc.maj || 0, fini: pc.fini || 0, valide: pc.valide || 0 };
-  if (pc.pass) out.passage = { genre: pc.pass.kind, total: pc.pass.list.length, repondues: Object.keys(pc.pass.res).length };
-  if (pc.pile) out.pile = { genre: pc.pile.kind, total: pc.pile.ids.length, trouvees: pc.pile.ids.filter(function (id) { return pc.pile.etat[id] && pc.pile.etat[id].d === 'trouve'; }).length };
-  return out;
-}
-
-// Sauvegarde complète des données (comptes avec PIN haché, quiz, progressions, parcours) : à faire avant toute migration.
+// Sauvegarde complète des données (comptes avec PIN haché, quiz, progressions) : à conserver hors du dépôt.
 function backupData(password) {
   checkAdmin_(password);
   var props = PropertiesService.getScriptProperties().getProperties();
   delete props.ADMIN_PASSWORD;
-  return { date: Date.now(), schema: 2, proprietes: props };
+  return { date: Date.now(), schema: 3, proprietes: props };
 }
 
-// Retour arrière de la migration : restaure les anciens parcours (v1) gardés à la première écriture. Les séries et compteurs restent.
-function rollbackParcoursV1(password) {
-  checkAdmin_(password);
-  var lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-  try {
-    var store = PropertiesService.getScriptProperties();
-    var all = store.getProperties(), n = 0;
-    Object.keys(all).forEach(function (k) {
-      if (k.indexOf(PARCOURS_PREFIX) !== 0) return;
-      var pc = parseJson_(all[k]);
-      if (pc && pc.v === 2 && pc.v1) { store.setProperty(k, JSON.stringify(pc.v1)); n++; }
-    });
-    return n;
-  } finally {
-    lock.releaseLock();
-  }
+// Supprime la révision d'un élève ('all' = tous) sur une leçon ('all' = toutes) ; renvoie le nombre d'enregistrements supprimés.
+// Les anciennes clés (prog_, done_, parcours_) sont effacées au passage si elles existent encore.
+function deleteProgress_(studentId, quizId) {
+  return deleteByPrefix_(SRS_PREFIX, studentId, quizId) + deleteByPrefix_(PROGRESS_PREFIX, studentId, quizId) +
+    deleteByPrefix_(DONE_PREFIX, studentId, quizId) + deleteByPrefix_(PARCOURS_PREFIX, studentId, quizId);
 }
-
-// Supprime la progression d'un élève ('all' = tous) sur une leçon ('all' = toutes). Renvoie le nombre d'enregistrements supprimés.
-function deleteProgress_(studentId, quizId) { return deleteByPrefix_(PROGRESS_PREFIX, studentId, quizId); }
-// Idem pour les compteurs de parties (uniquement lors de la suppression d'un élève ou d'un quiz).
-function deleteDone_(studentId, quizId) { return deleteByPrefix_(DONE_PREFIX, studentId, quizId); }
-// Le parcours repart de l'étape 1 (remise à zéro d'une leçon, ou suppression d'un élève ou d'un quiz).
-function deleteParcours_(studentId, quizId) { return deleteByPrefix_(PARCOURS_PREFIX, studentId, quizId); }
 
 function deleteByPrefix_(prefix, studentId, quizId) {
   var store = PropertiesService.getScriptProperties();
@@ -858,6 +831,11 @@ function validateQuiz_(quiz) {
       }
       out.options = options;
       out.correct = q.correct;
+      // réponse courte facultative : permet de reposer la question sans choix (rappel écrit)
+      if (Array.isArray(q.rappel)) {
+        var rappel = q.rappel.map(function (r) { return str_(r, 80); }).filter(Boolean).slice(0, 10);
+        if (rappel.length) out.rappel = rappel;
+      }
     }
 
     var explication = str_(q.explication, 400);

@@ -1,5 +1,5 @@
 const { chromium } = require('playwright');
-const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harness');
+const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harness'); const { startLesson } = require('./harness');
 const w = makeWorld(); w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' });
 const Q = (extra) => ({ titre: 'T', questions: [{ question: 'q ?', ...extra }] });
 const err = q => w.try('saveQuiz', PW, q).err;
@@ -80,15 +80,15 @@ const err = q => w.try('saveQuiz', PW, q).err;
   // ---- côté élève : il voit le quiz, le lien, et joue les deux questions ----
   const s = await c.newPage(); s.on('pageerror', e => errs.push('élève : ' + e.message));
   await s.goto('file://' + SRC + 'Index.html'); await login(s, LEO);
-  await s.locator('.card', { hasText: 'Analyse musicale' }).click();
+  await startLesson(s, 'Analyse musicale');
   ok((await s.locator('.quiz-link').getAttribute('href')) === saved.lien.url && (await s.locator('.quiz-link').innerText()) === '🔗 Écouter les extraits', 'ÉLÈVE : bouton « ' + await s.locator('.quiz-link').innerText() + ' » (icône par défaut 🔗)');
   const ins = s.locator('.saisie.champ'); await ins.nth(0).fill('très grave'); await ins.nth(1).fill('MP<F>MP'); await ins.nth(2).fill('Legato'); await s.locator('.panel .btn', { hasText: 'Valider' }).click();
-  ok((await s.locator('.feedback.ok').innerText()).includes('Bravo'), 'ÉLÈVE : question à champs réussie du premier coup (casse et espaces ignorés)');
-  await s.locator('.panel .btn', { hasText: 'suivante' }).click();
+  ok((await s.locator('.feedback.ok').innerText()).includes('Tout est juste'), 'ÉLÈVE : question à champs réussie du premier coup (casse et espaces ignorés)');
+  await s.click('.next-btn');
   const ins2 = s.locator('.saisie.champ'); await ins2.nth(0).fill('Bleu'); await ins2.nth(1).fill('rouge'); await s.locator('.panel .btn', { hasText: 'Valider' }).click();
-  ok((await s.locator('.feedback.ok').innerText()).includes('Bravo') && (await s.locator('.explication').innerText()) === 'Rouge, jaune, bleu.', 'ÉLÈVE : ordre libre accepté (« bleu, rouge ») et explication affichée');
-  await s.locator('.panel .btn', { hasText: /résultat/ }).click();
-  ok((await s.locator('.final').innerText()) === '2 / 2', 'ÉLÈVE : score 2 / 2');
+  ok((await s.locator('.feedback.ok').innerText()).includes('Tout est juste') && (await s.locator('.explication').innerText()) === 'Rouge, jaune, bleu.', 'ÉLÈVE : ordre libre accepté (« bleu, rouge ») et explication affichée');
+  await s.click('.next-btn'); await s.waitForSelector('.result .final');
+  ok((await s.locator('.final').innerText()) === '2 / 2', 'ÉLÈVE : bilan 2 / 2');
   ok(errs.length === 0, 'aucune erreur JavaScript ' + JSON.stringify(errs));
   await b.close(); process.exit(summary() ? 1 : 0);
 })().catch(e => { console.log('ECHEC:', e.message.split('\n')[0]); process.exit(1); });
