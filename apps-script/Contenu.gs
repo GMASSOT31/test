@@ -1717,5 +1717,417 @@ var BUILTIN_QUIZZES = [
         "correct": 0
       }
     ]
+  },
+  {
+    "id": "techno-5e-numerique",
+    "emoji": "💻",
+    "matiere": "Technologie",
+    "titre": "Technologie 5ᵉ : sécurité numérique et réseau",
+    "description": "Données personnelles et protection, cyberharcèlement, réseau informatique du collège. 40 questions.",
+    "questions": [
+      {
+        "question": "Quelle est la définition d'une donnée personnelle ?",
+        "options": [
+          "Toute information permettant d'identifier directement ou indirectement une personne physique (nom, photo, adresse, numéro d'élève…)",
+          "Uniquement le nom et le prénom d'une personne",
+          "Toute information que l'on trouve sur Internet"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Parmi les éléments suivants, lesquels sont des données personnelles ? (Nom, adresse IP, couleur préférée, numéro de téléphone, photo de visage)",
+        "champs": [
+          {
+            "label": "Donnée personnelle",
+            "reponses": [
+              "nom",
+              "le nom"
+            ]
+          },
+          {
+            "label": "Donnée personnelle",
+            "reponses": [
+              "adresse ip",
+              "l'adresse ip",
+              "ip"
+            ]
+          },
+          {
+            "label": "Donnée personnelle",
+            "reponses": [
+              "numéro de téléphone",
+              "le numéro de téléphone",
+              "téléphone",
+              "numéro de telephone"
+            ]
+          },
+          {
+            "label": "Donnée personnelle",
+            "reponses": [
+              "photo de visage",
+              "la photo de visage",
+              "photo",
+              "photo du visage"
+            ]
+          }
+        ],
+        "libre": true,
+        "explication": "La couleur préférée n'est pas une donnée personnelle."
+      },
+      {
+        "question": "Pourquoi faut-il éviter de publier sa date de naissance complète ou son adresse sur les réseaux sociaux ?",
+        "options": [
+          "Ces données peuvent être utilisées par des personnes malveillantes pour deviner des mots de passe, usurper une identité ou localiser la personne",
+          "Parce que les réseaux sociaux refusent ces informations",
+          "Parce que cela fait ralentir l'ordinateur"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Qu'est-ce que le phishing (ou hameçonnage) ?",
+        "options": [
+          "Une technique de fraude qui trompe l'utilisateur avec un faux message (e-mail, SMS) pour lui voler des informations confidentielles",
+          "Un logiciel qui protège l'ordinateur contre les virus",
+          "Une méthode pour télécharger des fichiers plus vite"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quel est l'objectif principal d'un pirate informatique qui envoie un e-mail de phishing ?",
+        "options": [
+          "Récupérer des identifiants secrets, voler des données personnelles ou installer un programme malveillant",
+          "Faire gagner un cadeau au destinataire",
+          "Réparer l'ordinateur du destinataire"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Citez deux indices qui permettent de repérer un e-mail de phishing.",
+        "options": [
+          "Adresse de l'expéditeur bizarre ou non officielle, fautes d'orthographe, sentiment d'urgence ou demande d'informations confidentielles",
+          "Un message très court, écrit en majuscules et envoyé le matin",
+          "Un message qui contient une pièce jointe de petite taille"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Qu'est-ce qu'un mot de passe robuste ou sécurisé ?",
+        "options": [
+          "Un mot de passe long, difficile à deviner, combinant différents types de caractères et unique à chaque compte",
+          "Un mot de passe court et facile à retenir, comme une date de naissance",
+          "Un mot de passe identique pour tous ses comptes"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Vrai ou Faux : Un bon mot de passe doit contenir au moins 12 caractères avec des majuscules, minuscules, chiffres et caractères spéciaux.",
+        "options": [
+          "Vrai",
+          "Faux"
+        ],
+        "correct": 0,
+        "explication": "Vrai : plus le mot de passe est long et complexe, plus il est difficile à pirater."
+      },
+      {
+        "question": "Pourquoi ne faut-il jamais utiliser le même mot de passe pour tous ses comptes ?",
+        "options": [
+          "Si un pirate découvre ce mot de passe, il a accès à l'ensemble des comptes de la personne",
+          "Parce qu'un site n'accepte jamais deux fois le même mot de passe",
+          "Parce qu'on l'oublie plus facilement"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Est-il recommandé de partager son mot de passe avec son meilleur ami ? Pourquoi ?",
+        "options": [
+          "Non : un mot de passe est strictement personnel, même avec un ami une dispute ou une fuite involontaire peut compromettre le compte",
+          "Oui : entre amis, il n'y a aucun risque",
+          "Oui : cela permet de se souvenir plus facilement du mot de passe"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Qu'est-ce qu'un logiciel malveillant (ou malware) ?",
+        "options": [
+          "Un programme conçu pour perturber, endommager ou infiltrer un système informatique à l'insu de l'utilisateur",
+          "Un logiciel de traitement de texte très ancien",
+          "Un programme qui accélère l'ordinateur"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quel outil ou logiciel permet de protéger un ordinateur contre les virus et attaques ?",
+        "reponses": [
+          "antivirus",
+          "un antivirus",
+          "l'antivirus",
+          "logiciel antivirus"
+        ],
+        "explication": "L'antivirus analyse les fichiers et bloque les programmes dangereux avant qu'ils ne nuisent à l'ordinateur."
+      },
+      {
+        "question": "Que signifie la présence d'un cadenas et du protocole https:// au début d'une adresse web ?",
+        "options": [
+          "La connexion entre le navigateur et le site web est sécurisée et chiffrée",
+          "Le site est gratuit",
+          "Le site est réservé aux adultes"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Qu'est-ce que l'usurpation d'identité en ligne ?",
+        "options": [
+          "Se faire passer pour une autre personne en ligne (son nom, sa photo ou son compte) afin de nuire ou de tromper",
+          "Changer son pseudo sur un jeu en ligne",
+          "Créer un mot de passe très compliqué"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Qu'est-ce que l'empreinte numérique (ou trace numérique) sur Internet ?",
+        "options": [
+          "L'ensemble des traces laissées en ligne lors de la navigation (historique, publications, commentaires, j'aime)",
+          "La marque laissée par les doigts sur l'écran",
+          "Le nombre de fichiers enregistrés sur l'ordinateur"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quelle est la différence entre une dispute ponctuelle et le cyberharcèlement ?",
+        "options": [
+          "Le cyberharcèlement se caractérise par la répétition d'actes agressifs ou humiliants via des moyens numériques, dans la durée",
+          "Il n'y a aucune différence",
+          "Le cyberharcèlement est un acte unique commis une seule fois"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Citez trois formes différentes que peut prendre le cyberharcèlement.",
+        "options": [
+          "Envoi d'insultes répétées, diffusion de fausses rumeurs, création d'un faux profil moqueur, exclusion volontaire d'un groupe de discussion",
+          "Envoyer un message d'anniversaire, partager un jeu, féliciter un camarade",
+          "Poser une question en classe, rendre un devoir, ranger son cartable"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Pourquoi le cyberharcèlement peut-il être particulièrement grave comparé au harcèlement classique dans la cour du collège ?",
+        "options": [
+          "Les contenus se propagent très vite, restent visibles à tout moment (même à la maison) et touchent un très large public",
+          "Parce qu'il ne dure jamais longtemps",
+          "Parce que personne ne peut le voir"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quelle est la première réaction à avoir si l'on reçoit des messages insultants répétés en ligne ?",
+        "options": [
+          "Ne pas répliquer, ne pas surenchérir, et en parler immédiatement à un adulte de confiance",
+          "Répondre avec des insultes plus fortes",
+          "Supprimer son compte sans en parler à personne"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quel réflexe technique indispensable faut-il avoir immédiatement pour prouver des actes de cyberharcèlement ?",
+        "options": [
+          "Effectuer des captures d'écran des messages, photos ou commentaires pour conserver les preuves",
+          "Éteindre l'ordinateur",
+          "Supprimer tous les messages reçus"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quel est le numéro national gratuit et anonyme pour signaler le cyberharcèlement et les violences numériques en France ?",
+        "reponses": [
+          "3018"
+        ],
+        "explication": "Le 3018 est gratuit et anonyme : il permet de signaler le cyberharcèlement et de faire supprimer des contenus numériques abusifs."
+      },
+      {
+        "question": "Quel est le numéro d'écoute national pour le harcèlement scolaire ?",
+        "reponses": [
+          "3020"
+        ],
+        "explication": "Le 3020 est le numéro vert d'écoute et d'assistance pour le harcèlement scolaire."
+      },
+      {
+        "question": "À quelles personnes ressources au sein du collège peut-on s'adresser en cas de cyberharcèlement ?",
+        "options": [
+          "Le professeur principal, le CPE, l'infirmière scolaire, un assistant d'éducation (AED), la direction",
+          "Uniquement le professeur de sport",
+          "Aucune : il faut gérer seul"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Vrai ou Faux : Publier la photo d'un camarade sans son autorisation sur les réseaux sociaux est autorisé si c'est pour rigoler.",
+        "options": [
+          "Vrai",
+          "Faux"
+        ],
+        "correct": 1,
+        "explication": "Faux : le droit à l'image interdit de publier ou partager la photo d'une personne sans son autorisation explicite."
+      },
+      {
+        "question": "Le cyberharcèlement est-il reconnu comme un délit puni par la loi ?",
+        "options": [
+          "Oui, c'est un délit puni par le Code pénal français",
+          "Non, ce n'est pas puni par la loi",
+          "Seulement s'il a lieu en dehors du collège"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quelles sanctions disciplinaires risque un élève auteur de cyberharcèlement au collège ?",
+        "options": [
+          "Avertissement, blâme, retenue, exclusion temporaire ou définitive (conseil de discipline)",
+          "Aucune sanction",
+          "Une récompense pour avoir été actif en ligne"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quelles sanctions pénales peuvent s'appliquer à un mineur reconnu coupable de cyberharcèlement grave ?",
+        "options": [
+          "Amendes, peines de prison ou travaux d'intérêt général adaptés aux mineurs selon la gravité des faits",
+          "Aucune : un mineur ne peut jamais être puni",
+          "Uniquement un changement de classe"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Qu'est-ce qu'un réseau informatique local (LAN) ?",
+        "options": [
+          "Un ensemble d'équipements (ordinateurs, serveurs, imprimantes) reliés entre eux sur une zone géographique restreinte, comme le collège",
+          "Le réseau qui relie tous les pays du monde",
+          "Un seul ordinateur connecté à Internet"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quel est le rôle principal d'un serveur dans le réseau du collège ?",
+        "options": [
+          "C'est la machine centrale qui stocke les données, gère les accès des utilisateurs et distribue les ressources aux ordinateurs clients",
+          "Il imprime les documents",
+          "Il sert uniquement d'écran"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Qu'est-ce qu'un commutateur (ou switch) et quelle est sa fonction dans une salle de technologie ?",
+        "options": [
+          "Un équipement qui relie plusieurs appareils en câble réseau et dirige les informations uniquement vers le destinataire concerné",
+          "Un interrupteur qui allume les ordinateurs",
+          "Un logiciel qui protège contre les virus"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quel équipement permet d'interconnecter le réseau du collège au réseau mondial Internet ?",
+        "reponses": [
+          "routeur",
+          "un routeur",
+          "le routeur"
+        ],
+        "explication": "Le routeur oriente les données entre le réseau local du collège et le réseau externe Internet."
+      },
+      {
+        "question": "Quel est le rôle d'un pare-feu (ou firewall) dans le réseau de l'établissement ?",
+        "options": [
+          "Un dispositif de sécurité qui filtre le trafic entrant et sortant pour bloquer les accès non autorisés et les sites inappropriés",
+          "Il refroidit les ordinateurs",
+          "Il augmente la vitesse du Wi-Fi"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quelle est la différence principale entre une liaison filaire (câble Ethernet / RJ45) et une liaison sans fil (Wi-Fi) ?",
+        "options": [
+          "La connexion filaire offre un meilleur débit, plus de stabilité et plus de sécurité que le Wi-Fi",
+          "Le Wi-Fi est toujours plus rapide et plus sûr que le câble",
+          "Il n'y a aucune différence"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Qu'est-ce qu'une adresse IP et à quoi sert-elle sur le réseau ?",
+        "options": [
+          "Un numéro d'identification unique attribué à chaque appareil du réseau pour permettre l'acheminement des données",
+          "Le nom du propriétaire de l'ordinateur",
+          "Le mot de passe du réseau Wi-Fi"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Pourquoi chaque élève possède-t-il un identifiant (login) et un mot de passe personnels pour se connecter aux ordinateurs du collège ?",
+        "options": [
+          "Pour identifier l'utilisateur, lui donner accès à son propre travail et assurer la traçabilité des actions sur le réseau",
+          "Pour que tous les élèves partagent les mêmes fichiers",
+          "Pour que l'ordinateur démarre plus vite"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Où sont enregistrés les fichiers d'un élève lorsqu'il les sauvegarde dans son espace personnel (lecteur réseau ou ENT) ?",
+        "options": [
+          "Sur le serveur du collège (ou sur le nuage de l'ENT), pas sur le disque dur local de l'ordinateur",
+          "Sur le disque dur de l'ordinateur utilisé ce jour-là",
+          "Dans l'imprimante"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quel est le rôle d'un serveur d'impression dans le réseau ?",
+        "options": [
+          "Il gère la file d'attente des documents envoyés par les utilisateurs vers les imprimantes du réseau",
+          "Il fabrique les feuilles de papier",
+          "Il protège le réseau contre les virus"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Vrai ou Faux : Une borne Wi-Fi (point d'accès sans fil) transmet les données sous forme d'ondes radio.",
+        "options": [
+          "Vrai",
+          "Faux"
+        ],
+        "correct": 0,
+        "explication": "Vrai : les bornes d'accès sans fil utilisent les radiofréquences pour communiquer avec les appareils portables."
+      },
+      {
+        "question": "Quel est le nom du câble et de la prise utilisés pour relier un ordinateur fixe à la prise murale du réseau au collège ?",
+        "champs": [
+          {
+            "label": "Câble",
+            "reponses": [
+              "câble ethernet",
+              "ethernet",
+              "cable ethernet",
+              "un câble ethernet"
+            ]
+          },
+          {
+            "label": "Prise",
+            "reponses": [
+              "rj45",
+              "prise rj45",
+              "connecteur rj45",
+              "la prise rj45"
+            ]
+          }
+        ],
+        "explication": "Un câble Ethernet à paires torsadées, équipé de connecteurs RJ45."
+      },
+      {
+        "question": "Quel est l'ordre de passage des données lorsqu'un élève consulte un site web depuis son poste informatique ?",
+        "options": [
+          "Poste élève → Commutateur → Routeur / Pare-feu → Internet",
+          "Internet → Routeur → Commutateur → Poste élève",
+          "Poste élève → Internet → Commutateur → Routeur"
+        ],
+        "correct": 0
+      }
+    ]
   }
 ];
