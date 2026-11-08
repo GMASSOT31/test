@@ -18,22 +18,19 @@ const KEY = ['A porcupine', 'A sloth', 'A ferret', 'A reindeer', 'A racoon', 'A 
   const b = await chromium.launch(); const c = await b.newContext({ viewport: { width: 1000, height: 900 } }); await install(c, w);
   const errs = []; const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + SRC + 'Index.html'); await login(p, LEO);
-  await p.locator('.card.lecon', { hasText: 'Anglais : les animaux' }).click();
-  for (let i = 0; i < 20; i++) {
-    await p.fill('.saisie', KEY[i]); await p.keyboard.press('Enter');
-    await p.locator('.panel .btn', { hasText: /suivante|résultat/ }).click();
-  }
-  ok((await p.locator('.final').innerText()) === '20 / 20', 'corrigé officiel saisi tel quel (majuscules, « A », « Wolves »…) : ' + await p.locator('.final').innerText());
-  await p.evaluate(() => revisionFlush());
-  const prog = w.run('adminData', PW).progress.leo.find(x => x.id === 'anglais-animaux');
-  ok(prog && prog.fois === 1, 'compteur « fait 1 fois » côté admin');
-  // sans article, ou mauvaise réponse
-  await p.click('text=Retour aux leçons'); await p.locator('.card.lecon', { hasText: 'Anglais : les animaux' }).click();
-  await p.fill('.saisie', 'porcupine'); await p.keyboard.press('Enter');
-  ok(await p.locator('.question').isVisible() && !(await p.locator('.feedback.bad, .feedback.err').count()), 'sans l\'article (« porcupine ») : accepté');
-  await p.locator('.panel .btn', { hasText: /suivante|résultat/ }).click();
-  await p.fill('.saisie', 'sloths'); await p.keyboard.press('Enter');
-  ok((await p.locator('.panel').innerText()).includes('essaie encore'), 'mauvaise réponse (« sloths ») : « essaie encore »');
+  const prev = i => p.evaluate(i => revisionPreview('anglais-animaux', i, 'rappel'), i);
+  const res = () => p.evaluate(() => window.revisionPreviewResult);
+  const refused = [];
+  for (let i = 0; i < 20; i++) { await prev(i); await p.fill('.saisie', KEY[i]); await p.keyboard.press('Enter'); if (!(await res())) refused.push(i + 1); }
+  ok(refused.length === 0, 'corrigé officiel saisi tel quel (majuscules, « A », « Wolves »…) : 20 / 20 acceptées ' + JSON.stringify(refused));
+  await prev(0); await p.fill('.saisie', 'porcupine'); await p.keyboard.press('Enter');
+  ok(await res(), 'sans l\'article (« porcupine ») : accepté');
+  await prev(1); await p.fill('.saisie', 'sloths'); await p.keyboard.press('Enter');
+  ok(!(await res()) && (await p.locator('.feedback.ko').innerText()).includes('a sloth'), 'mauvaise réponse (« sloths ») : refusée, la bonne réponse s\'affiche');
+  // en QCM (première découverte), les choix sont fabriqués avec les autres réponses de la leçon
+  await p.evaluate(() => revisionPreview('anglais-animaux', 0, 'qcm'));
+  const opts = await p.locator('.option').allInnerTexts();
+  ok(opts.length === 4 && opts.includes('a porcupine') && new Set(opts).size === 4, 'QCM de découverte : 4 choix dont « a porcupine » : ' + opts.join(' | '));
   ok(errs.length === 0, 'aucune erreur JavaScript ' + JSON.stringify(errs));
   await b.close(); process.exit(summary() ? 1 : 0);
 })().catch(e => { console.log('ECHEC:', e.message.split('\n')[0]); process.exit(1); });

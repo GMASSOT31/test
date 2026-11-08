@@ -12,16 +12,16 @@ const Q = w.ctx.BUILTIN_QUIZZES.find(q => q.id === 'histoire-revolution');
   const b = await chromium.launch(); const c = await b.newContext({ viewport: { width: 1000, height: 900 } }); await install(c, w);
   const errs = []; const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + SRC + 'Index.html'); await login(p, LEO);
-  await p.locator('.card.lecon', { hasText: "exécution du Roi" }).click();
-  const types = { qcm: 0, texte: 0, champs: 0 };
-  for (const q of Q.questions) {
+  const types = { qcm: 0, texte: 0, champs: 0 }, refused = [];
+  for (let i = 0; i < Q.questions.length; i++) {
+    const q = Q.questions[i];
+    await p.evaluate(([i, st]) => revisionPreview('histoire-revolution', i, st), [i, q.options ? 'qcm' : 'rappel']);
     if (q.options) { types.qcm++; await p.locator('.option', { hasText: new RegExp('^' + q.options[q.correct].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$') }).click(); }
     else if (q.champs) { types.champs++; const ins = p.locator('.saisie.champ'); for (let k = 0; k < q.champs.length; k++) await ins.nth(k).fill(q.champs[k].reponses[0]); await p.locator('.panel .btn', { hasText: 'Valider' }).click(); }
     else { types.texte++; await p.fill('.saisie', q.reponses[0]); await p.keyboard.press('Enter'); }
-    if (!(await p.locator('.feedback.ok, .option.correct').count())) throw new Error('refusée avec le corrigé : ' + q.question.slice(0, 70));
-    await p.locator('.panel .btn', { hasText: /suivante|résultat/ }).click();
+    if (!(await p.evaluate(() => window.revisionPreviewResult))) refused.push(i + 1);
   }
-  ok((await p.locator('.final').innerText()) === '30 / 30', 'corrigé du cahier saisi : 30 / 30 (' + JSON.stringify(types) + ')');
+  ok(refused.length === 0, 'corrigé saisi : 30 / 30 acceptées (' + JSON.stringify(types) + ') ' + JSON.stringify(refused));
   // variantes acceptées
   const t = (re, vals) => Q.questions.find(q => re.test(q.question));
   const sameAs = (q, v) => (q.reponses || []).some(r => r.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase() === v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase());

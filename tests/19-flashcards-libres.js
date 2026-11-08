@@ -1,4 +1,4 @@
-// Flashcards actives (retournement obligatoire, Oublié / Hésité / Trouvé), « Je ne sais pas », reprise, doubles clics
+// Flashcards libres (retournement obligatoire, Oublié / Hésité / Trouvé), doubles clics, clavier, « Voir les cartes » d'une leçon
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harness');
 const w = makeWorld();
@@ -12,7 +12,6 @@ w.run('saveQuiz', PW, { titre: 'Mixte', matiere: 'Test', emoji: '🧩', pour: ['
 const Lc = ['5B', 'Léo', '1234'];
 const mixId = w.run('adminData', PW).quizzes.find(q => q.titre === 'Mixte').id;
 const mixQ = w.run('adminData', PW).quizzes.find(q => q.titre === 'Mixte').questions.map(q => q.id);
-const pcm = () => w.run('getStudentData', ...Lc).parcours[mixId];
 
 (async () => {
   const b = await chromium.launch();
@@ -62,42 +61,12 @@ const pcm = () => w.run('getStudentData', ...Lc).parcours[mixId];
   await p.click('.eval-btn.trouve'); await p.locator('.flip-btn').focus(); await p.keyboard.press('Space');
   ok((await p.locator('.eval-btn').count()) === 3, 'Espace retourne la carte');
 
-  // ================= T06 : Je ne sais pas (champs multiples, explication, double clic) =================
+  // « Voir les cartes » depuis une leçon : même paquet, sans effet sur le plan
   await p.click('.back'); await p.click('#tab-quiz'); await p.locator('.card.lecon', { hasText: 'Mixte' }).click();
-  ok(await p.locator('text=Je ne sais pas').isVisible() && (await p.locator('text=Voir la réponse').count()) === 0, 'Q1 (champs) : « Je ne sais pas » dès l\'ouverture, plus de « Voir la réponse » tardif');
-  await p.fill('.saisie.champ >> nth=0', 'un'); await p.click('.panel .btn:has-text("Valider")');
-  ok((await p.locator('.saisie.champ').first().isDisabled()) && !(await p.locator('.saisie.champ').nth(1).isDisabled()), 'champ « Un » trouvé : verrouillé en vert');
-  await p.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.includes('Je ne sais pas')); b.click(); b.click(); });
-  ok(JSON.stringify(await p.locator('.saisie.champ').evaluateAll(l => l.map(i => i.value))) === '["un","deux"]' && (await p.locator('.saisie.champ').evaluateAll(l => l.every(i => i.disabled))), 'solutions de TOUS les champs affichées, champs verrouillés');
-  ok((await p.locator('.explication').innerText()).includes('Un puis deux.') && (await p.locator('.score').innerText()) === 'Score : 0', 'explication visible, zéro point');
-  ok((await p.locator('.auto-next').count()) === 0 || (await p.locator('.auto-next').evaluate(e => getComputedStyle(e).display)) === 'none', 'après « Je ne sais pas » : aucune avance automatique');
-  await sync();
-  const sr = () => JSON.parse(w.props['prog_leo__' + mixId]).q;
-  ok(JSON.stringify(sr()[mixQ[0]]) === '[0,1]', 'serveur : série 0 et UNE seule erreur malgré le double clic');
-  await nextBtn().click();
-  await p.fill('.saisie', 'faux'); await p.keyboard.press('Enter'); await p.click('text=Je ne sais pas');
-  await sync();
-  ok(JSON.stringify(sr()[mixQ[1]]) === '[0,1]' && (await p.locator('.explication').innerText()).includes('a, b, c'), 'Je ne sais pas après une première erreur : pas de doublon (1 erreur) + explication');
-
-  // ================= reprise du quiz après rechargement =================
-  await p.reload(); await p.waitForSelector('#app:not([hidden])');
-  const card = p.locator('.card.lecon', { hasText: 'Mixte' });
-  ok((await card.locator('.etape').innerText()).includes('Quiz en cours : 2 questions déjà répondues sur 3') && (await card.locator('.action-pill').innerText()) === 'Reprendre le quiz', 'accueil après rechargement : « ' + await card.locator('.etape').innerText() + ' »');
-  await card.click();
-  ok((await p.locator('.progress').innerText()).includes('Question 3 / 3') && (await p.locator('.score').innerText()) === 'Score : 0', 'reprise à la question 3, sans redonner de point (' + await p.locator('.progress').innerText() + ')');
-  await p.locator('.option', { hasText: /^y$/ }).click(); await nextBtn().click();
-  await p.locator('.actions .btn', { hasText: 'Revoir mes cartes' }).waitFor();
-  ok((await p.locator('.final').innerText()) === '1 / 3', 'score du passage : 1 / 3');
-
-  // ================= reprise d'une pile de cartes =================
-  await p.click('.actions .btn:has-text("Revoir mes cartes")');
-  ok((await p.locator('.cards-count').innerText()) === 'Cartes travaillées 0 sur 2 · Cartes encore à revoir 2', 'cartes ciblées : les 2 questions ratées');
-  const first = await face();
-  await p.click('.flip-btn'); await p.click('.eval-btn.trouve'); await sync();
-  await p.reload(); await p.waitForSelector('#app:not([hidden])');
-  await p.locator('.card.lecon', { hasText: 'Mixte' }).click();
-  ok((await p.locator('.cards-count').innerText()) === 'Cartes travaillées 1 sur 2 · Cartes encore à revoir 1' && (await face()) !== first, 'après rechargement : la carte Trouvé le reste, l\'autre reste à faire (« ' + await p.locator('.cards-count').innerText() + ' »)');
-  ok(await p.locator('.eval-btn').count() === 0, 'la pile reprend au recto');
+  if (await p.locator('.setup').count()) { await p.locator('.choice', { hasText: 'Pas de contrôle prévu' }).click(); await p.locator('.choice.wide', { hasText: 'Non' }).click(); await p.click('.setup .actions .btn'); await p.waitForSelector('.session-head'); await p.click('text=Arrêter'); if (await p.locator('.result').count()) await p.click('text=Retour aux leçons'); await p.locator('.card.lecon', { hasText: 'Mixte' }).click(); }
+  await p.click('text=Voir les cartes');
+  ok((await p.locator('.cards-count').innerText()).includes('sur 3') && (await p.locator('.back').innerText()).includes('Retour à la leçon'), '« Voir les cartes » d\'une leçon : ses 3 cartes, retour à la leçon');
+  await p.click('.back'); ok(await p.locator('.lesson-screen').isVisible(), 'retour à l\'écran de la leçon');
   ok(errs.length === 0, 'aucune erreur JavaScript ' + JSON.stringify(errs));
   await b.close(); process.exit(summary() ? 1 : 0);
 })().catch(e => { console.log('ECHEC:', e.message.split('\n')[0]); process.exit(1); });

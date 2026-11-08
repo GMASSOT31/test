@@ -1,5 +1,5 @@
 const { chromium } = require('playwright');
-const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harness');
+const { makeWorld, install, ok, summary, login, LEO, PW, SRC, startLesson } = require('./harness');
 
 // Corrigé officiel (texte fourni), tel qu'un élève le saisirait. Clé = numéro de question (0 = première).
 const QCM_KEY = { 0: "Genre musical dans lequel le compositeur imite des éléments non musicaux à l'aide d'un orchestre symphonique", 2: '1886', 3: 'Fin du 19ᵉ siècle', 5: 'Faire rire',
@@ -35,120 +35,70 @@ const CHAMPS_KEY = { 11: ['Alger', 'pneumonie'], 19: ['voix', 'instrument'], 21:
   ok(wrongKey.length === 0, 'la bonne réponse de CHAQUE QCM correspond au corrigé officiel ' + JSON.stringify(wrongKey));
   ok(new Set(Q.questions.map(q => q.question)).size === 40, 'les 40 énoncés sont tous différents (la progression repose dessus)');
   ok(idxChamps.every(i => Q.questions[i].champs.length >= 2 && Q.questions[i].champs.every(f => f.reponses.length >= 1 && f.label)), 'chaque question à champs a ≥ 2 champs, tous étiquetés et avec des réponses attendues');
-  await p.locator('.card', { hasText: 'Musique descriptive' }).click();
-  ok((await p.locator('.quiz-link').getAttribute('href')) === 'https://digipad.app/p/1852174/2ea2dfaf331198' && (await p.locator('.quiz-link').innerText()) === '🎧 Écouter les extraits sonores (Padlet / Digipad)', 'bouton audio présent avec l\'adresse du Digipad : « ' + (await p.locator('.quiz-link').innerText()) + ' »');
+  // le bouton audio s'affiche pendant les questions de la séance
+  await startLesson(p, 'Musique descriptive');
+  ok((await p.locator('.quiz-link').getAttribute('href')) === 'https://digipad.app/p/1852174/2ea2dfaf331198' && (await p.locator('.quiz-link').innerText()) === '🎧 Écouter les extraits sonores (Padlet / Digipad)', 'bouton audio présent pendant la séance');
   ok((await p.locator('.quiz-link').getAttribute('target')) === '_blank' && (await p.locator('.quiz-link').getAttribute('rel')) === 'noopener noreferrer', 'il s\'ouvre dans un nouvel onglet (noopener noreferrer)');
-  await p.click('.back');
+  await p.click('text=Arrêter'); if (await p.locator('.result').count()) await p.click('text=Retour aux leçons');
 
-  // ---- 2. parcours complet avec le corrigé officiel : 40 / 40 ----
-  const next = () => p.locator('.panel .btn', { hasText: /suivante|résultat/ }).click();
-  await p.locator('.card', { hasText: 'Musique descriptive' }).click();
+  // ---- 2. le corrigé officiel est accepté pour les 40 questions (format sans choix : rappel) ----
+  const prev = (i, stage) => p.evaluate(([i, stage]) => revisionPreview('musique-carnaval', i, stage), [i, stage]);
+  const fill = async vals => { const ins = p.locator('.saisie.champ'); for (let k = 0; k < vals.length; k++) await ins.nth(k).fill(vals[k]); await p.locator('.panel .btn', { hasText: 'Valider' }).click(); };
+  const refused = [];
   for (let i = 0; i < 40; i++) {
-    const label = (await p.locator('.progress span').first().innerText()).trim();
-    if (!label.startsWith('Question ' + (i + 1) + ' ')) throw new Error('ordre inattendu à la question ' + (i + 1) + ' : ' + label);
-    if (i in QCM_KEY) { const t = Q.questions[i].options[Q.questions[i].correct]; await p.locator('.option', { hasText: t.slice(0, 40) }).first().click(); }
+    const q = Q.questions[i];
+    await prev(i, q.options ? 'qcm' : 'rappel');
+    if (i in QCM_KEY) await p.locator('.option', { hasText: q.options[q.correct].slice(0, 40) }).first().click();
     else if (i in TYPED_KEY) { await p.fill('.saisie', TYPED_KEY[i]); await p.keyboard.press('Enter'); }
-    else { const inputs = p.locator('.saisie.champ'); for (let k = 0; k < CHAMPS_KEY[i].length; k++) await inputs.nth(k).fill(CHAMPS_KEY[i][k]); await p.locator('.panel .btn', { hasText: 'Valider' }).click(); }
-    if (!(await p.locator('.feedback.ok, .option.correct').count())) throw new Error('question ' + (i + 1) + ' refusée avec le corrigé : ' + Q.questions[i].question.slice(0, 60) + ' | feedback=' + (await p.locator('.feedback').allInnerTexts()).join('/') + ' | champs=' + JSON.stringify(await p.locator('.saisie').evaluateAll(l => l.map(i => (i.disabled ? 'V:' : 'x:') + i.value))) + ' | attendu=' + JSON.stringify(CHAMPS_KEY[i] || TYPED_KEY[i]));
-    await next();
+    else await fill(CHAMPS_KEY[i]);
+    if (!(await p.evaluate(() => window.revisionPreviewResult))) refused.push(i + 1);
   }
-  const final = (await p.locator('.final').innerText()).trim();
-  ok(final === '40 / 40', 'RÉPONDRE AVEC LE CORRIGÉ OFFICIEL : score ' + final + ' (aucune réponse du corrigé refusée)');
-  ok(await p.evaluate(() => QUIZZES[0].questions.every(q => progressOf(QUIZZES[0], q).ok === 1)), 'les 40 questions ont 1 / 2 réussites au programme');
+  ok(refused.length === 0, 'RÉPONDRE AVEC LE CORRIGÉ OFFICIEL : les 40 questions acceptées ' + JSON.stringify(refused));
 
-  // ---- 3. cas limites des questions à plusieurs champs ----
-  const goto = async i => { await p.evaluate(() => { activeTab = 'quiz'; renderList(); }); await p.locator('.card', { hasText: 'Musique descriptive' }).click(); for (let k = 0; k < i; k++) { if (Q.questions[k].options) await p.locator('.option').first().click(); else { await p.evaluate(() => { }); const ins = p.locator('.saisie'); for (let n = 0; n < await ins.count(); n++) await ins.nth(n).fill('x'); await p.keyboard.press('Enter'); if (await p.locator('text=Valider').count()) await p.locator('.panel .btn', { hasText: 'Valider' }).click(); } /* on avance sans valider : voir ci-dessous */ } };
-  // plus simple : on saute directement à la question voulue en forçant l'index (la fonction startQuiz n'expose pas l'index) → on rejoue depuis le début avec « Voir la réponse »
-  const open = async i => {
-    // nouveau passage côté page (la reprise ne redonne pas les questions déjà répondues) : on repart de la question 1
-    await p.evaluate(() => { const q = QUIZZES[0]; parcours[q.id] = { etape: 'quiz_initial', pass: { kind: 'initial', list: q.questions.map(qid), res: {} }, pile: null }; activeTab = 'quiz'; renderList(); });
-    await p.locator('.card', { hasText: 'Musique descriptive' }).click();
-    for (let k = 0; k < i; k++) {
-      const qk = Q.questions[k];
-      if (qk.options) { await p.locator('.option').first().click(); }
-      else if (qk.reponses) { for (let t = 0; t < 3; t++) { await p.fill('.saisie', 'zzz'); await p.keyboard.press('Enter'); } await p.locator('text=Je ne sais pas').click(); }
-      else { const ins = p.locator('.saisie.champ'); for (let n = 0; n < await ins.count(); n++) await ins.nth(n).fill('zzz'); for (let t = 0; t < 3; t++) await p.locator('.panel .btn', { hasText: 'Valider' }).click(); await p.locator('text=Je ne sais pas').click(); }
-      await next();
-    }
-  };
-  const fill = async vals => { const ins = p.locator('.saisie.champ'); for (let k = 0; k < vals.length; k++) { if (!(await ins.nth(k).isDisabled())) await ins.nth(k).fill(vals[k]); } await p.locator('.panel .btn', { hasText: 'Valider' }).click(); };
-  const state = async () => p.locator('.saisie.champ').evaluateAll(l => l.map(i => (i.disabled ? 'V' : 'x') + ':' + i.value));
-
-  // 3a. Lion (index 29) : un champ faux sur quatre
-  await open(29);
-  const scoreAvant = (await p.locator('.score').innerText());
-  await fill(['très grave', 'forte', 'très rapide', 'legato']);
-  ok((await p.locator('.feedback').innerText()).includes('1 champ à corriger'), 'Lion, 1 champ faux sur 4 : « ' + (await p.locator('.feedback').innerText()) + ' »');
+  // ---- 3. cas limites des questions à plusieurs champs (une validation : les justes en vert, les autres corrigées) ----
+  const state = async () => p.locator('.saisie.champ').evaluateAll(l => l.map(i => (i.classList.contains('input-correct') ? 'V' : 'x') + ':' + i.value));
+  await prev(29, 'rappel'); await fill(['très grave', 'forte', 'très rapide', 'legato']);
   const st = await state();
-  ok(st[0].startsWith('V') && st[2].startsWith('V') && st[3].startsWith('V') && st[1].startsWith('x'), 'les 3 bons champs sont verrouillés en vert, le faux reste modifiable : ' + st.join(' | '));
-  await fill(['', 'mp<f>mp']);
-  ok(await p.locator('.feedback.ok').isVisible(), '« mp<f>mp » (sans espaces) accepté pour « mp < f > mp »');
-  ok((await p.locator('.feedback').innerText()).includes('sans point') && (await p.locator('.score').innerText()) === scoreAvant, 'réussi au 2e essai : pas de point (score inchangé : ' + scoreAvant + ')');
-  ok((await p.locator('.mastery-line').innerText()).includes('repart à 0'), 'et la question repart à 0 / 2 au programme');
-
-  // 3b. catégories de hauteur, ordre libre (index 21)
-  await open(21);
-  await fill(['grave', 'aigu', 'médium']);
-  ok(await p.locator('.feedback.ok').isVisible() && (await p.locator('.feedback').innerText()).includes('Bravo'), 'ordre libre : « grave, aigu, médium » accepté du premier coup');
-  await open(21);
-  await fill(['aigu', 'aigu', 'grave']);
-  ok((await p.locator('.feedback').innerText()).includes('1 champ à corriger'), 'doublon « aigu, aigu, grave » : un seul « aigu » compte, 1 champ à corriger');
-  await fill(['', 'médium']);
-  ok(await p.locator('.feedback.ok').isVisible(), 'après correction (« médium ») : validé');
-
-  // 3c. Cygne : les deux modes de jeu sont interchangeables mais pas répétables (index 39)
-  await open(39);
-  await fill(['grâce', 'médium', 'mezzo forte', 'modéré', 'vibrato', 'legato']);
-  ok(await p.locator('.feedback.ok').isVisible() && (await p.locator('.feedback').innerText()).includes('Bravo'), 'Cygne : « vibrato, legato » accepté dans le désordre');
-  await open(39);
-  await fill(['grâce', 'médium', 'mezzo forte', 'modéré', 'legato', 'legato']);
-  ok((await p.locator('.feedback').innerText()).includes('1 champ à corriger'), 'Cygne : « legato, legato » refusé (un seul « legato »)');
-
-  await open(19); await fill(['voix', 'voix']);
-  ok((await p.locator('.feedback').innerText()).includes('1 champ à corriger'), 'timbre : « voix, voix » refusé (un seul « voix »)');
-  await open(19); await fill(['instrument', 'voix']);
-  ok(await p.locator('.feedback.ok').isVisible(), 'timbre : « instrument, voix » accepté dans le désordre');
-
-  // 3d. champs à position fixe : l'ordre compte (Ânes, index 35 : Hi = aigu, Han = grave)
-  await open(35);
-  await fill(['braiement', 'grave', 'aigu', 'forte', 'rapide', 'lent']);
-  ok((await p.locator('.feedback').innerText()).includes('2 champs à corriger'), 'Ânes : « Hi = grave, Han = aigu » inversés → 2 champs à corriger (l\'ordre compte ici)');
-
-  // 3e. espaces et accents (Tortues, index 31) ; synonymes
-  await open(31);
-  await fill(['Orchestre de CORDES', 'médium / grave', 'MP', 'lent', 'Legato']);
-  ok(await p.locator('.feedback.ok').isVisible() && (await p.locator('.feedback').innerText()).includes('Bravo'), 'Tortues : majuscules, « médium / grave » avec espaces, « MP » pour mezzo piano : accepté');
-
-  // 3f. ordre des nuances (index 27) : variantes acceptées, mauvais ordre refusé
+  ok(st[0].startsWith('V') && st[2].startsWith('V') && st[3].startsWith('V') && st[1] === 'x:mp < f > mp' && !(await p.evaluate(() => window.revisionPreviewResult)), 'Lion, 1 champ faux sur 4 : les 3 bons en vert, le faux corrigé (« mp < f > mp ») : ' + st.join(' | '));
+  await prev(29, 'rappel'); await fill(['très grave', 'mp<f>mp', 'très rapide', 'legato']);
+  ok(await p.evaluate(() => window.revisionPreviewResult), '« mp<f>mp » (sans espaces) accepté pour « mp < f > mp »');
+  await prev(21, 'rappel'); await fill(['grave', 'aigu', 'médium']);
+  ok(await p.evaluate(() => window.revisionPreviewResult), 'ordre libre : « grave, aigu, médium » accepté');
+  await prev(21, 'rappel'); await fill(['aigu', 'aigu', 'grave']);
+  ok(!(await p.evaluate(() => window.revisionPreviewResult)) && (await state()).filter(x => x.startsWith('V')).length === 2, 'doublon « aigu, aigu, grave » : un seul « aigu » compte');
+  await prev(39, 'rappel'); await fill(['grâce', 'médium', 'mezzo forte', 'modéré', 'vibrato', 'legato']);
+  ok(await p.evaluate(() => window.revisionPreviewResult), 'Cygne : « vibrato, legato » accepté dans le désordre');
+  await prev(39, 'rappel'); await fill(['grâce', 'médium', 'mezzo forte', 'modéré', 'legato', 'legato']);
+  ok(!(await p.evaluate(() => window.revisionPreviewResult)), 'Cygne : « legato, legato » refusé (un seul « legato »)');
+  await prev(19, 'rappel'); await fill(['instrument', 'voix']);
+  ok(await p.evaluate(() => window.revisionPreviewResult), 'timbre : « instrument, voix » accepté dans le désordre');
+  await prev(35, 'rappel'); await fill(['braiement', 'grave', 'aigu', 'forte', 'rapide', 'lent']);
+  ok((await state()).filter(x => x.startsWith('x')).length === 2, 'Ânes : « Hi = grave, Han = aigu » inversés : 2 champs corrigés (l\'ordre compte ici)');
+  await prev(31, 'rappel'); await fill(['Orchestre de CORDES', 'médium / grave', 'MP', 'lent', 'Legato']);
+  ok(await p.evaluate(() => window.revisionPreviewResult), 'Tortues : majuscules, « médium / grave » avec espaces, « MP » pour mezzo piano : accepté');
   for (const [v, good] of [['pp<p<mp<mf<f<ff', true], ['PP < P < MP < MF < F < FF', true], ['pp, p, mp, mf, f, ff', true], ['pp p mp mf f ff', true], ['p < pp < mp < mf < f < ff', false]]) {
-    await open(27); await p.fill('.saisie', v); await p.keyboard.press('Enter');
-    ok((await p.locator('.feedback.ok').count()) === (good ? 1 : 0), `ordre des nuances « ${v} » : ${good ? 'accepté' : 'refusé'}`);
+    await prev(27, 'rappel'); await p.fill('.saisie', v); await p.keyboard.press('Enter');
+    ok((await p.evaluate(() => window.revisionPreviewResult)) === good, `ordre des nuances « ${v} » : ${good ? 'accepté' : 'refusé'}`);
   }
-
-  // 3g. abandon après 3 validations ratées (Éléphant, index 33)
-  await open(33);
-  ok(await p.locator('text=Je ne sais pas').isVisible(), '« Je ne sais pas » visible dès la première présentation (pas besoin de 3 validations ratées)');
-  await fill(['x', 'x', 'x', 'x']);
+  // « Je ne sais pas » sur une question à champs (Éléphant, index 33) : solutions affichées partout
+  await prev(33, 'rappel');
+  ok(await p.locator('text=Je ne sais pas').isVisible(), '« Je ne sais pas » visible dès la première présentation');
   await p.locator('text=Je ne sais pas').click();
-  ok(JSON.stringify((await p.locator('.saisie.champ').evaluateAll(l => l.map(i => i.value)))) === '["grave","mezzo forte","modéré","staccato"]', 'les bonnes réponses sont affichées dans les champs');
-  ok(await p.locator('.saisie.champ').evaluateAll(l => l.every(i => i.disabled)) && await p.locator('.panel .btn', { hasText: /suivante/ }).isVisible(), 'champs verrouillés, bouton « Question suivante » disponible');
+  ok(JSON.stringify(await p.locator('.saisie.champ').evaluateAll(l => l.map(i => i.value))) === '["grave","mezzo forte","modéré","staccato"]' && await p.locator('.saisie.champ').evaluateAll(l => l.every(i => i.disabled)), 'les bonnes réponses sont affichées, champs verrouillés');
+  // une question à choix dans le format « rappel » : QCM masqué (réfléchir d'abord) avec plus de choix
+  await prev(0, 'rappel');
+  ok((await p.locator('.option').count()) === 0 && await p.locator('.masked-btns').isVisible(), 'rappel d\'un QCM : les choix sont cachés, l\'élève réfléchit d\'abord');
+  await p.locator('.masked-btns .btn').first().click();
+  ok((await p.locator('.option').count()) >= 4, 'puis 4 ou 5 choix (les 3 d\'origine + des réponses d\'autres questions de la leçon) : ' + await p.locator('.option').count());
 
-  // ---- 4. flashcards du programme pour une question à champs ----
+  // ---- 4. flashcards pour une question à champs ----
   const verso = await p.evaluate(() => decksFromQuizzes()[0].cartes[29].verso);
   ok(verso === 'Hauteur : très grave · Nuance : mp < f > mp · Durée : très rapide · Mode de jeu : legato', 'flashcard du Lion : « ' + verso + ' »');
   const cardsAll = await p.evaluate(() => decksFromQuizzes()[0].cartes);
   ok(cardsAll.length === 40 && cardsAll.every(c => c.recto && c.verso && !/undefined/.test(c.verso)), '40 flashcards générées, aucune vide ni « undefined »');
 
-  // ---- 5. bouton audio ----
-  await p.evaluate(() => { QUIZZES[0].lien.url = 'https://digipad.app/p/123'; });
-  await open(0);
-  const href = await p.locator('.quiz-link').getAttribute('href'), tgt = await p.locator('.quiz-link').getAttribute('target'), rel = await p.locator('.quiz-link').getAttribute('rel');
-  ok(href === 'https://digipad.app/p/123' && tgt === '_blank' && rel === 'noopener noreferrer', 'avec une adresse : bouton « ' + (await p.locator('.quiz-link').innerText()) + ' » (nouvel onglet, rel=noopener noreferrer)');
-  await p.evaluate(() => { QUIZZES[0].lien.url = 'javascript:alert(1)'; });
-  await open(0);
-  ok((await p.locator('.quiz-link').count()) === 0, 'une adresse « javascript: » n\'est jamais affichée comme lien');
-
-  // ---- 6. attribution : invisible pour qui ne l'a pas ----
+  // ---- 5. attribution : invisible pour qui ne l'a pas ----
+  await p.evaluate(() => { activeTab = 'quiz'; renderList(); });
   await p.click('#logout'); await p.fill('#login-pseudo', 'Emma'); await p.fill('#login-pin', '4321'); await p.click('#login-btn'); await p.waitForSelector('#app:not([hidden])');
   ok((await p.locator('.empty').innerText()).includes('Aucune leçon') && !(await p.evaluate(() => JSON.stringify(QUIZZES))).includes('Carnaval'), 'Emma (sans accès) ne voit rien et la page ne contient rien du quiz de musique');
   const adm = w.run('adminData', PW);

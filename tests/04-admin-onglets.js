@@ -20,11 +20,11 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
   await a.fill('#password', PW); await a.press('#password', 'Enter'); await waitOk('#lock-status');
   ok(await a.locator('#admin-area').isVisible() && await a.locator('#locked-hint').isHidden(), 'bon mot de passe (touche Entrée) : gestion déverrouillée');
   const labels = (await a.locator('.sidebar .tab').allInnerTexts()).map(t => t.replace(/\s*\d+\s*$/, '').replace(/\s+/g, ' ').trim());
-  ok(JSON.stringify(labels) === JSON.stringify(['➕ Ajouter un élève', '👥 Liste des élèves', '➕ Ajouter un quiz', '📋 Liste des quiz', '🃏 Ajouter des flashcards', '📅 Programmes de révision']), 'BARRE LATÉRALE, 6 onglets dans l\'ordre demandé : ' + labels.join(' | '));
+  ok(JSON.stringify(labels) === JSON.stringify(['➕ Ajouter un élève', '👥 Liste des élèves', '➕ Ajouter un quiz', '📋 Liste des quiz', '🃏 Ajouter des flashcards', '📈 Suivi des révisions']), 'BARRE LATÉRALE, 6 onglets dans l\'ordre demandé : ' + labels.join(' | '));
   ok((await visiblePane()) === 'pane-eleve-ajout' && (await a.locator('#tab-eleve-ajout').getAttribute('aria-selected')) === 'true', 'sans élève, on arrive sur « Ajouter un élève »');
   // mot de passe rangé dans la barre latérale, sous les onglets
   const yPw = (await a.locator('#password').boundingBox()).y, yLast = (await a.locator('#tab-programmes').boundingBox()).y;
-  ok(await a.locator('#lock-dock #password').count() === 1 && await a.locator('.sidebar #lockbar.docked').count() === 1 && yPw > yLast, 'MOT DE PASSE DANS LA BARRE LATÉRALE, sous l\'onglet « Programmes de révision » (y ' + Math.round(yPw) + ' > ' + Math.round(yLast) + ')');
+  ok(await a.locator('#lock-dock #password').count() === 1 && await a.locator('.sidebar #lockbar.docked').count() === 1 && yPw > yLast, 'MOT DE PASSE DANS LA BARRE LATÉRALE, sous l\'onglet « Suivi des révisions » (y ' + Math.round(yPw) + ' > ' + Math.round(yLast) + ')');
   ok(await a.locator('body > #lockbar').count() === 0 && (await a.locator('#unlock').innerText()).includes('Actualiser') && await a.locator('#lock').isVisible(), 'la barre du haut a disparu ; boutons « ↻ Actualiser » et « 🔒 Verrouiller » dans la barre latérale');
   await a.click('#lock');
   ok(await a.locator('#admin-area').isHidden() && (await a.locator('#password').inputValue()) === '' && await a.locator('body > #lockbar').count() === 1 && (await a.locator('#unlock').innerText()) === 'Déverrouiller' && await a.locator('#locked-hint').isVisible(), '« Verrouiller » : gestion masquée, mot de passe effacé, barre remise en haut');
