@@ -89,7 +89,7 @@ const orig = w.ctx.BUILTIN_QUIZZES.map(q => JSON.stringify(q)).join();
   await a.click('#tab-quiz-liste');
   const row = id => a.locator(`.builtin[data-id="${id}"]`);
   const openRow = async id => { if (await row(id).locator('.builtin-details').isHidden()) await row(id).locator('.builtin-toggle').click(); };
-  ok((await a.locator('.builtin button', { hasText: 'Modifier' }).count()) === 6 && (await a.locator('.builtin button', { hasText: 'Rétablir' }).count()) === 1, 'LISTE DES QUIZ : un bouton « Modifier » sur chacun des 6 quiz intégrés ; « Rétablir l\'original » seulement sur celui déjà modifié (musique)');
+  ok((await a.locator('.builtin button', { hasText: 'Modifier' }).count()) === 7 && (await a.locator('.builtin button', { hasText: 'Rétablir' }).count()) === 1, 'LISTE DES QUIZ : un bouton « Modifier » sur chacun des 7 quiz intégrés ; « Rétablir l\'original » seulement sur celui déjà modifié (musique)');
   ok((await row('musique-carnaval').locator('.badge-modifie').count()) === 1 && (await row('zootopia').locator('.badge-modifie').count()) === 0, 'pastille « ✏️ modifié » sur le bon quiz');
   // modifier Zootopia depuis l'interface (correction d'une faute)
   await openRow('zootopia'); await row('zootopia').locator('text=Modifier').click();
