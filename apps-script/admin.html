@@ -171,6 +171,9 @@
         .status.inline { display: none; margin: 0; padding: 7px 12px; }
         .status.inline.ok, .status.inline.err, .status.inline.info { display: inline-block; }
         .locked-hint { max-width: 1180px; margin: 22px auto; padding: 0 16px; color: var(--muted); font-weight: 600; text-align: center; }
+        .switch-zone { text-align: center; margin: 14px auto; }
+        .switch-link { font-size: .8rem; font-weight: 600; color: var(--muted); text-decoration: none; opacity: .8; }
+        .switch-link:hover, .switch-link:focus-visible { text-decoration: underline; opacity: 1; }
 
         /* Barre latérale et contenu */
         .shell { display: flex; gap: 20px; max-width: 1180px; margin: 20px auto 60px; padding: 0 16px; align-items: flex-start; }
@@ -316,6 +319,8 @@
     </div>
 
     <p class="locked-hint" id="locked-hint">Saisis le mot de passe administrateur pour afficher la gestion. Il se définit dans les propriétés du script (ADMIN_PASSWORD).</p>
+    <!-- lien discret vers la connexion élève (target _top : l'application s'affiche dans un cadre Google) -->
+    <p class="switch-zone" id="to-student-zone"><a class="switch-link" id="to-student" href="https://script.google.com/macros/s/AKfycbzzqlCAUDZAoHOmhxufvj4CAAHWX8JtU8vBsTB0ZsoEK_mLu2tW4BoESRUdrg4b7bkF/exec" target="_top">🎒 Espace élève</a></p>
 
     <div class="shell" id="admin-area" hidden>
         <aside class="sidebar">
@@ -621,7 +626,7 @@
         function lockAgain() {
             $("password").value = "";
             $("admin-area").hidden = true;
-            $("locked-hint").hidden = false;
+            $("locked-hint").hidden = false; $("to-student-zone").hidden = false;
             $("lock-status").className = "status inline";
             $("lock-status").textContent = "";
             firstUnlock = true;
@@ -632,13 +637,13 @@
             try {
                 await reload();
                 $("admin-area").hidden = false;
-                $("locked-hint").hidden = true;
+                $("locked-hint").hidden = true; $("to-student-zone").hidden = true;
                 dockLock();
                 showStatus($("lock-status"), "ok", "Déverrouillé.");
                 if (firstUnlock) { firstUnlock = false; go(DATA.students.length ? "eleves" : "eleve-ajout"); }
             } catch (e) {
                 $("admin-area").hidden = true;
-                $("locked-hint").hidden = false;
+                $("locked-hint").hidden = false; $("to-student-zone").hidden = false;
                 undockLock();
                 showStatus($("lock-status"), "err", e.message);
             }

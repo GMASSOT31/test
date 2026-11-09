@@ -9,6 +9,8 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
   const errs = [];
   const a = await c.newPage(); a.on('pageerror', e => errs.push(e.message)); a.on('dialog', d => d.accept());
   await a.goto('file://' + SRC + 'admin.html');
+  const toStudent = a.locator('#to-student');
+  ok(await toStudent.isVisible() && (await toStudent.innerText()).includes('Espace élève') && (await toStudent.getAttribute('href')).endsWith('/exec') && (await toStudent.getAttribute('target')) === '_top', 'connexion enseignant : lien discret « Espace élève » (vers la page élève, dans toute la fenêtre)');
   const waitOk = async (id) => a.waitForSelector(`${id}.ok`, { timeout: 8000 });
   const tab = async t => a.click('#tab-' + t);
   const visiblePane = async () => (await a.locator('.pane:visible').evaluateAll(l => l.map(e => e.id))).join();
@@ -26,8 +28,10 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
   const yPw = (await a.locator('#password').boundingBox()).y, yLast = (await a.locator('#tab-programmes').boundingBox()).y;
   ok(await a.locator('#lock-dock #password').count() === 1 && await a.locator('.sidebar #lockbar.docked').count() === 1 && yPw > yLast, 'MOT DE PASSE DANS LA BARRE LATÉRALE, sous l\'onglet « Suivi des révisions » (y ' + Math.round(yPw) + ' > ' + Math.round(yLast) + ')');
   ok(await a.locator('body > #lockbar').count() === 0 && (await a.locator('#unlock').innerText()).includes('Actualiser') && await a.locator('#lock').isVisible(), 'la barre du haut a disparu ; boutons « ↻ Actualiser » et « 🔒 Verrouiller » dans la barre latérale');
+  ok(await a.locator('#to-student').isHidden(), 'une fois connecté : le lien « Espace élève » disparaît');
   await a.click('#lock');
   ok(await a.locator('#admin-area').isHidden() && (await a.locator('#password').inputValue()) === '' && await a.locator('body > #lockbar').count() === 1 && (await a.locator('#unlock').innerText()) === 'Déverrouiller' && await a.locator('#locked-hint').isVisible(), '« Verrouiller » : gestion masquée, mot de passe effacé, barre remise en haut');
+  ok(await a.locator('#to-student').isVisible(), 'après « Verrouiller » : le lien « Espace élève » revient');
   await a.fill('#password', PW); await a.click('#unlock'); await waitOk('#lock-status');
   ok(await a.locator('#admin-area').isVisible() && await a.locator('#lock-dock #password').count() === 1, 'redéverrouillage : la barre retourne dans la barre latérale');
   for (const [t, pane] of [['eleves', 'pane-eleves'], ['quiz-ajout', 'pane-quiz-ajout'], ['quiz-liste', 'pane-quiz-liste'], ['fc-ajout', 'pane-fc-ajout'], ['programmes', 'pane-programmes'], ['eleve-ajout', 'pane-eleve-ajout']]) {
