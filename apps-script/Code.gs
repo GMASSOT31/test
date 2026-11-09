@@ -576,6 +576,8 @@ function lessonSummary_(quiz, r) {
     id: quiz.id, titre: quiz.titre, emoji: quiz.emoji, matiere: quiz.matiere, total: total,
     niveaux: niveaux, erreurs: erreurs, aReviser: aReviser, maj: maj,
     pret: total ? Math.round((niveaux[2] + niveaux[3] + niveaux[4]) / total * 100) : 0,
+    // avancement de l'apprentissage : découverte 1/3, rappelée 2/3, ancrée ou maîtrisée 3/3
+    avancement: total ? Math.round((niveaux[1] + 2 * niveaux[2] + 3 * (niveaux[3] + niveaux[4])) / (3 * total) * 100) : 0,
     difficiles: difficiles.slice(0, 5),
     exam: r.exam || '', plan: r.plan || [], mode: r.mode || 'actif',
     seances: (r.ses || []).slice(-10).reverse().map(function (x) { return { debut: x[0], duree: x[1], questions: x[2], reussies: x[3], bonus: !!x[4] }; }),

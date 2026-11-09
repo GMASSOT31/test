@@ -141,6 +141,7 @@
             .field-row .f-reps { grid-column: 1 / -1; }
             .inline { flex-wrap: wrap; }
             .item { flex-wrap: wrap; }
+            .item .info { flex: 1 1 calc(100% - 44px); min-width: 0; }
         }
         [hidden] { display: none !important; }
         .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
@@ -155,7 +156,9 @@
         .builtin .info strong { display: block; }
         .builtin .info span { display: block; font-size: .85rem; color: var(--muted); }
         .builtin .builtin-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-        .builtin .builtin-head strong { flex: 1 1 140px; min-width: 0; }
+        .builtin .builtin-name { flex: 1 1 140px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .builtin-pour { font-size: .82rem; font-weight: 700; color: #07603b; }
+        .builtin-pour.none { color: var(--muted); font-weight: 600; }
         .builtin .builtin-details { margin-top: 8px; }
         .builtin .builtin-details[hidden] { display: none; }
         .item .info span { display: block; }
@@ -175,26 +178,42 @@
         .switch-link { font-size: .8rem; font-weight: 600; color: var(--muted); text-decoration: none; opacity: .8; }
         .switch-link:hover, .switch-link:focus-visible { text-decoration: underline; opacity: 1; }
 
-        /* Barre latérale et contenu */
-        .shell { display: flex; gap: 20px; max-width: 1180px; margin: 20px auto 60px; padding: 0 16px; align-items: flex-start; }
-        .sidebar { width: 230px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; position: sticky; top: 12px; }
-        .tabs { display: flex; flex-direction: column; gap: 12px; }
-        /* Le mot de passe, une fois connecté, se range sous les onglets de la barre latérale */
-        .lockbar.docked { flex-direction: column; align-items: stretch; gap: 8px; margin: 0; padding: 12px; max-width: none; border-radius: 14px; }
-        .lockbar.docked label { font-size: .85rem; }
-        .lockbar.docked input { width: 100%; max-width: none; min-width: 0; }
-        .lockbar.docked .btn { width: 100%; padding: 8px 12px; font-size: .9rem; }
-        .lockbar.docked .status.inline { display: none; font-size: .85rem; }
-        .lockbar.docked .status.inline.ok, .lockbar.docked .status.inline.err, .lockbar.docked .status.inline.info { display: block; }
-        .tab { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border: 0; border-radius: 12px; background: #fff;
-               font: inherit; font-weight: 800; color: var(--navy); cursor: pointer; text-align: left; box-shadow: var(--sticker); transition: transform .15s; }
-        .tab:nth-child(odd) { transform: rotate(-1deg); }
-        .tab:nth-child(even) { transform: rotate(1deg); }
-        .tab:hover { transform: rotate(0) translateY(-2px) scale(1.03); }
-        .tab[aria-selected="true"] { background: var(--gold); transform: rotate(0) scale(1.03); }
-        .tab .count { margin-left: auto; font-size: .8rem; padding: 2px 9px; border-radius: 999px; background: var(--navy); color: #fff; }
+        /* Barre du haut : 4 sections, puis Actualiser / Verrouiller */
+        .shell { max-width: 1180px; margin: 14px auto 60px; padding: 0 16px; }
+        .topnav { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 10px; padding: 8px 0 10px; background: var(--bg); }
+        .tabs { display: flex; flex: 1; min-width: 0; gap: 8px; }
+        .tab { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 1 1 0; min-width: 0; padding: 11px 12px;
+               border: 0; border-radius: 14px; background: #fff; font: inherit; font-weight: 800; color: var(--navy); cursor: pointer; box-shadow: var(--sticker); }
+        .tab .t-ico { font-size: 1.2rem; line-height: 1; }
+        .tab:hover { background: #f4f6ff; }
+        .tab[aria-selected="true"] { background: var(--gold); }
+        .tab .count { font-size: .75rem; padding: 1px 8px; border-radius: 999px; background: var(--navy); color: #fff; }
         .tab .count:empty { display: none; }
-        .tab:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+        .tab:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
+        .lockbar.docked { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 6px; margin: 0; padding: 0; background: transparent; box-shadow: none; max-width: none; }
+        .lockbar.docked label, .lockbar.docked input { display: none !important; }
+        .lockbar.docked .status { margin: 0; padding: 6px 10px; font-size: .8rem; white-space: nowrap; }
+        .lockbar.docked .btn { padding: 9px 12px; font-size: .85rem; white-space: nowrap; }
+        /* En-tête de section : ce qu'on peut y faire + l'action principale */
+        section.intro { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; background: linear-gradient(135deg, #eef3ff, #fff); }
+        section.intro .intro-txt { flex: 1 1 320px; }
+        section.intro h2 { margin: 0 0 4px; }
+        section.intro .hint { margin: 0; }
+        .back-link { background: none; border: 0; padding: 0 0 8px; font: inherit; font-weight: 800; color: var(--blue); cursor: pointer; }
+        .back-link:hover { text-decoration: underline; }
+        /* Avancement et guide */
+        .avancement { display: inline-block; margin-left: 8px; font-size: .78rem; font-weight: 800; padding: 2px 10px; border-radius: 999px; background: #e7f0ff; color: var(--navy); vertical-align: middle; }
+        .av-bar { height: 8px; max-width: 260px; margin: 6px 0 4px; }
+        .bar.av-bar span { background: linear-gradient(90deg, #9be7c4, #2fbf7f); }
+        .guide { border: 2px dashed #c9d4f5; border-radius: 16px; padding: 14px 16px; margin: 10px 0 16px; background: #fbfcff; }
+        .guide h3 { margin: 0 0 8px; color: var(--navy); }
+        .guide ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+        .guide li { display: flex; gap: 10px; align-items: flex-start; }
+        .guide li > div { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+        .guide li span:not(.g-dot) { color: var(--muted); font-size: .9rem; }
+        .guide .g-dot { flex: 0 0 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #e3e6ef; font-weight: 900; color: var(--navy); }
+        .guide li.done .g-dot { background: var(--green); color: #fff; }
+        .guide li.done strong { text-decoration: line-through; color: var(--muted); }
         .content { flex: 1; min-width: 0; }
         .pane { display: grid; gap: 20px; }
 
@@ -215,13 +234,6 @@
         .lesson-title { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
         .niveau { font-size: .8rem; font-weight: 800; padding: 2px 10px; border-radius: 999px; background: #eef2ff; color: var(--navy); }
         .lesson-detail { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: .85rem; color: var(--muted); margin-bottom: 8px; }
-        @media (max-width: 760px) {
-            .shell { flex-direction: column; margin-top: 12px; }
-            .sidebar { width: 100%; position: static; }
-            .tabs { flex-direction: row; flex-wrap: wrap; gap: 8px; }
-            .tab { width: auto; flex: 1 1 150px; padding: 10px; font-size: .9rem; transform: none !important; }
-            .lockbar input { max-width: none; }
-        }
         /* ===== Téléphone : bandeau très fin, onglets en symboles sur une seule ligne ===== */
         @media (max-width: 760px) {
             .rv-banner { padding: 6px 12px; border-bottom-width: 2px; }
@@ -234,17 +246,18 @@
             .lockbar .status { flex-basis: 100%; margin: 0; }
             .lockbar .status:empty { display: none; }
             .locked-hint { display: none; }
-            .shell { margin: 6px auto 40px; gap: 8px; }
-            .sidebar { flex-direction: row; align-items: center; gap: 4px; position: sticky; top: 0; z-index: 20; padding: 4px 0; background: var(--bg); }
-            .tabs { flex: 1; min-width: 0; flex-wrap: nowrap; gap: 4px; }
-            .tab { flex: 1 1 0; min-width: 0; justify-content: center; padding: 6px 0; font-size: 0; position: relative; border-radius: 10px; }
-            .tab::before { content: attr(data-ico); font-size: 1.15rem; line-height: 1.2; }
-            .tab .count { position: absolute; top: -5px; right: -2px; margin: 0; padding: 0 5px; font-size: .6rem; }
-            .lockbar.docked { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 4px; padding: 0; background: transparent; box-shadow: none; }
-            .lockbar.docked label, .lockbar.docked input, .lockbar.docked .status { display: none !important; }
-            .lockbar.docked .btn { width: 38px; padding: 6px 0; font-size: 0; }
+            .shell { margin: 6px auto 40px; padding: 0 10px; }
+            .topnav { gap: 4px; padding: 4px 0 8px; }
+            .tabs { gap: 4px; }
+            .tab { flex-direction: column; gap: 1px; padding: 5px 2px; font-size: .68rem; border-radius: 12px; }
+            .tab .t-ico { font-size: 1.15rem; }
+            .tab .count { position: absolute; top: -4px; right: 2px; padding: 0 5px; font-size: .6rem; }
+            .lockbar.docked { gap: 4px; }
+            .lockbar.docked .status { display: none !important; }
+            .lockbar.docked .btn { width: 38px; padding: 8px 0; font-size: 0; }
             .lockbar.docked #unlock::before { content: "↻"; font-size: 1.1rem; }
             .lockbar.docked #lock::before { content: "🔒"; font-size: 1.1rem; }
+            section.intro .btn { width: 100%; }
         }
         /* Suivi des révisions : niveaux, prête pour le contrôle */
         .lvl-bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: #eceff7; margin: 8px 0 4px; }
@@ -293,19 +306,18 @@
       <div class="rv-inner">
         <span class="rv-sticker"><span class="rv-dot"></span> Espace administrateur</span>
         <h1 class="rv-title">Espace <span class="rv-hl">admin</span> ⚙️</h1>
-        <p class="rv-sub" id="rvSub">Ajoute, modifie ou supprime des quiz et des flashcards</p>
+        <p class="rv-sub" id="rvSub">Suis les révisions de tes élèves et donne-leur des leçons</p>
         <div class="rv-chips">
-          <span class="rv-chip">🧠 Quiz</span>
-          <span class="rv-chip">🃏 Flashcards</span>
-          <span class="rv-chip">📅 Programme</span>
-          <span class="rv-chip">🔒 Réservé à l'admin</span>
+          <span class="rv-chip">📈 Suivi</span>
+          <span class="rv-chip">👥 Élèves</span>
+          <span class="rv-chip">📚 Leçons</span>
+          <span class="rv-chip">🔒 Réservé aux parents et enseignants</span>
         </div>
       </div>
     
       <div class="rv-ticker" aria-hidden="true">
         <div class="rv-track">
-          ADMIN • QUIZ • FLASHCARDS • PROGRAMME • 3 RÉUSSITES D'AFFILÉE = QUESTION SUE • ADMIN • QUIZ • FLASHCARDS • PROGRAMME • 3 RÉUSSITES D'AFFILÉE = QUESTION SUE •&nbsp;
-          ADMIN • QUIZ • FLASHCARDS • PROGRAMME • 3 RÉUSSITES D'AFFILÉE = QUESTION SUE • ADMIN • QUIZ • FLASHCARDS • PROGRAMME • 3 RÉUSSITES D'AFFILÉE = QUESTION SUE •&nbsp;
+          SUIVI • ÉLÈVES • LEÇONS • FLASHCARDS • RÉVISION ESPACÉE : 1, 3, 7 JOURS • RÉVISION EXPRESS LA VEILLE • SUIVI • ÉLÈVES • LEÇONS • FLASHCARDS • RÉVISION ESPACÉE : 1, 3, 7 JOURS • RÉVISION EXPRESS LA VEILLE •&nbsp;
         </div>
       </div>
     </header>
@@ -323,23 +335,22 @@
     <p class="switch-zone" id="to-student-zone"><a class="switch-link" id="to-student" href="https://script.google.com/macros/s/AKfycbzzqlCAUDZAoHOmhxufvj4CAAHWX8JtU8vBsTB0ZsoEK_mLu2tW4BoESRUdrg4b7bkF/exec" target="_top">🎒 Espace élève</a></p>
 
     <div class="shell" id="admin-area" hidden>
-        <aside class="sidebar">
+        <header class="topnav">
         <nav class="tabs" role="tablist" aria-label="Sections de l'administration">
-            <button class="tab" role="tab" id="tab-eleve-ajout" data-tab="eleve-ajout" data-ico="🙋" aria-label="Ajouter un élève" title="Ajouter un élève">➕ Ajouter un élève</button>
-            <button class="tab" role="tab" id="tab-eleves" data-tab="eleves" data-ico="👥" aria-label="Liste des élèves" title="Liste des élèves">👥 Liste des élèves <span class="count" id="count-eleves"></span></button>
-            <button class="tab" role="tab" id="tab-quiz-ajout" data-tab="quiz-ajout" data-ico="🧠" aria-label="Ajouter un quiz" title="Ajouter un quiz">➕ Ajouter un quiz</button>
-            <button class="tab" role="tab" id="tab-quiz-liste" data-tab="quiz-liste" data-ico="📋" aria-label="Liste des quiz" title="Liste des quiz">📋 Liste des quiz <span class="count" id="count-quiz"></span></button>
-            <button class="tab" role="tab" id="tab-fc-ajout" data-tab="fc-ajout" data-ico="🃏" aria-label="Ajouter des flashcards" title="Ajouter des flashcards">🃏 Ajouter des flashcards <span class="count" id="count-decks"></span></button>
-            <button class="tab" role="tab" id="tab-programmes" data-tab="programmes" data-ico="📈" aria-label="Suivi des révisions" title="Suivi des révisions">📈 Suivi des révisions</button>
+            <button class="tab" role="tab" id="tab-programmes" data-tab="programmes" title="Voir où en est chaque élève"><span class="t-ico" aria-hidden="true">📈</span><span class="t-lbl">Suivi</span></button>
+            <button class="tab" role="tab" id="tab-eleves" data-tab="eleves" title="Comptes des élèves"><span class="t-ico" aria-hidden="true">👥</span><span class="t-lbl">Élèves</span><span class="count" id="count-eleves"></span></button>
+            <button class="tab" role="tab" id="tab-quiz-liste" data-tab="quiz-liste" title="Leçons (quiz) et à qui les donner"><span class="t-ico" aria-hidden="true">📚</span><span class="t-lbl">Leçons</span><span class="count" id="count-quiz"></span></button>
+            <button class="tab" role="tab" id="tab-fc-ajout" data-tab="fc-ajout" title="Paquets de flashcards en plus"><span class="t-ico" aria-hidden="true">🃏</span><span class="t-lbl">Flashcards</span><span class="count" id="count-decks"></span></button>
         </nav>
         <div id="lock-dock"></div>
-        </aside>
+        </header>
 
         <main class="content">
 
         <!-- ================= AJOUTER UN ÉLÈVE ================= -->
         <div class="pane" id="pane-eleve-ajout" role="tabpanel" aria-labelledby="tab-eleve-ajout">
             <section>
+                <button class="back-link" type="button" data-go="eleves">← Retour aux élèves</button>
                 <h2 id="student-form-title">➕ Nouvel élève</h2>
                 <div class="row3">
                     <div>
@@ -366,8 +377,15 @@
 
         <!-- ================= LISTE DES ÉLÈVES ================= -->
         <div class="pane" id="pane-eleves" role="tabpanel" aria-labelledby="tab-eleves" hidden>
+            <section class="intro">
+                <div class="intro-txt">
+                    <h2>👥 Élèves</h2>
+                    <p class="hint">Chaque enfant a son compte : une classe, un pseudo et un code PIN pour se connecter sur la page élève. Ici tu peux ajouter, modifier ou supprimer un élève ; « Progression » ouvre son suivi.</p>
+                </div>
+                <button class="btn" id="tab-eleve-ajout" type="button">➕ Ajouter un élève</button>
+            </section>
             <section>
-                <h2>👥 Liste des élèves</h2>
+                <h2>Liste des élèves</h2>
                 <div class="status" id="eleves-status" role="status"></div>
                 <div id="student-list"></div>
             </section>
@@ -376,7 +394,8 @@
         <!-- ================= AJOUTER UN QUIZ ================= -->
         <div class="pane" id="pane-quiz-ajout" role="tabpanel" aria-labelledby="tab-quiz-ajout" hidden>
             <section>
-                <h2 id="quiz-form-title">➕ Nouveau quiz</h2>
+                <button class="back-link" type="button" data-go="quiz-liste">← Retour aux leçons</button>
+                <h2 id="quiz-form-title">➕ Nouvelle leçon (quiz)</h2>
 
                 <label for="titre">Titre</label>
                 <input type="text" id="titre" maxlength="120" placeholder="Ex : La Révolution française">
@@ -441,21 +460,36 @@
 
         <!-- ================= LISTE DES QUIZ ================= -->
         <div class="pane" id="pane-quiz-liste" role="tabpanel" aria-labelledby="tab-quiz-liste" hidden>
+            <section class="intro">
+                <div class="intro-txt">
+                    <h2>📚 Leçons</h2>
+                    <p class="hint">Une leçon est un quiz : l'élève la révise avec des cartes, des QCM et des questions sans choix. Pour la donner à un élève, ouvre « Gérer » et coche son nom. Tu peux aussi modifier les questions ou créer ta propre leçon.</p>
+                </div>
+                <button class="btn" id="tab-quiz-ajout" type="button">➕ Créer une leçon</button>
+            </section>
+            <div class="status" id="quizlist-status" role="status"></div>
             <section>
-                <h2>📋 Quiz créés depuis l'administration</h2>
-                <div class="status" id="quizlist-status" role="status"></div>
-                <div id="quiz-list"></div>
+                <h2>🏛️ Leçons fournies avec le site</h2>
+                <p class="hint">Coche les élèves qui y ont accès, puis « Enregistrer l'accès ». « Modifier » corrige les questions (l'original peut être rétabli).</p>
+                <div id="builtin-list"></div>
             </section>
             <section>
-                <h2>🏛️ Quiz intégrés</h2>
-                <p class="hint">Ces quiz sont fournis avec le site. Coche les élèves qui y ont accès, puis enregistre la ligne.</p>
-                <div id="builtin-list"></div>
+                <h2>✏️ Mes leçons créées</h2>
+                <div id="quiz-list"></div>
             </section>
         </div>
 
         <!-- ================= AJOUTER DES FLASHCARDS ================= -->
         <div class="pane" id="pane-fc-ajout" role="tabpanel" aria-labelledby="tab-fc-ajout" hidden>
-            <section>
+            <section class="intro">
+                <div class="intro-txt">
+                    <h2>🃏 Flashcards</h2>
+                    <p class="hint">Chaque leçon a déjà ses flashcards. Ici tu peux créer des paquets en plus (par exemple du vocabulaire) et choisir à quels élèves les donner.</p>
+                </div>
+                <button class="btn" id="new-deck" type="button">➕ Créer un paquet</button>
+            </section>
+            <section id="deck-form-section" hidden>
+                <button class="back-link" type="button" id="deck-form-close">✕ Fermer</button>
                 <h2 id="deck-form-title">➕ Nouveau paquet de flashcards</h2>
 
                 <label for="deck-titre">Titre</label>
@@ -490,7 +524,7 @@
                 <div class="status" id="deck-status" role="status"></div>
             </section>
             <section>
-                <h2>🃏 Paquets enregistrés</h2>
+                <h2>Paquets enregistrés</h2>
                 <div id="deck-list"></div>
             </section>
         </div>
@@ -499,7 +533,8 @@
         <div class="pane" id="pane-programmes" role="tabpanel" aria-labelledby="tab-programmes" hidden>
             <section>
                 <h2>📈 Suivi des révisions</h2>
-                <p class="hint">Pour chaque élève et chaque leçon : les questions par niveau (🌱 nouvelle, 🌿 découverte en QCM, 🌳 rappelée sans choix, ⭐ ancrée, 🏆 maîtrisée), « Prête pour le contrôle ? » (part des questions au moins rappelées), les questions difficiles et l'historique des séances. Tu peux fixer la date du contrôle : le plan de séances s'adapte (révision express si c'est demain).</p>
+                <div id="guide"></div>
+                <p class="hint"><strong>Avancement</strong> : le chemin parcouru dans l'apprentissage (🌿 découverte = 1/3, 🌳 rappelée sans choix = 2/3, ⭐ ancrée ou 🏆 maîtrisée = 3/3). <strong>Prête pour le contrôle</strong> : part des questions au moins rappelées. Tu peux aussi fixer la date du contrôle : le plan de séances s'adapte (révision express si c'est demain).</p>
                 <label for="prog-filtre">Afficher</label>
                 <select id="prog-filtre"></select>
                 <div class="status" id="prog-status" role="status"></div>
@@ -521,10 +556,10 @@
 (function () {
   // Phrases qui tournent sous le titre
   var phrases = [
-    "Ajoute, modifie ou supprime des quiz et des flashcards",
+    "Suis les révisions de tes élèves et donne-leur des leçons",
     "Une question courte et claire vaut mieux qu'une longue ✍️",
-    "Chaque élève ne voit que ses propres quiz 🔒",
-    "Suis la progression de chaque élève, leçon par leçon 📅"
+    "Chaque élève ne voit que les leçons qu'on lui donne 🔒",
+    "Fixe la date du contrôle : le plan de révision s'adapte 📅"
   ];
   var el = document.getElementById("rvSub"), i = 0;
   if (el) setInterval(function () {
@@ -582,12 +617,18 @@
         const studentName = id => { const s = DATA.students.find(x => x.id === id); return s ? s.pseudo : null; };
 
         // ---------- onglets ----------
+        // 4 sections dans la barre du haut ; les formulaires « Ajouter / Créer » s'ouvrent depuis leur section
+        const NAV = ["programmes", "eleves", "quiz-liste", "fc-ajout"];
+        const NAV_OF = { "eleve-ajout": "eleves", "quiz-ajout": "quiz-liste" };
         function go(tab) {
-            TABS.forEach(t => {
-                $("pane-" + t).hidden = t !== tab;
-                $("tab-" + t).setAttribute("aria-selected", String(t === tab));
-            });
+            TABS.forEach(t => { $("pane-" + t).hidden = t !== tab; });
+            const nav = NAV_OF[tab] || tab;
+            NAV.forEach(t => $("tab-" + t).setAttribute("aria-selected", String(t === nav)));
             window.scrollTo({ top: 0 });
+        }
+        function showDeckForm(open) {
+            $("deck-form-section").hidden = !open;
+            if (open) $("deck-form-section").scrollIntoView({ block: "start" });
         }
 
         // ---------- élèves rangés par classe (comme à la connexion : la casse et les espaces ne comptent pas) ----------
@@ -640,7 +681,7 @@
                 $("locked-hint").hidden = true; $("to-student-zone").hidden = true;
                 dockLock();
                 showStatus($("lock-status"), "ok", "Déverrouillé.");
-                if (firstUnlock) { firstUnlock = false; go(DATA.students.length ? "eleves" : "eleve-ajout"); }
+                if (firstUnlock) { firstUnlock = false; go("programmes"); }
             } catch (e) {
                 $("admin-area").hidden = true;
                 $("locked-hint").hidden = false; $("to-student-zone").hidden = false;
@@ -696,7 +737,7 @@
                         h("div", {}, "👤"),
                         h("div", { class: "info" },
                             h("strong", {}, s.pseudo),
-                            h("span", {}, r.lecons ? r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") + " · " + r.sues + " / " + r.total + " questions ancrées (" + r.pct + " %)" : "Aucune leçon attribuée")),
+                            h("span", {}, r.lecons ? r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") + " · avancement " + r.avancement + " %" : "Aucune leçon attribuée")),
                         h("button", { class: "btn secondary small", type: "button", onclick: () => { progFilter = "s:" + s.id; openDetails.add(s.id); renderProgrammes(); go("programmes"); } }, "Progression"),
                         h("button", { class: "btn secondary small", type: "button", onclick: () => loadStudent(s) }, "Modifier"),
                         h("button", { class: "btn danger", type: "button", onclick: () => removeStudent(s) }, "Supprimer"));
@@ -923,7 +964,7 @@
             editingBuiltinId = null;
             $("builtin-note").hidden = true;
             $("q-search").value = "";
-            $("quiz-form-title").textContent = "➕ Nouveau quiz";
+            $("quiz-form-title").textContent = "➕ Nouvelle leçon (quiz)";
             ["titre", "matiere", "emoji", "description", "lien-texte", "lien-url", "lien-icone"].forEach(id => $(id).value = "");
             pourBoxes($("quiz-pour"), []);
             qList.replaceChildren();
@@ -992,6 +1033,7 @@
             pourBoxes($("deck-pour"), deck.pour || []);
             $("deck-status").className = "status";
             go("fc-ajout");
+            showDeckForm(true);
         }
 
         // ================= LISTES =================
@@ -1000,7 +1042,7 @@
         function renderItems(list, items, kind) {
             const isQuiz = kind === "quiz";
             if (items.length === 0) {
-                list.replaceChildren(h("p", { class: "empty" }, isQuiz ? "Aucun quiz créé depuis l'administration pour le moment. Utilise « Ajouter un quiz »." : "Aucun paquet pour le moment."));
+                list.replaceChildren(h("p", { class: "empty" }, isQuiz ? "Aucune leçon créée pour le moment. Utilise « ➕ Créer une leçon » en haut de la page." : "Aucun paquet pour le moment."));
                 return;
             }
             list.replaceChildren(...items.map(it => h("div", { class: "item" },
@@ -1072,7 +1114,7 @@
                     resetQuizForm();
                     status.className = "status";
                     await reload();
-                    showStatus($("quizlist-status"), "ok", "Quiz « " + payload.titre + " » : " + msg);
+                    showStatus($("quizlist-status"), "ok", "Leçon « " + payload.titre + " » : " + msg);
                     go("quiz-liste");
                 } else {
                     resetDeckForm();
@@ -1115,12 +1157,14 @@
                         const now = details.hidden;
                         details.hidden = !now;
                         toggle.setAttribute("aria-expanded", String(now));
-                        toggle.textContent = now ? "▲ Masquer les détails" : "▼ Détails";
+                        toggle.textContent = now ? "▲ Fermer" : "⚙️ Gérer";
                         if (now) openBuiltins.add(q.id); else openBuiltins.delete(q.id);
-                    } }, open ? "▲ Masquer les détails" : "▼ Détails");
+                    } }, open ? "▲ Fermer" : "⚙️ Gérer");
                 return h("div", { class: "builtin", "data-id": q.id },
                     h("div", { class: "builtin-head" },
-                        h("strong", {}, (q.emoji || "📘") + " " + q.titre, q.modifie ? h("span", { class: "badge-modifie" }, "✏️ modifié") : null),
+                        h("div", { class: "builtin-name" },
+                            h("strong", {}, (q.emoji || "📘") + " " + q.titre, q.modifie ? h("span", { class: "badge-modifie" }, "✏️ modifié") : null),
+                            h("span", { class: "builtin-pour" + ((q.pour || []).length ? "" : " none") }, (q.pour || []).length ? "👥 " + q.pour.map(studentName).filter(Boolean).join(", ") : "Donnée à personne")),
                         toggle),
                     details);
             }));
@@ -1133,7 +1177,7 @@
                 loadQuiz({ ...res.quiz, pour: res.pour });
                 editingQuizId = null;
                 editingBuiltinId = q.id;
-                $("quiz-form-title").textContent = "✏️ Modifier le quiz intégré : " + res.quiz.titre;
+                $("quiz-form-title").textContent = "✏️ Modifier la leçon fournie : " + res.quiz.titre;
                 $("builtin-note").hidden = false;
             } catch (e) {
                 showStatus(status, "err", e.message);
@@ -1201,12 +1245,34 @@
         function lessonsSummary(id) {
             const l = DATA.progress[id] || [];
             const total = l.reduce((n, x) => n + x.total, 0), sues = l.reduce((n, x) => n + x.niveaux[3] + x.niveaux[4], 0);
+            // avancement : chemin parcouru (découverte 1/3, rappelée 2/3, ancrée ou maîtrisée 3/3), pondéré par le nombre de questions
+            const pas = l.reduce((n, x) => n + x.niveaux[1] + 2 * x.niveaux[2] + 3 * (x.niveaux[3] + x.niveaux[4]), 0);
+            const avancement = total ? Math.round(pas / (3 * total) * 100) : 0;
             const week = l.reduce((acc, x) => { x.seances.forEach(s => { if (s.debut > DATA.now - 7 * 86400000) { acc.n++; acc.t += s.duree; } }); return acc; }, { n: 0, t: 0 });
             const last = l.reduce((m, x) => Math.max(m, x.maj || 0), 0);
             const due = l.reduce((n, x) => n + (x.mode === "archive" ? 0 : x.aReviser), 0);
-            return { lecons: l.length, total, sues, pct: total ? Math.round(sues / total * 100) : 0, week, last, due };
+            return { lecons: l.length, total, sues, pct: total ? Math.round(sues / total * 100) : 0, week, last, due, avancement };
+        }
+        function avBar(pct) { return h("div", { class: "bar av-bar", role: "progressbar", "aria-valuenow": String(pct), "aria-valuemin": "0", "aria-valuemax": "100" }, h("span", { style: "width:" + pct + "%" })); }
+        // Guide affiché tant que les premières étapes ne sont pas faites
+        function renderGuide() {
+            const hasStudent = DATA.students.length > 0;
+            const hasLesson = DATA.students.some(s => (DATA.progress[s.id] || []).length > 0);
+            const hasActivity = DATA.students.some(s => (DATA.progress[s.id] || []).some(l => l.maj));
+            const box = $("guide");
+            if (hasStudent && hasLesson && hasActivity) { box.replaceChildren(); return; }
+            const step = (done, n, title, txt, action) => h("li", { class: done ? "done" : "" },
+                h("span", { class: "g-dot" }, done ? "✓" : String(n)), h("div", {}, h("strong", {}, title), h("span", {}, txt), done ? null : action));
+            box.replaceChildren(h("div", { class: "guide" }, h("h3", {}, "🚀 Pour commencer"), h("ol", {},
+                step(hasStudent, 1, "Crée le compte de ton enfant", "Une classe, un pseudo et un code PIN.",
+                    h("button", { class: "btn small", type: "button", onclick: () => { resetStudentForm(); go("eleve-ajout"); } }, "➕ Ajouter un élève")),
+                step(hasLesson, 2, "Donne-lui une leçon", "Onglet « Leçons » : bouton « Gérer », coche son nom, puis « Enregistrer l'accès ».",
+                    h("button", { class: "btn small", type: "button", onclick: () => go("quiz-liste") }, "📚 Voir les leçons")),
+                step(hasActivity, 3, "Il révise sur la page élève", "Il se connecte avec sa classe, son pseudo et son PIN. Sa progression s'affiche ici.",
+                    h("a", { class: "btn small secondary", href: $("to-student").getAttribute("href"), target: "_blank", rel: "noopener" }, "🎒 Ouvrir la page élève")))));
         }
         function renderProgrammes() {
+            renderGuide();
             renderProgFilter();
             const list = $("prog-list");
             let groups = groupByClass(DATA.students);
@@ -1226,7 +1292,9 @@
             const r = lessonsSummary(s.id);
             const card = h("div", { class: "prog-card compact", "data-student": s.id },
                 h("div", { class: "prog-head" },
-                    h("div", { class: "info" }, h("strong", {}, "👤 " + s.pseudo),
+                    h("div", { class: "info" }, h("strong", {}, "👤 " + s.pseudo,
+                            r.lecons ? h("span", { class: "avancement", title: "Avancement de l'apprentissage sur ses " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") }, "Avancement " + r.avancement + " %") : null),
+                        r.lecons ? avBar(r.avancement) : null,
                         h("span", { class: "student-sum" }, r.week.n + " séance" + (r.week.n > 1 ? "s" : "") + " cette semaine (" + Math.round(r.week.t / 60) + " min)" +
                             (r.due ? " · " + r.due + " question" + (r.due > 1 ? "s" : "") + " à réviser" : "") + (r.last ? " · dernière activité " + timeFr(r.last) : ""))),
                     h("button", { class: "btn secondary small", type: "button", "aria-expanded": String(open), onclick: () => {
@@ -1240,9 +1308,9 @@
             const lessons = (DATA.progress[s.id] || []).slice().sort((a, b) => a.titre.localeCompare(b.titre, "fr", { sensitivity: "base" }));
             const r = lessonsSummary(s.id);
             const detail = h("div", { class: "prog-detail" },
-                h("p", { class: "total" }, r.lecons ? r.sues + " / " + r.total + " questions ancrées (" + r.pct + " %) sur " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") : "Aucune leçon attribuée."));
+                h("p", { class: "total" }, r.lecons ? "Avancement " + r.avancement + " % sur " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") + " · " + r.sues + " / " + r.total + " questions ancrées" : "Aucune leçon attribuée."));
             if (lessons.length === 0) {
-                detail.append(h("p", { class: "hint" }, "Donne-lui un quiz depuis « Liste des quiz » pour suivre ses révisions."));
+                detail.append(h("p", { class: "hint" }, "Donne-lui une leçon depuis l'onglet « 📚 Leçons » (bouton « Gérer », puis coche son nom) pour suivre ses révisions."));
                 return detail;
             }
             lessons.forEach(l => {
@@ -1251,7 +1319,7 @@
                 const plan = planText(l);
                 detail.append(h("div", { class: "lesson", "data-quiz": l.id },
                     h("div", { class: "lesson-title" }, h("strong", {}, (l.emoji || "📘") + " " + l.titre),
-                        h("span", { class: "badges" }, h("span", { class: "pret " + cls }, txt))),
+                        h("span", { class: "badges" }, h("span", { class: "avancement" }, "Avancement " + l.avancement + " %"), h("span", { class: "pret " + cls, title: "Prête pour le contrôle : part des questions au moins rappelées" }, txt))),
                     levelBarAdmin(l), levelLegendAdmin(l),
                     h("div", { class: "lesson-detail" },
                         h("span", { class: "exam-txt" }, examText(l)),
@@ -1307,7 +1375,12 @@
         }
 
         // ---------- événements ----------
-        TABS.forEach(t => $("tab-" + t).addEventListener("click", () => go(t)));
+        NAV.forEach(t => $("tab-" + t).addEventListener("click", () => go(t)));
+        $("tab-eleve-ajout").addEventListener("click", () => { resetStudentForm(); $("student-status").className = "status"; go("eleve-ajout"); });
+        $("tab-quiz-ajout").addEventListener("click", () => { resetQuizForm(); $("quiz-status").className = "status"; go("quiz-ajout"); });
+        $("new-deck").addEventListener("click", () => { resetDeckForm(); $("deck-status").className = "status"; showDeckForm(true); });
+        $("deck-form-close").addEventListener("click", () => showDeckForm(false));
+        document.querySelectorAll(".back-link[data-go]").forEach(b => b.addEventListener("click", () => go(b.dataset.go)));
         $("unlock").addEventListener("click", unlock);
         $("lock").addEventListener("click", lockAgain);
         $("password").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); unlock(); } });
@@ -1326,7 +1399,7 @@
 
         resetQuizForm();
         resetDeckForm();
-        go("eleve-ajout");
+        go("programmes");
     </script>
 </body>
 </html>

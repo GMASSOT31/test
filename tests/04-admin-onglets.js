@@ -12,7 +12,9 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
   const toStudent = a.locator('#to-student');
   ok(await toStudent.isVisible() && (await toStudent.innerText()).includes('Espace élève') && (await toStudent.getAttribute('href')).endsWith('/exec') && (await toStudent.getAttribute('target')) === '_top', 'connexion enseignant : lien discret « Espace élève » (vers la page élève, dans toute la fenêtre)');
   const waitOk = async (id) => a.waitForSelector(`${id}.ok`, { timeout: 8000 });
-  const tab = async t => a.click('#tab-' + t);
+  // navigation : 4 sections en haut ; « Ajouter un élève » et « Créer une leçon » s'ouvrent depuis leur section
+  const PARENT = { 'eleve-ajout': 'eleves', 'quiz-ajout': 'quiz-liste' };
+  const tab = async t => { if (PARENT[t]) await a.click('#tab-' + PARENT[t]); await a.click('#tab-' + t); };
   const visiblePane = async () => (await a.locator('.pane:visible').evaluateAll(l => l.map(e => e.id))).join();
 
   // ---- 1. verrouillé, puis barre latérale ----
@@ -21,22 +23,22 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
   ok((await a.locator('#lock-status').innerText()).trim() === 'Mot de passe incorrect.' && await a.locator('#admin-area').isHidden(), 'mauvais mot de passe : refusé, rien ne s\'affiche');
   await a.fill('#password', PW); await a.press('#password', 'Enter'); await waitOk('#lock-status');
   ok(await a.locator('#admin-area').isVisible() && await a.locator('#locked-hint').isHidden(), 'bon mot de passe (touche Entrée) : gestion déverrouillée');
-  const labels = (await a.locator('.sidebar .tab').allInnerTexts()).map(t => t.replace(/\s*\d+\s*$/, '').replace(/\s+/g, ' ').trim());
-  ok(JSON.stringify(labels) === JSON.stringify(['➕ Ajouter un élève', '👥 Liste des élèves', '➕ Ajouter un quiz', '📋 Liste des quiz', '🃏 Ajouter des flashcards', '📈 Suivi des révisions']), 'BARRE LATÉRALE, 6 onglets dans l\'ordre demandé : ' + labels.join(' | '));
-  ok((await visiblePane()) === 'pane-eleve-ajout' && (await a.locator('#tab-eleve-ajout').getAttribute('aria-selected')) === 'true', 'sans élève, on arrive sur « Ajouter un élève »');
-  // mot de passe rangé dans la barre latérale, sous les onglets
-  const yPw = (await a.locator('#password').boundingBox()).y, yLast = (await a.locator('#tab-programmes').boundingBox()).y;
-  ok(await a.locator('#lock-dock #password').count() === 1 && await a.locator('.sidebar #lockbar.docked').count() === 1 && yPw > yLast, 'MOT DE PASSE DANS LA BARRE LATÉRALE, sous l\'onglet « Suivi des révisions » (y ' + Math.round(yPw) + ' > ' + Math.round(yLast) + ')');
+  const labels = (await a.locator('.topnav .tab').allInnerTexts()).map(t => t.replace(/\s*\d+\s*$/, '').replace(/\s+/g, ' ').trim());
+  ok(JSON.stringify(labels) === JSON.stringify(['📈 Suivi', '👥 Élèves', '📚 Leçons', '🃏 Flashcards']), 'BARRE DU HAUT, 4 sections claires : ' + labels.join(' | '));
+  ok((await visiblePane()) === 'pane-programmes' && (await a.locator('#tab-programmes').getAttribute('aria-selected')) === 'true', 'on arrive sur le Suivi');
+  ok((await a.locator('#guide .guide li').count()) === 3 && (await a.locator('#guide').innerText()).includes('Pour commencer') && (await a.locator('#guide').innerText()).includes('Crée le compte de ton enfant'), 'sans élève : guide « Pour commencer » en 3 étapes');
+  const navBox = await a.locator('.topnav').boundingBox(), lockBox = await a.locator('#lock').boundingBox();
+  ok(await a.locator('.topnav #lockbar.docked').count() === 1 && Math.abs((lockBox.y + lockBox.height / 2) - (navBox.y + navBox.height / 2)) < 20, 'Actualiser et Verrouiller sont sur la même ligne que les sections');
   ok(await a.locator('body > #lockbar').count() === 0 && (await a.locator('#unlock').innerText()).includes('Actualiser') && await a.locator('#lock').isVisible(), 'la barre du haut a disparu ; boutons « ↻ Actualiser » et « 🔒 Verrouiller » dans la barre latérale');
   ok(await a.locator('#to-student').isHidden(), 'une fois connecté : le lien « Espace élève » disparaît');
   await a.click('#lock');
   ok(await a.locator('#admin-area').isHidden() && (await a.locator('#password').inputValue()) === '' && await a.locator('body > #lockbar').count() === 1 && (await a.locator('#unlock').innerText()) === 'Déverrouiller' && await a.locator('#locked-hint').isVisible(), '« Verrouiller » : gestion masquée, mot de passe effacé, barre remise en haut');
   ok(await a.locator('#to-student').isVisible(), 'après « Verrouiller » : le lien « Espace élève » revient');
   await a.fill('#password', PW); await a.click('#unlock'); await waitOk('#lock-status');
-  ok(await a.locator('#admin-area').isVisible() && await a.locator('#lock-dock #password').count() === 1, 'redéverrouillage : la barre retourne dans la barre latérale');
+  ok(await a.locator('#admin-area').isVisible() && await a.locator('#lock-dock #password').count() === 1, 'redéverrouillage : les boutons retournent dans la barre du haut');
   for (const [t, pane] of [['eleves', 'pane-eleves'], ['quiz-ajout', 'pane-quiz-ajout'], ['quiz-liste', 'pane-quiz-liste'], ['fc-ajout', 'pane-fc-ajout'], ['programmes', 'pane-programmes'], ['eleve-ajout', 'pane-eleve-ajout']]) {
     await tab(t);
-    if ((await visiblePane()) !== pane || (await a.locator('.tab[aria-selected="true"]').count()) !== 1 || (await a.locator('.tab[aria-selected="true"]').getAttribute('data-tab')) !== t) ok(false, 'onglet ' + t + ' : mauvais affichage (' + await visiblePane() + ')');
+    if ((await visiblePane()) !== pane || (await a.locator('.tab[aria-selected="true"]').count()) !== 1 || (await a.locator('.tab[aria-selected="true"]').getAttribute('data-tab')) !== (PARENT[t] || t)) ok(false, 'onglet ' + t + ' : mauvais affichage (' + await visiblePane() + ')');
   }
   ok(true, 'chaque onglet n\'affiche que sa propre page, et un seul onglet est actif à la fois');
 
@@ -107,6 +109,8 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
 
   // ---- 7. ajouter des flashcards (liste des paquets sous le formulaire) ----
   await tab('fc-ajout');
+  ok(await a.locator('#deck-form-section').isHidden() && await a.locator('#new-deck').isVisible(), 'FLASHCARDS : la liste d\'abord, le formulaire s\'ouvre avec « ➕ Créer un paquet »');
+  await a.click('#new-deck');
   await a.fill('#deck-titre', 'Mots anglais'); await a.fill('#deck-cartes', 'dog | chien\ncat | chat');
   await a.locator('#deck-pour .pour-item', { hasText: 'Léo' }).locator('input').check();
   await a.click('#save-deck'); await waitOk('#deck-status');

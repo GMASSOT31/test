@@ -33,7 +33,7 @@ const err = q => w.try('saveQuiz', PW, q).err;
   // on repart d'un site propre : on retire le quiz « Champs » créé pour le test serveur
   w.run('deleteQuiz', PW, good.id); await a.click('#unlock'); await a.waitForSelector('#lock-status.ok');
 
-  await a.click('#tab-quiz-ajout');
+  await a.click('#tab-quiz-liste'); await a.click('#tab-quiz-ajout');
   await a.fill('#titre', 'Analyse musicale'); await a.fill('#matiere', 'Musique');
   await a.fill('#lien-texte', 'Écouter les extraits'); await a.fill('#lien-url', 'https://digipad.app/p/1852174/2ea2dfaf331198');
   await a.locator('#quiz-pour .pour-item', { hasText: 'Léo' }).locator('input').check();
@@ -60,7 +60,7 @@ const err = q => w.try('saveQuiz', PW, q).err;
   ok(saved.lien && saved.lien.url === 'https://digipad.app/p/1852174/2ea2dfaf331198' && saved.lien.texte === 'Écouter les extraits', 'lien enregistré depuis le formulaire');
 
   // validations côté formulaire
-  await a.click('#tab-quiz-ajout'); await a.click('#reset-quiz'); await a.fill('#titre', 'X'); await a.fill('#lien-url', 'javascript:alert(1)'); await a.fill('.q-text', 'q'); const o = a.locator('.opt-text'); await o.nth(0).fill('a'); await o.nth(1).fill('b');
+  await a.click('#tab-quiz-liste'); await a.click('#tab-quiz-ajout'); await a.click('#reset-quiz'); await a.fill('#titre', 'X'); await a.fill('#lien-url', 'javascript:alert(1)'); await a.fill('.q-text', 'q'); const o = a.locator('.opt-text'); await o.nth(0).fill('a'); await o.nth(1).fill('b');
   await a.click('#save-quiz'); await a.waitForSelector('#quiz-status.err');
   ok((await a.locator('#quiz-status').innerText()).includes('http'), 'formulaire : adresse « javascript: » refusée : « ' + await a.locator('#quiz-status').innerText() + ' »');
   await a.click('#reset-quiz'); await a.fill('#titre', 'X'); await a.fill('.q-text', 'q'); await a.locator('.q-type').nth(0).selectOption('fields');

@@ -33,11 +33,15 @@ const DAY = 86400000;
   const sumLeo = (await card('leo').locator('.student-sum').innerText());
   ok(sumLeo.includes('2 séances cette semaine (12 min)') && sumLeo.includes('3 questions à réviser') && sumLeo.includes('dernière activité'), 'résumé de Léo : « ' + sumLeo + ' »');
   ok((await card('zoe').locator('.student-sum').innerText()).startsWith('0 séance cette semaine'), 'Zoé : aucune séance');
+  ok((await card('leo').locator('.prog-head .avancement').innerText()) === 'Avancement 15 %' && (await card('leo').locator('.av-bar').count()) === 1, 'AVANCEMENT visible sans ouvrir les détails : Léo 15 % (en cours d\'apprentissage, même sans question ancrée)');
+  ok((await card('emma').locator('.prog-head .avancement').innerText()) === 'Avancement 1 %' && (await card('zoe').locator('.avancement').count()) === 0, 'Emma (1 question découverte sur 50) : 1 % ; Zoé (aucune leçon) : pas d\'indicateur');
+  ok((await a.locator('#guide').innerText()) === '', 'des élèves sont au travail : plus de guide « Pour commencer »');
   for (const id of ['leo', 'emma', 'nina', 'zoe']) await card(id).locator('text=Détails').click();
 
   // ---- 1. une leçon : niveaux, prête pour le contrôle, à réviser, questions difficiles, historique ----
   const lz = lesson('leo', 'zootopia');
   ok((await lz.locator('.lvl-legend').innerText()).replace(/\s+/g, ' ').includes('🌱 Nouvelle 3 🌿 Découverte 1 🌳 Rappelée 2 ⭐ Ancrée 4 🏆 Maîtrisée 0'), 'niveaux de Zootopia : ' + (await lz.locator('.lvl-legend').innerText()).replace(/\s+/g, ' '));
+  ok((await lz.locator('.avancement').innerText()) === 'Avancement 57 %', 'Zootopia : avancement 57 % (4 ancrées, 2 rappelées, 1 découverte sur 10)');
   ok((await lz.locator('.lvl-bar .lvl').count()) === 4, 'barre des niveaux en couleurs (4 niveaux présents)');
   ok((await lz.locator('.pret').innerText()) === '🟡 Presque (60 %)' && (await lz.locator('.pret').getAttribute('class')).includes('mid'), 'prête pour le contrôle : « ' + await lz.locator('.pret').innerText() + ' » (au moins rappelées : 6 / 10)');
   ok((await lz.innerText()).includes('3 questions à réviser maintenant') && (await lz.innerText()).includes('Pas de contrôle prévu'), 'à réviser maintenant et contrôle');
@@ -47,7 +51,7 @@ const DAY = 86400000;
   await lz.locator('.historique summary').click();
   const hist = await lz.locator('.historique li').allInnerTexts();
   ok(hist.length === 2 && hist[0].includes('5 min · 6 / 8 réussies du premier coup') && hist[1].includes('7 min · 7 / 10'), 'historique (récent d\'abord) : ' + hist.join(' | '));
-  ok((await card('leo').locator('.prog-detail .total').innerText()).includes('4 / 40 questions ancrées (10 %) sur 2 leçons'), 'total de Léo : ' + await card('leo').locator('.prog-detail .total').innerText());
+  ok((await card('leo').locator('.prog-detail .total').innerText()).includes('Avancement 15 % sur 2 leçons · 4 / 40 questions ancrées'), 'total de Léo : ' + await card('leo').locator('.prog-detail .total').innerText());
   ok((await lesson('emma', 'musique-carnaval').innerText()).includes('Jamais commencée') && (await lesson('emma', 'musique-carnaval').locator('.pret').innerText()).includes('0 %'), 'leçon jamais commencée');
   ok((await card('zoe').innerText()).includes('Aucune leçon attribuée'), 'élève sans leçon : message');
 
@@ -90,7 +94,7 @@ const DAY = 86400000;
   ok(!Object.keys(w.props).some(k => k.startsWith('srs_emma__')) && !!w.props['srs_leo__byzance-30'], 'tout remettre à zéro pour Emma : Léo intact');
   await a.click('#reset-all'); await a.waitForSelector('#prog-status.ok');
   ok(!Object.keys(w.props).some(k => k.startsWith('srs_')), 'remise à zéro générale : plus aucune révision');
-  await a.fill('#password', 'mauvais');
+  await a.evaluate(() => { document.getElementById('password').value = 'mauvais'; });
   await lesson('leo', 'zootopia').locator('text=Remettre cette leçon à zéro').click(); await a.waitForSelector('#prog-status.err');
   ok((await a.locator('#prog-status').innerText()).includes('Mot de passe incorrect'), 'sans le bon mot de passe : refusé');
   ok(errs.length === 0, 'aucune erreur JavaScript ' + JSON.stringify(errs));
