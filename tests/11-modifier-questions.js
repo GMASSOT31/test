@@ -95,7 +95,7 @@ const orig = w.ctx.BUILTIN_QUIZZES.map(q => JSON.stringify(q)).join();
   ok((await row('musique-carnaval').locator('.badge-modifie').count()) === 1 && (await row('zootopia').locator('.badge-modifie').count()) === 0, 'pastille « ✏️ modifié » sur le bon quiz');
   // modifier Zootopia depuis l'interface (correction d'une faute)
   await openRow('zootopia'); await row('zootopia').locator('text=Modifier').click();
-  ok((await a.locator('.pane:visible').getAttribute('id')) === 'pane-quiz-ajout' && (await a.locator('#quiz-form-title').innerText()).includes('quiz intégré') && await a.locator('#builtin-note').isVisible(), '« Modifier » : formulaire ouvert, titre « ' + await a.locator('#quiz-form-title').innerText() + ' », avertissement affiché');
+  ok((await a.locator('.pane:visible').getAttribute('id')) === 'pane-quiz-ajout' && (await a.locator('#quiz-form-title').innerText()).includes('leçon fournie') && await a.locator('#builtin-note').isVisible(), '« Modifier » : formulaire ouvert, titre « ' + await a.locator('#quiz-form-title').innerText() + ' », avertissement affiché');
   ok((await a.locator('#questions .question').count()) === 10 && (await a.locator('#quiz-pour input:checked').evaluateAll(l => l.map(i => i.value))).join() === 'leo', '10 questions chargées, destinataire actuel coché (Léo seul)');
   ok((await a.locator('#q-count').innerText()) === '10 questions', 'compteur : « ' + await a.locator('#q-count').innerText() + ' »');
   await a.fill('#q-search', 'désert'); 

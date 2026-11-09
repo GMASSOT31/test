@@ -120,6 +120,7 @@ const sum = w.run('setLessonPlanAdmin', PW, 'leo', 'zootopia', iso(t + DAY));
 ok(sum.exam === iso(t + DAY) && sum.plan.length >= 2 && srs().exam === iso(t + DAY), 'le parent fixe la date du contrôle : plan recalculé, vu par l\'élève');
 w.run('setLessonModeAdmin', PW, 'leo', 'zootopia', 'archive'); ok(srs().mode === 'archive', 'le parent peut archiver');
 const adm = w.run('adminData', PW).progress.leo.find(x => x.id === 'zootopia');
+ok(typeof adm.avancement === 'number' && adm.avancement === Math.round((adm.niveaux[1] + 2 * adm.niveaux[2] + 3 * (adm.niveaux[3] + adm.niveaux[4])) / 30 * 100), 'avancement de l\'apprentissage : ' + adm.avancement + ' %');
 ok(Array.isArray(adm.niveaux) && adm.niveaux.reduce((a, b) => a + b, 0) === 10 && typeof adm.pret === 'number' && adm.seances.length === 2 && adm.nbSeances === 2, 'résumé parent : niveaux, prêt, historique');
 ok(adm.difficiles.length >= 1 && adm.difficiles[0].question && adm.difficiles[0].erreurs >= 1, 'questions difficiles (avec leur énoncé)');
 ok(!JSON.stringify(w.run('adminData', PW)).includes('1234'), 'aucun PIN dans les données du parent');
