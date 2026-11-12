@@ -2129,5 +2129,629 @@ var BUILTIN_QUIZZES = [
         "correct": 0
       }
     ]
+  },
+  {
+    "id": "pc5-melanges",
+    "emoji": "🧪",
+    "matiere": "Physique-chimie",
+    "titre": "Physique-chimie 5ᵉ (1/4) : corps purs, mélanges, dissolution",
+    "description": "Vocabulaire : corps pur, mélanges homogène et hétérogène, solvant, soluté, solution, saturation, gaz dissous, CO₂ et modélisation.",
+    "questions": [
+      {
+        "question": "Qu'est-ce qu'un corps pur ?",
+        "options": [
+          "Une substance constituée d'une seule sorte de constituants (une seule espèce chimique)",
+          "Une substance très propre, sans aucune saleté",
+          "Un mélange dans lequel on ne distingue pas les constituants"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quelle est la différence entre un mélange homogène et un mélange hétérogène ?",
+        "options": [
+          "Homogène : on ne distingue pas les constituants à l'œil nu ; hétérogène : on en distingue au moins deux",
+          "Homogène : il contient de l'eau ; hétérogène : il n'en contient pas",
+          "Homogène : un seul constituant ; hétérogène : plusieurs constituants"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "L'eau minérale (sans bulles) est-elle un corps pur ou un mélange ?",
+        "options": [
+          "Un mélange (homogène) : de l'eau et plusieurs sels minéraux dissous",
+          "Un corps pur : c'est simplement de l'eau",
+          "Un mélange hétérogène : on voit les sels minéraux"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "L'eau boueuse est-elle un mélange homogène ou hétérogène ?",
+        "options": [
+          "Hétérogène : on voit à l'œil nu les particules de terre en suspension",
+          "Homogène : la terre est dissoute dans l'eau",
+          "Ce n'est pas un mélange, c'est un corps pur"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Dans de l'eau sucrée, quel est le nom donné à l'eau ?",
+        "reponses": [
+          "le solvant",
+          "solvant"
+        ],
+        "explication": "L'eau est le solvant : le liquide qui dissout."
+      },
+      {
+        "question": "Dans cette même eau sucrée, quel est le nom donné au sucre ?",
+        "reponses": [
+          "le soluté",
+          "soluté"
+        ],
+        "explication": "Le sucre est le soluté : le corps qui est dissous."
+      },
+      {
+        "question": "Comment appelle-t-on le mélange obtenu lorsque le sucre est totalement dissous dans l'eau ?",
+        "reponses": [
+          "une solution",
+          "solution",
+          "une solution aqueuse",
+          "solution aqueuse"
+        ],
+        "explication": "C'est une solution (ici, une solution aqueuse)."
+      },
+      {
+        "question": "Que signifie le mot « insoluble » ? Quel exemple convient avec l'eau ?",
+        "options": [
+          "Qui ne peut pas se dissoudre dans un solvant donné : le sable ou l'huile dans l'eau",
+          "Qui se dissout très vite : le sucre dans l'eau",
+          "Qui se dissout seulement à chaud : le sel dans l'eau"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "À quel moment dit-on qu'une solution est « saturée » ?",
+        "options": [
+          "Quand le solvant ne peut plus dissoudre davantage de soluté (l'excès reste au fond)",
+          "Quand tout le soluté est dissous",
+          "Quand la solution devient trouble après agitation"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Les gaz peuvent-ils se dissoudre dans l'eau ?",
+        "options": [
+          "Oui",
+          "Non"
+        ],
+        "correct": 0,
+        "explication": "Oui, les gaz sont solubles dans l'eau (exemple : le CO₂ des boissons gazeuses)."
+      },
+      {
+        "question": "Quel est le nom du gaz dissous présent dans toutes les boissons gazeuses ?",
+        "reponses": [
+          "le dioxyde de carbone",
+          "dioxyde de carbone",
+          "du dioxyde de carbone",
+          "CO2",
+          "CO₂",
+          "gaz carbonique"
+        ],
+        "explication": "C'est le dioxyde de carbone (CO₂)."
+      },
+      {
+        "question": "Quelle est la conséquence de la présence de dioxyde de carbone (CO₂) dans l'atmosphère sur le climat ?",
+        "options": [
+          "C'est un gaz à effet de serre : il retient la chaleur et contribue au réchauffement climatique",
+          "Il refroidit la planète en bloquant les rayons du Soleil",
+          "Il n'a aucun effet sur le climat"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quel rôle jouent les océans vis-à-vis du CO₂ atmosphérique ?",
+        "options": [
+          "Ils absorbent (dissolvent) une partie du CO₂ de l'atmosphère, ce qui limite le réchauffement",
+          "Ils produisent tout le CO₂ de l'atmosphère",
+          "Ils n'échangent aucun gaz avec l'atmosphère"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "On représente les molécules par des symboles (ronds, triangles…). À quoi reconnaît-on le schéma d'un corps pur ?",
+        "options": [
+          "Tous les symboles dessinés dans le récipient sont identiques",
+          "Les symboles sont rangés en lignes bien droites",
+          "Il y a autant de ronds que de triangles"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Comment reconnaît-on le schéma d'un mélange homogène par rapport à celui d'un mélange hétérogène ?",
+        "options": [
+          "Homogène : symboles différents bien mélangés partout ; hétérogène : symboles regroupés par zones distinctes",
+          "Homogène : un seul type de symbole ; hétérogène : deux types de symboles",
+          "Homogène : symboles tous au fond ; hétérogène : symboles tous en surface"
+        ],
+        "correct": 0,
+        "explication": "Exemple de mélange hétérogène : tous les triangles en bas et tous les ronds au-dessus."
+      }
+    ]
+  },
+  {
+    "id": "pc5-conversions",
+    "emoji": "📏",
+    "matiere": "Physique-chimie",
+    "titre": "Physique-chimie 5ᵉ (2/4) : conversions, verrerie, proportionnalité",
+    "description": "Verrerie, incertitude de mesure, équivalences de volumes, conversions de masses et de volumes, proportionnalité.",
+    "questions": [
+      {
+        "question": "Quel instrument de verrerie utilise-t-on pour mesurer précisément un volume de liquide ?",
+        "options": [
+          "L'éprouvette graduée",
+          "Le bécher",
+          "L'erlenmeyer"
+        ],
+        "correct": 0,
+        "explication": "On peut aussi utiliser une fiole jaugée ou une pipette jaugée."
+      },
+      {
+        "question": "Quels récipients servent à contenir ou mélanger des liquides, mais pas à faire des mesures précises ?",
+        "options": [
+          "Le bécher et l'erlenmeyer (ou le tube à essais)",
+          "L'éprouvette graduée et la pipette jaugée",
+          "La fiole jaugée et l'éprouvette graduée"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Pourquoi toute mesure en physique-chimie s'accompagne-t-elle d'une « marge d'erreur » (incertitude) ?",
+        "options": [
+          "Les instruments ont une précision limitée et l'œil peut faire une petite erreur de lecture",
+          "Parce que les élèves font toujours des erreurs de calcul",
+          "Parce que les liquides changent de volume quand on les regarde"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Combien de litres (L) y a-t-il dans 1 m³ ?",
+        "reponses": [
+          "1000",
+          "1000 L",
+          "1000 litres"
+        ],
+        "explication": "1 m³ = 1 000 L."
+      },
+      {
+        "question": "À quel volume en litres (L) correspond 1 dm³ ?",
+        "reponses": [
+          "1",
+          "1 L",
+          "1 litre"
+        ],
+        "explication": "1 dm³ = 1 L."
+      },
+      {
+        "question": "À quel volume en millilitres (mL) correspond 1 cm³ ?",
+        "reponses": [
+          "1",
+          "1 mL",
+          "1 millilitre"
+        ],
+        "explication": "1 cm³ = 1 mL."
+      },
+      {
+        "question": "Convertis 250 g en kilogrammes (kg).",
+        "reponses": [
+          "0,25",
+          "0,25 kg"
+        ],
+        "explication": "250 g = 0,25 kg."
+      },
+      {
+        "question": "Convertis 0,045 kg en grammes (g).",
+        "reponses": [
+          "45",
+          "45 g"
+        ],
+        "explication": "0,045 kg = 45 g."
+      },
+      {
+        "question": "Convertis 1,5 L en millilitres (mL).",
+        "reponses": [
+          "1500",
+          "1500 mL"
+        ],
+        "explication": "1,5 L = 1 500 mL."
+      },
+      {
+        "question": "Convertis 350 mL en litres (L).",
+        "reponses": [
+          "0,35",
+          "0,35 L"
+        ],
+        "explication": "350 mL = 0,35 L."
+      },
+      {
+        "question": "Convertis 2,5 m³ en litres (L).",
+        "reponses": [
+          "2500",
+          "2500 L"
+        ],
+        "explication": "2,5 m³ = 2 500 L."
+      },
+      {
+        "question": "Convertis 400 L en mètres cubes (m³).",
+        "reponses": [
+          "0,4",
+          "0,4 m³",
+          "0,4 m3"
+        ],
+        "explication": "400 L = 0,4 m³."
+      },
+      {
+        "question": "Un paquet de 4 stylos coûte 6 €. Quel est le coefficient de proportionnalité pour passer du nombre de stylos au prix ?",
+        "reponses": [
+          "1,5",
+          "1,50"
+        ],
+        "explication": "6 ÷ 4 = 1,5 : le coefficient est 1,5 (un stylo coûte 1,50 €)."
+      },
+      {
+        "question": "La masse d'un liquide est proportionnelle à son volume : 2 L pèsent 1,6 kg. Combien pèsent 5 L de ce liquide ?",
+        "reponses": [
+          "4",
+          "4 kg"
+        ],
+        "explication": "Pour 1 L : 1,6 ÷ 2 = 0,8 kg. Pour 5 L : 5 × 0,8 = 4 kg."
+      },
+      {
+        "question": "10 g de sel se dissolvent dans 50 mL d'eau, et 25 g dans 125 mL. Est-ce une situation de proportionnalité ?",
+        "options": [
+          "Oui : 10 ÷ 50 = 0,2 et 25 ÷ 125 = 0,2, les quotients sont égaux",
+          "Non : 25 n'est pas le double de 10",
+          "Non : 10 ÷ 50 = 5 et 25 ÷ 125 = 4"
+        ],
+        "correct": 0
+      }
+    ]
+  },
+  {
+    "id": "pc5-solubilite",
+    "emoji": "🧂",
+    "matiere": "Physique-chimie",
+    "titre": "Physique-chimie 5ᵉ (3/4) : la solubilité et les calculs",
+    "description": "Définition et unité de la solubilité, calculs s = m ÷ V, saturation, influence de la température, conservation de la masse.",
+    "questions": [
+      {
+        "question": "Quelle est la définition de la « solubilité » d'un soluté dans un solvant ?",
+        "options": [
+          "La masse maximale de soluté que l'on peut dissoudre dans 1 L de solvant, à une température donnée",
+          "La masse de solvant nécessaire pour dissoudre 1 g de soluté",
+          "Le volume de la solution obtenue après la dissolution"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quelle est l'unité usuelle de la solubilité au collège ?",
+        "reponses": [
+          "g/L",
+          "gramme par litre",
+          "grammes par litre"
+        ],
+        "explication": "Le gramme par litre (g/L)."
+      },
+      {
+        "question": "Quelle formule donne la solubilité s à partir de la masse maximale dissoute m et du volume de solvant V ?",
+        "options": [
+          "s = m ÷ V (m en grammes, V en litres)",
+          "s = m × V",
+          "s = V ÷ m"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "On peut dissoudre au maximum 72 g de sel dans 0,2 L d'eau. Quelle est la solubilité du sel dans l'eau (en g/L) ?",
+        "reponses": [
+          "360",
+          "360 g/L"
+        ],
+        "explication": "s = 72 ÷ 0,2 = 360 g/L."
+      },
+      {
+        "question": "On dissout au maximum 100 g de sucre dans 50 mL d'eau. Calcule la solubilité du sucre en g/L.",
+        "reponses": [
+          "2000",
+          "2000 g/L"
+        ],
+        "explication": "50 mL = 0,05 L, donc s = 100 ÷ 0,05 = 2 000 g/L."
+      },
+      {
+        "question": "La saturation est atteinte avec 64 g de sulfate de cuivre dans 200 mL d'eau. Calcule sa solubilité en g/L.",
+        "reponses": [
+          "320",
+          "320 g/L"
+        ],
+        "explication": "200 mL = 0,2 L, donc s = 64 ÷ 0,2 = 320 g/L."
+      },
+      {
+        "question": "La solubilité du sel à 20 °C est de 360 g/L. Peut-on dissoudre totalement 400 g de sel dans 1 L d'eau ?",
+        "options": [
+          "Non : 400 g dépasse les 360 g possibles, il restera 40 g au fond",
+          "Oui : il suffit de bien mélanger",
+          "Oui : 400 g est inférieur à 1 000 g"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Solubilité du sel : 360 g/L. Quelle masse maximale de sel peut-on dissoudre dans 0,5 L d'eau (en g) ?",
+        "reponses": [
+          "180",
+          "180 g"
+        ],
+        "explication": "m = s × V = 360 × 0,5 = 180 g."
+      },
+      {
+        "question": "Solubilité du sel : 360 g/L. On verse 80 g de sel dans 250 mL d'eau. La solution est-elle saturée ?",
+        "options": [
+          "Non : dans 0,25 L on peut dissoudre jusqu'à 90 g, et 80 < 90",
+          "Oui : 80 g, c'est trop pour 250 mL d'eau",
+          "Oui : une solution salée est toujours saturée"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "On verse 100 g de sel dans 250 mL d'eau (solubilité : 360 g/L). Quelle masse se dissout, et quelle masse reste au fond ?",
+        "champs": [
+          {
+            "label": "Masse dissoute (g)",
+            "reponses": [
+              "90",
+              "90 g"
+            ]
+          },
+          {
+            "label": "Masse restée au fond (g)",
+            "reponses": [
+              "10",
+              "10 g"
+            ]
+          }
+        ],
+        "explication": "Dans 0,25 L on peut dissoudre au maximum 360 × 0,25 = 90 g : 90 g se dissolvent et 100 − 90 = 10 g restent au fond."
+      },
+      {
+        "question": "À 20 °C, la solubilité du sucre est de 2 000 g/L et celle du sel de 360 g/L. Quel soluté est le plus soluble dans l'eau ?",
+        "reponses": [
+          "le sucre",
+          "sucre"
+        ],
+        "explication": "Le sucre : on peut en dissoudre une masse bien plus grande dans 1 L d'eau (2 000 g contre 360 g)."
+      },
+      {
+        "question": "En général, comment évolue la solubilité d'un solide dans l'eau quand la température de l'eau augmente ?",
+        "options": [
+          "Elle augmente",
+          "Elle diminue",
+          "Elle reste la même"
+        ],
+        "correct": 0,
+        "explication": "On dissout plus facilement le sucre dans du thé chaud que dans de l'eau froide."
+      },
+      {
+        "question": "Comment évolue la solubilité d'un gaz (comme le CO₂) dans l'eau quand la température augmente ?",
+        "options": [
+          "Elle diminue",
+          "Elle augmente",
+          "Elle reste la même"
+        ],
+        "correct": 0,
+        "explication": "Une boisson gazeuse chaude perd ses bulles plus vite."
+      },
+      {
+        "question": "On dissout 15 g de sucre dans 100 g d'eau. Quelle est la masse totale de la solution (en g) ?",
+        "reponses": [
+          "115",
+          "115 g"
+        ],
+        "explication": "La masse se conserve lors d'une dissolution : 100 + 15 = 115 g."
+      },
+      {
+        "question": "1 L d'eau a une masse de 1 000 g. On y dissout 50 g de sel. Quelle est la masse de la solution obtenue (en g) ?",
+        "reponses": [
+          "1050",
+          "1050 g"
+        ],
+        "explication": "La masse se conserve : 1 000 + 50 = 1 050 g."
+      }
+    ]
+  },
+  {
+    "id": "pc5-graphiques",
+    "emoji": "📈",
+    "matiere": "Physique-chimie",
+    "titre": "Physique-chimie 5ᵉ (4/4) : graphiques et analyse de données",
+    "description": "Méthode du graphique (axes, titre, points, tracé, échelle), description d'une évolution, lecture d'un tableau, modélisation.",
+    "questions": [
+      {
+        "question": "Que doit-on obligatoirement dessiner à l'extrémité de chacun des deux axes d'un graphique ?",
+        "options": [
+          "Une flèche",
+          "Un point",
+          "Une croix"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Quelles sont les deux informations à écrire au bout de chaque axe ?",
+        "champs": [
+          {
+            "label": "Information",
+            "reponses": [
+              "la grandeur",
+              "grandeur",
+              "le nom de la grandeur",
+              "la grandeur mesurée",
+              "grandeur mesurée"
+            ]
+          },
+          {
+            "label": "Information",
+            "reponses": [
+              "l'unité",
+              "unité",
+              "son unité",
+              "l'unité entre parenthèses",
+              "unite"
+            ]
+          }
+        ],
+        "libre": true,
+        "explication": "La grandeur mesurée et son unité (entre parenthèses)."
+      },
+      {
+        "question": "On demande « l'évolution de la solubilité en fonction de la température ». Quelle grandeur place-t-on sur l'axe vertical (ordonnées) ?",
+        "reponses": [
+          "la solubilité",
+          "solubilité"
+        ],
+        "explication": "La grandeur citée en premier (« évolution de … ») va toujours sur l'axe vertical."
+      },
+      {
+        "question": "Sur quel axe place-t-on alors la température ?",
+        "options": [
+          "Sur l'axe horizontal (abscisses)",
+          "Sur l'axe vertical (ordonnées)",
+          "Sur les deux axes"
+        ],
+        "correct": 0,
+        "explication": "La grandeur qui suit « en fonction de … » va sur l'axe horizontal."
+      },
+      {
+        "question": "Quelle est la formulation attendue pour le titre d'un graphique ?",
+        "options": [
+          "« Graphique représentant l'évolution de [grandeur verticale] en fonction de [grandeur horizontale] »",
+          "« Graphique de [grandeur horizontale] et de [grandeur verticale] »",
+          "« Tableau des mesures »"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Sous quelle forme place-t-on les points sur le papier millimétré ?",
+        "options": [
+          "De petites croix droites « + »",
+          "De gros points ronds",
+          "Des croix penchées « x »"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Comment relie-t-on les points entre eux, et pourquoi pas à la règle ?",
+        "options": [
+          "À main levée, en une courbe lisse : les phénomènes physiques évoluent de façon continue",
+          "À la règle, segment par segment : c'est plus précis",
+          "On ne les relie jamais"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "L'axe horizontal mesure 10 cm et la température va de 0 °C à 100 °C. Quelle échelle simple choisir ? 1 cm représente … °C",
+        "reponses": [
+          "10",
+          "10 °C",
+          "1 cm pour 10 °C",
+          "1 cm représente 10 °C"
+        ],
+        "explication": "1 cm représente 10 °C."
+      },
+      {
+        "question": "Quels sont les trois mots-clés possibles pour décrire l'évolution d'une grandeur ?",
+        "champs": [
+          {
+            "label": "Mot-clé",
+            "reponses": [
+              "augmente",
+              "elle augmente",
+              "augmenter"
+            ]
+          },
+          {
+            "label": "Mot-clé",
+            "reponses": [
+              "diminue",
+              "elle diminue",
+              "diminuer"
+            ]
+          },
+          {
+            "label": "Mot-clé",
+            "reponses": [
+              "reste constante",
+              "constante",
+              "reste constant",
+              "stagne",
+              "ne varie pas"
+            ]
+          }
+        ],
+        "libre": true,
+        "explication": "La grandeur augmente, diminue, ou reste constante (stagne)."
+      },
+      {
+        "question": "Solubilité d'un gaz : 2,3 g/L à 10 °C ; 1,7 g/L à 20 °C ; 1,3 g/L à 30 °C. Quelle phrase répond à « Comment varie la solubilité de ce gaz en fonction de la température ? »",
+        "options": [
+          "Lorsque la température augmente (de 10 °C à 30 °C), la solubilité de ce gaz diminue (de 2,3 g/L à 1,3 g/L).",
+          "Lorsque la température augmente, la solubilité de ce gaz augmente.",
+          "La solubilité de ce gaz vaut 1,7 g/L."
+        ],
+        "correct": 0,
+        "explication": "Il est toujours apprécié de citer les valeurs extrêmes du tableau."
+      },
+      {
+        "question": "D'après ce tableau (2,3 g/L à 10 °C ; 1,7 g/L à 20 °C ; 1,3 g/L à 30 °C), quelle est la solubilité du gaz à 20 °C ? N'oublie pas l'unité.",
+        "reponses": [
+          "1,7 g/L",
+          "1,7 gramme par litre",
+          "1,7 grammes par litre"
+        ],
+        "explication": "1,7 g/L (une valeur sans unité est incomplète)."
+      },
+      {
+        "question": "D'après ce même tableau, à quelle température la solubilité est-elle égale à 1,3 g/L ?",
+        "reponses": [
+          "30 °C",
+          "30°C",
+          "30 degrés",
+          "30"
+        ],
+        "explication": "À 30 °C."
+      },
+      {
+        "question": "Sur un graphique, la courbe est un trait parfaitement horizontal. Comment décrit-on l'évolution de la grandeur ?",
+        "options": [
+          "« La grandeur reste constante (elle ne varie pas) lorsque [grandeur horizontale] augmente. »",
+          "« La grandeur augmente régulièrement. »",
+          "« La grandeur diminue jusqu'à zéro. »"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Tu dessines un bécher d'eau (ronds bleus) où l'on a dissous du dioxyde de carbone (triangles rouges). Comment places-tu les symboles ?",
+        "options": [
+          "Ronds bleus et triangles rouges répartis uniformément dans tout le liquide (mélange homogène)",
+          "Tous les triangles rouges en haut, au-dessus de l'eau",
+          "Tous les triangles rouges au fond du bécher"
+        ],
+        "correct": 0
+      },
+      {
+        "question": "Tu ajoutes trop de sel (carrés verts) : la solution est saturée. Où dessines-tu les carrés verts ?",
+        "options": [
+          "Une partie mélangée uniformément au liquide (sel dissous), le surplus entassé au fond (dépôt non dissous)",
+          "Tous les carrés au fond du bécher",
+          "Tous les carrés répartis dans le liquide, aucun au fond"
+        ],
+        "correct": 0
+      }
+    ]
   }
 ];

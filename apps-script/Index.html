@@ -661,6 +661,7 @@
         function norm(text) {
             return String(text).toLowerCase()
                 .normalize("NFD").replace(/[̀-ͯ]/g, "")
+                .replace(/(\d)[.,](\d)/g, "$1¤$2")   // virgule ou point décimal : 0,25 = 0.25 (mais ≠ 25)
                 .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
                 .trim()
                 .replace(/\s{2,}/g, " ");
@@ -1171,6 +1172,7 @@
         // QCM plus difficile pour le rappel : les choix d'origine + d'autres bonnes réponses de la leçon (4 à 5 choix)
         function harderOptions(quiz, q) {
             const base = q.options.map((text, i) => ({ text, ok: i === q.correct }));
+            if (base.length <= 2) return shuffle(base);   // Vrai / Faux, Oui / Non : on n'ajoute rien
             const extra = quiz.questions.filter(x => x !== q && Array.isArray(x.options)).map(x => x.options[x.correct])
                 .filter(a => !base.some(b => sameAnswer(b.text, a)));
             const want = Math.max(0, Math.min(5, Math.max(4, base.length)) - base.length);
