@@ -30,7 +30,10 @@ function doGet(e) {
 //   srs_<idÉlève>__<idQuiz>  la révision espacée d'un élève sur une leçon : niveau et échéance de chaque question,
 //                            date du contrôle, plan de séances, historique (voir « Révision espacée »)
 //   schema_version  '3' une fois les anciennes données (prog_, done_, parcours_) effacées
-// Le mot de passe administrateur est la propriété ADMIN_PASSWORD.
+//   parent_<id>   un compte parent invité = une famille (pseudo, nom de famille, mot de passe haché)
+// Les élèves, quiz et paquets d'une famille invitée portent le champ fam (= id du parent) ; sans fam : famille de
+// l'administrateur principal. Administrateur principal : ADMIN_PSEUDO + ADMIN_PASSWORD (ou ADMIN_PASS_HASH une fois le
+// mot de passe changé depuis l'appli). INVITE_CODE : code d'invitation pour créer une famille (absent = inscriptions fermées).
 //
 // Séparation des élèves : le serveur ne renvoie à un élève que les quiz et paquets qui lui sont destinés
 // (champ « pour »). Un quiz ou un paquet sans destinataire reste caché.
@@ -46,7 +49,18 @@ var PARCOURS_PREFIX = 'parcours_';
 var MAX_QUESTIONS = 50;
 var MAX_CARDS = 150;
 var MAX_FIELDS = 12;       // champs maximum dans une question à plusieurs champs
-var MAX_STUDENTS = 40;
+var MAX_STUDENTS = 40;          // élèves de la famille de l'administrateur principal
+var MAX_FAMILY_STUDENTS = 12;   // élèves d'une famille invitée
+var MAX_ALL_STUDENTS = 150;     // toutes familles confondues
+var PARENT_PREFIX = 'parent_';
+var INVITE_KEY = 'INVITE_CODE';
+var OWNER_HASH_KEY = 'ADMIN_PASS_HASH';
+var MAX_FAMILIES = 15;
+var MAX_ADMIN_FAILS = 8;        // erreurs de connexion parent avant blocage temporaire (par pseudo)
+var MAX_INVITE_FAILS = 20;      // mauvais codes d'invitation avant blocage temporaire
+var MIN_PASSWORD = 8;
+var STORAGE_MAX = 500000;       // les propriétés du script sont limitées à environ 500 Ko
+var STORAGE_SIGNUP_LIMIT = 0.85; // au-delà, plus de nouvelle famille
 var MAX_VALUE_BYTES = 8500; // une propriété est limitée à 9 Ko : au-delà, on découpe
 var CHUNK_CHARS = 3000;     // taille d'un morceau (3 octets au pire par caractère, donc < 9 Ko)
 var MAX_ITEM_CHARS = 250000; // plafond de sécurité pour un quiz ou un paquet
@@ -290,15 +304,20 @@ function applyMode_(r, mode, now) {
   }
 }
 
-// ---------------- Côté administrateur (mot de passe requis pour tout) ----------------
+// ---------------- Côté administrateur (identifiants requis pour tout) ----------------
+// Chaque parent ne voit et ne modifie que SA famille : ses élèves (champ fam), ses leçons et paquets créés (champ fam),
+// et l'accès de ses élèves aux leçons fournies. L'administrateur principal (ADMIN_PSEUDO) a la famille '' (données
+// sans champ fam) ; lui seul modifie les leçons fournies, gère le code d'invitation et voit l'onglet Parents.
 
-function adminData(password) {
-  checkAdmin_(password);
+function adminData(cred) {
+  var me = checkAdmin_(cred);
   migrateV3_();
-  var props = PropertiesService.getScriptProperties().getProperties();
+  var store = PropertiesService.getScriptProperties();
+  var props = store.getProperties();
   var assigned = builtinAssign_();
-  var students = students_();
-  var customQuizzes = list_(QUIZ_PREFIX).map(withQids_);
+  var students = familyStudents_(me);
+  var ids = students.map(function (s) { return s.id; });
+  var customQuizzes = list_(QUIZ_PREFIX).filter(ownedBy_(me)).map(withQids_);
   var builtins = builtins_();
   var modifies = {};
   list_(OVERRIDE_PREFIX).forEach(function (o) { modifies[o.id] = true; });
@@ -309,22 +328,35 @@ function adminData(password) {
       .filter(function (q) { return quizFor_(q, st.id, assigned); })
       .map(function (q) { return lessonSummary_(q, readSrs_(props[srsKey_(st.id, q.id)])); });
   });
-  return {
+  var res = {
+    moi: { pseudo: me.pseudo, owner: me.owner, famille: me.famille || '' },
     students: students.map(publicStudent_),
     quizzes: customQuizzes,
-    decks: list_(DECK_PREFIX),
+    decks: list_(DECK_PREFIX).filter(ownedBy_(me)),
     builtins: builtins.map(function (q) {
-      return { id: q.id, titre: q.titre, emoji: q.emoji, matiere: q.matiere, questions: q.questions.length, pour: assigned[q.id] || [], modifie: !!modifies[q.id] };
+      return { id: q.id, titre: q.titre, emoji: q.emoji, matiere: q.matiere, questions: q.questions.length, pour: onlyIds_(assigned[q.id], ids), modifie: me.owner && !!modifies[q.id] };
     }),
     progress: progress,
     now: Date.now()
   };
+  if (me.owner) {
+    var all = students_();
+    res.parents = parents_().map(function (p) {
+      return { id: p.id, pseudo: p.pseudo, famille: p.famille, ajoute: p.ajoute, vu: p.vu || 0,
+        enfants: all.filter(function (s) { return s.fam === p.id; }).length };
+    });
+    res.invitation = store.getProperty(INVITE_KEY) || '';
+    res.stockage = { octets: storageBytes_(props), max: STORAGE_MAX };
+  } else {
+    touchParent_(store, me.fam);
+  }
+  return res;
 }
 
 // Création (sans id) ou modification (avec id) d'un compte. Le PIN est enregistré haché : on ne peut plus le relire.
 // En modification, un PIN vide conserve l'ancien.
-function saveStudent(password, student) {
-  checkAdmin_(password);
+function saveStudent(cred, student) {
+  var me = checkAdmin_(cred);
   if (!student || typeof student !== 'object') throw new Error('Compte invalide.');
   var classe = str_(student.classe, 30);
   var pseudo = str_(student.pseudo, 30);
@@ -337,19 +369,26 @@ function saveStudent(password, student) {
   try {
     var store = PropertiesService.getScriptProperties();
     var all = students_();
+    var family = all.filter(function (s) { return (s.fam || '') === me.fam; });
     var existing = null;
     if (student.id && /^[a-z0-9-]{1,60}$/.test(student.id)) {
-      existing = all.filter(function (s) { return s.id === student.id; })[0] || null;
+      existing = family.filter(function (s) { return s.id === student.id; })[0] || null;
+      if (!existing && all.some(function (s) { return s.id === student.id; })) throw new Error('Élève inconnu.');
     }
     if (!existing && !pin) throw new Error('Le PIN est obligatoire pour un nouvel élève.');
     if (pin && !/^\d{4,8}$/.test(pin)) throw new Error('Le PIN doit comporter de 4 à 8 chiffres.');
-    if (!existing && all.length >= MAX_STUDENTS) throw new Error('Maximum ' + MAX_STUDENTS + ' élèves.');
-    var duplicate = all.some(function (s) {
+    var max = me.owner ? MAX_STUDENTS : MAX_FAMILY_STUDENTS;
+    if (!existing && family.length >= max) throw new Error('Maximum ' + max + ' élèves.');
+    if (!existing && all.length >= MAX_ALL_STUDENTS) throw new Error("Le nombre maximum d'élèves est atteint : contacte l'administrateur.");
+    var same = all.filter(function (s) {
       return (!existing || s.id !== existing.id) && norm_(s.classe) === norm_(classe) && norm_(s.pseudo) === norm_(pseudo);
-    });
-    if (duplicate) throw new Error('Cet élève existe déjà dans cette classe (même pseudo).');
+    })[0];
+    if (same && (same.fam || '') === me.fam) throw new Error('Cet élève existe déjà dans cette classe (même pseudo).');
+    // la connexion élève se fait par classe + pseudo : ce couple doit rester unique entre toutes les familles
+    if (same) throw new Error('Un autre élève utilise déjà ce pseudo dans cette classe : choisis un autre pseudo (ex. « ' + pseudo + ' ' + pseudo.charAt(0).toUpperCase() + '. ») ou une autre classe.');
 
     var rec = existing || { id: uniqueStudentId_(pseudo, all), ajoute: Date.now() };
+    if (!existing && me.fam) rec.fam = me.fam;
     rec.classe = classe;
     rec.pseudo = pseudo;
     if (pin) {
@@ -363,73 +402,73 @@ function saveStudent(password, student) {
   }
 }
 
-// Supprime l'élève, sa remise à zéro, et le retire de tout ce qui lui était destiné.
-function deleteStudent(password, id) {
-  checkAdmin_(password);
+// Supprime l'élève, sa progression, et le retire de tout ce qui lui était destiné.
+function deleteStudent(cred, id) {
+  var me = checkAdmin_(cred);
   if (!/^[a-z0-9-]{1,60}$/.test(String(id))) throw new Error('Identifiant invalide.');
-  var store = PropertiesService.getScriptProperties();
-  store.deleteProperty(STUDENT_PREFIX + id);
-  deleteProgress_(id, 'all');
-  var assigned = builtinAssign_();
-  Object.keys(assigned).forEach(function (k) { assigned[k] = assigned[k].filter(function (x) { return x !== id; }); });
-  store.setProperty(BUILTIN_ASSIGN_KEY, JSON.stringify(assigned));
-  [QUIZ_PREFIX, DECK_PREFIX].forEach(function (prefix) {
-    list_(prefix).forEach(function (item) {
-      if ((item.pour || []).indexOf(id) >= 0) {
-        item.pour = item.pour.filter(function (x) { return x !== id; });
-        putItem_(store, prefix, item.id, item);
-      }
-    });
-  });
+  if (!familyStudents_(me).some(function (s) { return s.id === id; })) throw new Error('Élève inconnu.');
+  deleteStudentCore_(id);
   return true;
 }
 
-function saveQuiz(password, quiz) {
-  checkAdmin_(password);
-  return save_(QUIZ_PREFIX, validateQuiz_(quiz), quiz.id);
+function saveQuiz(cred, quiz) {
+  var me = checkAdmin_(cred);
+  return save_(QUIZ_PREFIX, validateQuiz_(quiz, familyIds_(me)), quiz.id, me.fam);
 }
 
-function saveDeck(password, deck) {
-  checkAdmin_(password);
-  return save_(DECK_PREFIX, validateDeck_(deck), deck.id);
+function saveDeck(cred, deck) {
+  var me = checkAdmin_(cred);
+  return save_(DECK_PREFIX, validateDeck_(deck, familyIds_(me)), deck.id, me.fam);
 }
 
-function deleteQuiz(password, id) {
-  checkAdmin_(password);
+function deleteQuiz(cred, id) {
+  var me = checkAdmin_(cred);
+  // seulement une leçon créée de la famille : jamais la progression d'une leçon fournie ou d'une autre famille
+  if (!checkOwned_(QUIZ_PREFIX, id, me)) return true;
   remove_(QUIZ_PREFIX, id);
   deleteProgress_('all', id);
   return true;
 }
 
-function deleteDeck(password, id) {
-  checkAdmin_(password);
+function deleteDeck(cred, id) {
+  var me = checkAdmin_(cred);
+  checkOwned_(DECK_PREFIX, id, me);
   return remove_(DECK_PREFIX, id);
 }
 
-// À qui est donné un quiz intégré
-function setBuiltinAssign(password, quizId, pour) {
-  checkAdmin_(password);
+// À qui est donné un quiz intégré (parmi les élèves de la famille ; les autres familles ne sont pas touchées)
+function setBuiltinAssign(cred, quizId, pour) {
+  var me = checkAdmin_(cred);
   if (!isBuiltin_(quizId)) throw new Error('Quiz intégré inconnu.');
-  var assigned = builtinAssign_();
-  assigned[quizId] = cleanPour_(pour);
-  PropertiesService.getScriptProperties().setProperty(BUILTIN_ASSIGN_KEY, JSON.stringify(assigned));
-  return { pour: assigned[quizId] };
+  var ids = familyIds_(me);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var assigned = builtinAssign_();
+    assigned[quizId] = mergePour_(assigned[quizId], ids, cleanPour_(pour, ids));
+    PropertiesService.getScriptProperties().setProperty(BUILTIN_ASSIGN_KEY, JSON.stringify(assigned));
+    return { pour: onlyIds_(assigned[quizId], ids) };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // Version à modifier d'un quiz intégré : la version en vigueur (modifiée ou d'origine) et ses destinataires.
-function getBuiltinForEdit(password, quizId) {
-  checkAdmin_(password);
+function getBuiltinForEdit(cred, quizId) {
+  var me = ownerOnly_(cred);
   if (!isBuiltin_(quizId)) throw new Error('Quiz intégré inconnu.');
   var quiz = builtins_().filter(function (q) { return q.id === quizId; })[0];
-  return { quiz: quiz, pour: builtinAssign_()[quizId] || [] };
+  return { quiz: quiz, pour: onlyIds_(builtinAssign_()[quizId], familyIds_(me)) };
 }
 
 // Enregistre une version modifiée d'un quiz intégré (l'original reste intact et peut être rétabli).
 // Les questions gardent leur identifiant : la progression des élèves est conservée, même si l'énoncé change.
-function saveBuiltin(password, quizId, quiz) {
-  checkAdmin_(password);
+// Réservé à l'administrateur principal : la leçon modifiée est la même pour toutes les familles.
+function saveBuiltin(cred, quizId, quiz) {
+  var me = ownerOnly_(cred);
   if (!isBuiltin_(quizId)) throw new Error('Quiz intégré inconnu.');
-  var clean = validateQuiz_(quiz);
+  var ids = familyIds_(me);
+  var clean = validateQuiz_(quiz, ids);
   var pour = clean.pour;
   delete clean.pour;
   clean.id = quizId;
@@ -440,7 +479,7 @@ function saveBuiltin(password, quizId, quiz) {
     var store = PropertiesService.getScriptProperties();
     putItem_(store, OVERRIDE_PREFIX, quizId, clean);
     var assigned = builtinAssign_();
-    assigned[quizId] = pour;
+    assigned[quizId] = mergePour_(assigned[quizId], ids, pour);
     store.setProperty(BUILTIN_ASSIGN_KEY, JSON.stringify(assigned));
   } finally {
     lock.releaseLock();
@@ -449,23 +488,23 @@ function saveBuiltin(password, quizId, quiz) {
 }
 
 // Rétablit la version d'origine d'un quiz intégré. La progression des élèves est conservée.
-function restoreBuiltin(password, quizId) {
-  checkAdmin_(password);
+function restoreBuiltin(cred, quizId) {
+  ownerOnly_(cred);
   if (!isBuiltin_(quizId)) throw new Error('Quiz intégré inconnu.');
   delItem_(PropertiesService.getScriptProperties(), OVERRIDE_PREFIX, quizId);
   return true;
 }
 
 // Le parent fixe ou corrige la date du contrôle d'une leçon pour un élève ('' = pas de contrôle), ou change son mode.
-function setLessonPlanAdmin(password, studentId, quizId, exam) {
-  return withSrsAdmin_(password, studentId, quizId, function (r, now) { applyPlan_(r, exam, undefined, now); });
+function setLessonPlanAdmin(cred, studentId, quizId, exam) {
+  return withSrsAdmin_(cred, studentId, quizId, function (r, now) { applyPlan_(r, exam, undefined, now); });
 }
-function setLessonModeAdmin(password, studentId, quizId, mode) {
-  return withSrsAdmin_(password, studentId, quizId, function (r, now) { applyMode_(r, mode, now); });
+function setLessonModeAdmin(cred, studentId, quizId, mode) {
+  return withSrsAdmin_(cred, studentId, quizId, function (r, now) { applyMode_(r, mode, now); });
 }
-function withSrsAdmin_(password, studentId, quizId, fn) {
-  checkAdmin_(password);
-  if (!students_().some(function (s) { return s.id === studentId; })) throw new Error('Élève inconnu.');
+function withSrsAdmin_(cred, studentId, quizId, fn) {
+  var me = checkAdmin_(cred);
+  if (!familyStudents_(me).some(function (s) { return s.id === studentId; })) throw new Error('Élève inconnu.');
   var quiz = quizzesOf_(studentId).filter(function (q) { return q.id === quizId; })[0];
   if (!quiz) throw new Error("Cette leçon n'est pas attribuée à cet élève.");
   var lock = LockService.getScriptLock();
@@ -483,20 +522,186 @@ function withSrsAdmin_(password, studentId, quizId, fn) {
   }
 }
 
-// Remise à zéro de la progression : pour un élève (id ou 'all') et une leçon (id d'un quiz ou 'all').
+// Remise à zéro de la progression : pour un élève (id ou 'all' = tous les élèves DE LA FAMILLE) et une leçon (id ou 'all').
 // La progression étant enregistrée sur le serveur, l'élève la retrouve vide à sa prochaine connexion ou actualisation.
-function resetProgress(password, studentId, quizId) {
-  checkAdmin_(password);
+function resetProgress(cred, studentId, quizId) {
+  var me = checkAdmin_(cred);
   studentId = studentId || 'all';
   quizId = quizId || 'all';
-  if (studentId !== 'all' && !students_().some(function (s) { return s.id === studentId; })) throw new Error('Élève inconnu.');
+  var ids = familyIds_(me);
+  if (studentId !== 'all' && ids.indexOf(studentId) < 0) throw new Error('Élève inconnu.');
   if (quizId !== 'all' && !/^[a-z0-9-]{1,60}$/.test(String(quizId))) throw new Error('Identifiant de quiz invalide.');
-  return { supprimes: deleteProgress_(studentId, quizId) };
+  var n = 0;
+  (studentId === 'all' ? ids : [studentId]).forEach(function (id) { n += deleteProgress_(id, quizId); });
+  return { supprimes: n };
+}
+
+// ---------------- Familles : inscription, mots de passe, onglet Parents ----------------
+
+// Inscription d'une famille depuis la page de connexion parents : il faut le code d'invitation donné par l'administrateur.
+function createFamily(code, info) {
+  info = info && typeof info === 'object' ? info : {};
+  var store = PropertiesService.getScriptProperties();
+  var cache = CacheService.getScriptCache();
+  var failKey = 'invitation-echecs';
+  if (Number(cache.get(failKey) || 0) >= MAX_INVITE_FAILS) throw new Error("Trop d'essais. Réessaie dans quelques minutes.");
+  var invite = store.getProperty(INVITE_KEY) || '';
+  if (!invite) throw new Error("Les inscriptions sont fermées : demande un code d'invitation à l'administrateur.");
+  if (normCode_(code) !== normCode_(invite)) {
+    cache.put(failKey, String(Number(cache.get(failKey) || 0) + 1), LOCK_SECONDS);
+    Utilities.sleep(1000);
+    throw new Error("Code d'invitation incorrect.");
+  }
+  var famille = str_(info.famille, 40);
+  var pseudo = str_(info.pseudo, 30);
+  if (famille.length < 2) throw new Error('Indique le nom de ta famille.');
+  if (pseudo.length < 2) throw new Error('Choisis un pseudo (2 caractères minimum).');
+  checkNewPassword_(info.password);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var parents = parents_();
+    if (parents.length >= MAX_FAMILIES) throw new Error("Le nombre maximum de familles est atteint : contacte l'administrateur.");
+    var owner = store.getProperty('ADMIN_PSEUDO') || '';
+    if (norm_(pseudo) === norm_(owner) || parents.some(function (p) { return norm_(p.pseudo) === norm_(pseudo); })) {
+      throw new Error('Ce pseudo est déjà pris : choisis-en un autre.');
+    }
+    if (storageBytes_(store.getProperties()) > STORAGE_MAX * STORAGE_SIGNUP_LIMIT) {
+      throw new Error("L'espace de stockage est presque plein : contacte l'administrateur.");
+    }
+    var id = uniqueId_(slugify_(pseudo) || 'parent', parents.map(function (p) { return p.id; }));
+    var salt = Utilities.getUuid();
+    var rec = { id: id, pseudo: pseudo, famille: famille, salt: salt, hash: hashPin_(salt, info.password), ajoute: Date.now(), vu: 0 };
+    store.setProperty(PARENT_PREFIX + id, JSON.stringify(rec));
+    return { pseudo: pseudo, famille: famille };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Le parent connecté change son mot de passe (cred contient le mot de passe ACTUEL).
+// Administrateur principal : le nouveau mot de passe est enregistré haché (ADMIN_PASS_HASH) et ADMIN_PASSWORD est retiré.
+// Mot de passe oublié : remettre la propriété ADMIN_PASSWORD dans l'éditeur Apps Script, elle reprend le dessus.
+function changePassword(cred, newPassword) {
+  var me = checkAdmin_(cred);
+  checkNewPassword_(newPassword);
+  var store = PropertiesService.getScriptProperties();
+  var salt = Utilities.getUuid();
+  if (me.owner) {
+    store.setProperty(OWNER_HASH_KEY, salt + ':' + hashPin_(salt, newPassword));
+    store.deleteProperty('ADMIN_PASSWORD');
+  } else {
+    setParentPassword_(store, me.fam, newPassword);
+  }
+  return true;
+}
+
+// Code d'invitation : 'new' en crée un nouveau (l'ancien ne marche plus), 'close' ferme les inscriptions.
+function setInviteCode(cred, action) {
+  ownerOnly_(cred);
+  var store = PropertiesService.getScriptProperties();
+  if (action === 'close') {
+    store.deleteProperty(INVITE_KEY);
+    return { code: '' };
+  }
+  var alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';   // sans 0/O, 1/I/L : facile à dicter
+  var hex = Utilities.getUuid().replace(/[^0-9a-f]/gi, '');
+  var code = '';
+  for (var i = 0; i < 8; i++) code += alphabet.charAt(parseInt(hex.substr(i * 2, 2), 16) % alphabet.length);
+  code = code.slice(0, 4) + '-' + code.slice(4);
+  store.setProperty(INVITE_KEY, code);
+  return { code: code };
+}
+
+// L'administrateur donne un nouveau mot de passe à un parent qui a oublié le sien.
+function resetParentPassword(cred, parentId, newPassword) {
+  ownerOnly_(cred);
+  checkNewPassword_(newPassword);
+  var store = PropertiesService.getScriptProperties();
+  var p = setParentPassword_(store, parentId, newPassword);
+  CacheService.getScriptCache().remove('admin-echecs|' + norm_(p.pseudo));
+  return true;
+}
+
+// L'administrateur supprime une famille : le compte parent, ses élèves (et leur progression), ses leçons et paquets.
+function deleteFamily(cred, parentId) {
+  ownerOnly_(cred);
+  var store = PropertiesService.getScriptProperties();
+  var p = /^[a-z0-9-]{1,60}$/.test(String(parentId)) ? parseJson_(store.getProperty(PARENT_PREFIX + parentId)) : null;
+  if (!p) throw new Error('Famille inconnue.');
+  students_().filter(function (s) { return s.fam === p.id; }).forEach(function (s) { deleteStudentCore_(s.id); });
+  list_(QUIZ_PREFIX).filter(function (q) { return q.fam === p.id; }).forEach(function (q) { delItem_(store, QUIZ_PREFIX, q.id); deleteProgress_('all', q.id); });
+  list_(DECK_PREFIX).filter(function (d) { return d.fam === p.id; }).forEach(function (d) { delItem_(store, DECK_PREFIX, d.id); });
+  store.deleteProperty(PARENT_PREFIX + p.id);
+  return true;
 }
 
 // ---------------- Fonctions internes (le _ final les rend non appelables depuis les pages) ----------------
 
 function students_() { return list_(STUDENT_PREFIX); }
+function parents_() { return list_(PARENT_PREFIX); }
+
+// Ce qui appartient à la famille du parent connecté (me.fam : '' pour l'administrateur principal)
+function familyStudents_(me) { return students_().filter(function (s) { return (s.fam || '') === me.fam; }); }
+function familyIds_(me) { return familyStudents_(me).map(function (s) { return s.id; }); }
+function ownedBy_(me) { return function (item) { return (item.fam || '') === me.fam; }; }
+function onlyIds_(list, ids) { return (list || []).filter(function (id) { return ids.indexOf(id) >= 0; }); }
+// Remplace, dans une liste de destinataires, ceux de la famille par la nouvelle sélection (les autres familles restent)
+function mergePour_(old, familyIds, chosen) {
+  return (old || []).filter(function (id) { return familyIds.indexOf(id) < 0; }).concat(chosen);
+}
+function checkOwned_(prefix, id, me) {
+  if (!/^[a-z0-9-]{1,60}$/.test(String(id))) throw new Error('Identifiant invalide.');
+  var item = getItem_(PropertiesService.getScriptProperties(), prefix, id);
+  if (item && (item.fam || '') !== me.fam) throw new Error('Élément introuvable.');
+  return item;
+}
+
+function deleteStudentCore_(id) {
+  var store = PropertiesService.getScriptProperties();
+  store.deleteProperty(STUDENT_PREFIX + id);
+  deleteProgress_(id, 'all');
+  var assigned = builtinAssign_();
+  Object.keys(assigned).forEach(function (k) { assigned[k] = assigned[k].filter(function (x) { return x !== id; }); });
+  store.setProperty(BUILTIN_ASSIGN_KEY, JSON.stringify(assigned));
+  [QUIZ_PREFIX, DECK_PREFIX].forEach(function (prefix) {
+    list_(prefix).forEach(function (item) {
+      if ((item.pour || []).indexOf(id) >= 0) {
+        item.pour = item.pour.filter(function (x) { return x !== id; });
+        putItem_(store, prefix, item.id, item);
+      }
+    });
+  });
+}
+
+// Taille occupée par les propriétés du script (clés + valeurs, en octets UTF-8)
+function storageBytes_(props) {
+  return Object.keys(props).reduce(function (n, k) { return n + utf8Len_(k) + utf8Len_(String(props[k])); }, 0);
+}
+function utf8Len_(text) { return unescape(encodeURIComponent(text)).length; }
+function normCode_(code) { return String(code == null ? '' : code).toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+function checkNewPassword_(password) {
+  if (typeof password !== 'string' || password.length < MIN_PASSWORD) throw new Error('Le mot de passe doit faire au moins ' + MIN_PASSWORD + ' caractères.');
+  if (password.length > 100) throw new Error('Le mot de passe est trop long (100 caractères maximum).');
+}
+function setParentPassword_(store, parentId, password) {
+  var key = PARENT_PREFIX + parentId;
+  var p = /^[a-z0-9-]{1,60}$/.test(String(parentId)) ? parseJson_(store.getProperty(key)) : null;
+  if (!p) throw new Error('Famille inconnue.');
+  p.salt = Utilities.getUuid();
+  p.hash = hashPin_(p.salt, password);
+  store.setProperty(key, JSON.stringify(p));
+  return p;
+}
+// Dernière connexion d'un parent invité (au plus une écriture toutes les 10 minutes)
+function touchParent_(store, parentId) {
+  var key = PARENT_PREFIX + parentId;
+  var p = parseJson_(store.getProperty(key));
+  if (p && Date.now() - (p.vu || 0) > 10 * MIN_MS) {
+    p.vu = Date.now();
+    store.setProperty(key, JSON.stringify(p));
+  }
+}
 
 function parseJson_(raw) {
   try { return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
@@ -586,10 +791,11 @@ function lessonSummary_(quiz, r) {
 }
 
 // Sauvegarde complète des données (comptes avec PIN haché, quiz, progressions) : à conserver hors du dépôt.
-function backupData(password) {
-  checkAdmin_(password);
+function backupData(cred) {
+  ownerOnly_(cred);
   var props = PropertiesService.getScriptProperties().getProperties();
   delete props.ADMIN_PASSWORD;
+  delete props[OWNER_HASH_KEY];
   return { date: Date.now(), schema: 3, proprietes: props };
 }
 
@@ -625,13 +831,12 @@ function isFor_(item, studentId) { return (item.pour || []).indexOf(studentId) >
 
 function withoutPour_(item) {
   var copy = {};
-  Object.keys(item).forEach(function (k) { if (k !== 'pour') copy[k] = item[k]; });
+  Object.keys(item).forEach(function (k) { if (k !== 'pour' && k !== 'fam') copy[k] = item[k]; });
   return copy;
 }
 
-// Ne garde que des identifiants d'élèves existants, sans doublon
-function cleanPour_(pour) {
-  var ids = students_().map(function (s) { return s.id; });
+// Ne garde que des identifiants d'élèves autorisés (ceux de la famille), sans doublon
+function cleanPour_(pour, ids) {
   var out = [];
   (Array.isArray(pour) ? pour : []).forEach(function (id) {
     if (ids.indexOf(id) >= 0 && out.indexOf(id) < 0) out.push(id);
@@ -646,10 +851,11 @@ function norm_(text) {
 }
 
 function uniqueStudentId_(pseudo, all) {
-  var base = slugify_(pseudo) || 'eleve';
+  return uniqueId_(slugify_(pseudo) || 'eleve', all.map(function (s) { return s.id; }));
+}
+function uniqueId_(base, taken) {
   var id = base;
   var n = 2;
-  var taken = all.map(function (s) { return s.id; });
   while (taken.indexOf(id) >= 0) { id = base + '-' + n++; }
   return id;
 }
@@ -733,13 +939,15 @@ function delItem_(store, prefix, id) {
   store.deleteProperty(key);
 }
 
-function save_(prefix, clean, requestedId) {
+function save_(prefix, clean, requestedId, fam) {
   var store = PropertiesService.getScriptProperties();
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     var existing = null;
     if (requestedId && /^[a-z0-9-]{1,60}$/.test(requestedId)) existing = getItem_(store, prefix, requestedId);
+    if (existing && (existing.fam || '') !== (fam || '')) throw new Error('Élément introuvable.');
+    if (fam) clean.fam = fam;
     if (existing) {
       clean.id = existing.id;
       clean.ajoute = existing.ajoute;
@@ -764,32 +972,59 @@ function remove_(prefix, id) {
   return true;
 }
 
-// Identifiants de l'administrateur (parent) : { pseudo, password } envoyés par la page d'administration.
-// Le pseudo est enregistré dans la propriété ADMIN_PSEUDO à la première connexion réussie (le parent choisit son pseudo) ;
-// ensuite pseudo ET mot de passe doivent correspondre. Un mot de passe seul (ancienne forme) n'est accepté que tant
-// qu'aucun pseudo n'est enregistré.
+// Identifiants d'un parent : { pseudo, password } envoyés par la page d'administration. Renvoie qui est connecté :
+// { owner, fam, pseudo, famille }. L'administrateur principal a la famille '' ; un parent invité, celle de son compte.
+// Administrateur principal : son pseudo est enregistré dans ADMIN_PSEUDO à la première connexion réussie (il le choisit) ;
+// son mot de passe est ADMIN_PASSWORD (en clair, prioritaire : sert aussi en cas d'oubli) ou, une fois changé depuis
+// l'appli, ADMIN_PASS_HASH. Un mot de passe seul (ancienne forme) n'est accepté que tant qu'aucun pseudo n'est enregistré.
 function checkAdmin_(cred) {
   var store = PropertiesService.getScriptProperties();
-  var expected = store.getProperty('ADMIN_PASSWORD');
-  if (!expected) {
-    throw new Error("Mot de passe administrateur non défini : ajoute la propriété de script ADMIN_PASSWORD.");
-  }
   var withPseudo = !!cred && typeof cred === 'object';
   var password = withPseudo ? cred.password : cred;
+  if (typeof password !== 'string') password = '';
   var pseudo = withPseudo ? str_(cred.pseudo, 30) : '';
   var saved = store.getProperty('ADMIN_PSEUDO') || '';
-  if (withPseudo && !pseudo) throw new Error('Saisis ton pseudo.');
-  var pseudoOk = !saved || (withPseudo && norm_(pseudo) === norm_(saved));
-  if (password !== expected || !pseudoOk) {
-    Utilities.sleep(1000); // ralentit les essais répétés
-    throw new Error(withPseudo ? 'Pseudo ou mot de passe incorrect.' : 'Mot de passe incorrect.');
+  var ownerSet = !!(store.getProperty('ADMIN_PASSWORD') || store.getProperty(OWNER_HASH_KEY));
+  var parent = pseudo ? parents_().filter(function (p) { return norm_(p.pseudo) === norm_(pseudo); })[0] : null;
+  if (!ownerSet && !parent) {
+    throw new Error("Mot de passe administrateur non défini : ajoute la propriété de script ADMIN_PASSWORD.");
   }
-  if (withPseudo && !saved) store.setProperty('ADMIN_PSEUDO', pseudo);
+  if (withPseudo && !pseudo) throw new Error('Saisis ton pseudo.');
+  var cache = CacheService.getScriptCache();
+  var failKey = 'admin-echecs|' + norm_(pseudo);
+  if (Number(cache.get(failKey) || 0) >= MAX_ADMIN_FAILS) throw new Error("Trop d'essais. Réessaie dans quelques minutes.");
+  // un pseudo déjà pris par un parent invité ne peut pas devenir celui de l'administrateur
+  var ownerPseudoOk = saved ? (withPseudo && norm_(pseudo) === norm_(saved)) : !parent;
+  if (ownerPseudoOk && ownerPasswordOk_(store, password)) {
+    cache.remove(failKey);
+    if (withPseudo && !saved) store.setProperty('ADMIN_PSEUDO', pseudo);
+    return { owner: true, fam: '', pseudo: saved || pseudo, famille: '' };
+  }
+  if (parent && parent.hash === hashPin_(parent.salt, password)) {
+    cache.remove(failKey);
+    return { owner: false, fam: parent.id, pseudo: parent.pseudo, famille: parent.famille };
+  }
+  cache.put(failKey, String(Number(cache.get(failKey) || 0) + 1), LOCK_SECONDS);
+  Utilities.sleep(1000); // ralentit les essais répétés
+  throw new Error(withPseudo ? 'Pseudo ou mot de passe incorrect.' : 'Mot de passe incorrect.');
+}
+function ownerPasswordOk_(store, password) {
+  var plain = store.getProperty('ADMIN_PASSWORD');
+  if (plain) return password === plain;
+  var saved = store.getProperty(OWNER_HASH_KEY) || '';
+  var i = saved.indexOf(':');
+  return i > 0 && saved.slice(i + 1) === hashPin_(saved.slice(0, i), password);
+}
+// Réservé à l'administrateur principal (leçons fournies, code d'invitation, onglet Parents, sauvegarde)
+function ownerOnly_(cred) {
+  var me = checkAdmin_(cred);
+  if (!me.owner) throw new Error("Réservé à l'administrateur principal.");
+  return me;
 }
 
 // Une question est de l'un des trois types : à choix (options + correct), à réponse écrite (reponses),
 // ou à plusieurs champs (champs : [{ label, reponses, groupe? }], libre?).
-function validateQuiz_(quiz) {
+function validateQuiz_(quiz, allowedIds) {
   if (!quiz || typeof quiz !== 'object') throw new Error('Quiz invalide.');
   var titre = str_(quiz.titre, 120);
   if (!titre) throw new Error('Le titre est obligatoire.');
@@ -861,7 +1096,7 @@ function validateQuiz_(quiz) {
     matiere: str_(quiz.matiere, 40) || 'Divers',
     emoji: str_(quiz.emoji, 8) || '📘',
     description: str_(quiz.description, 300),
-    pour: cleanPour_(quiz.pour),
+    pour: cleanPour_(quiz.pour, allowedIds || []),
     questions: questions
   };
   var lien = validateLien_(quiz.lien);
@@ -881,7 +1116,7 @@ function validateLien_(lien) {
   return res;
 }
 
-function validateDeck_(deck) {
+function validateDeck_(deck, allowedIds) {
   if (!deck || typeof deck !== 'object') throw new Error('Paquet invalide.');
   var titre = str_(deck.titre, 120);
   if (!titre) throw new Error('Le titre est obligatoire.');
@@ -902,7 +1137,7 @@ function validateDeck_(deck) {
     matiere: str_(deck.matiere, 40) || 'Divers',
     emoji: str_(deck.emoji, 8) || '🃏',
     description: str_(deck.description, 300),
-    pour: cleanPour_(deck.pour),
+    pour: cleanPour_(deck.pour, allowedIds || []),
     cartes: cartes
   };
 }

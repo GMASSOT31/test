@@ -257,7 +257,9 @@
             .lockbar.docked .status { display: none !important; }
             .lockbar.docked .btn { width: 38px; padding: 8px 0; font-size: 0; }
             .lockbar.docked #unlock::before { content: "↻"; font-size: 1.1rem; }
-            .lockbar.docked #lock::before { content: "🔒"; font-size: 1.1rem; }
+            .lockbar.docked #acct-btn::before { content: "👤"; font-size: 1.1rem; }
+            .tab .t-lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            section.signup { margin: 8px 12px; padding: 16px; }
             section.intro .btn { width: 100%; }
         }
         /* Suivi des révisions : niveaux, prête pour le contrôle */
@@ -325,6 +327,33 @@
         .parcours-admin { font-size: .8rem; font-weight: 800; padding: 2px 10px; border-radius: 999px; background: #f1eeff; color: var(--violet); }
         .parcours-admin.attente { background: #ffe3ee; color: #c0264b; }
         .lesson-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        /* Menu du compte (pseudo) : changer le mot de passe, se déconnecter */
+        .acct { position: relative; }
+        .acct-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 40; display: grid; gap: 2px; min-width: 240px; padding: 6px;
+                     background: #fff; border-radius: 14px; box-shadow: var(--soft); border: 2px solid var(--line); }
+        .menu-item { text-align: left; border: 0; background: none; font: inherit; font-weight: 700; padding: 10px 12px; border-radius: 10px; color: var(--navy); cursor: pointer; white-space: nowrap; }
+        .menu-item:hover, .menu-item:focus-visible { background: #f4f6ff; outline: none; }
+        .menu-who { padding: 6px 12px 8px; font-size: .8rem; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--line); margin-bottom: 4px; white-space: nowrap; }
+        .pw-panel { margin-bottom: 20px; }
+        /* Inscription d'une famille (page de connexion) */
+        .signup { max-width: 640px; margin: 16px auto; }
+        .link-btn { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+        /* Onglet Parents */
+        .invite-code { display: inline-block; font-size: 1.5rem; font-weight: 900; letter-spacing: 2px; color: var(--navy); background: #fff6dc; padding: 4px 14px; border-radius: 12px; }
+        .invite-url { margin-top: 6px; font-size: .85rem; }
+        .stockage { margin: 0 0 12px; font-size: .9rem; font-weight: 700; color: var(--navy); }
+        .stockage .bar { max-width: 360px; margin: 6px 0 2px; }
+        .stockage.warn .bar span { background: linear-gradient(90deg, #ffb3c6, var(--red)); }
+        /* Suivi : leçons archivées repliées */
+        .archived-toggle { margin-top: 6px; background: none; border: 0; padding: 4px 0; font: inherit; font-size: .85rem; font-weight: 800; color: var(--muted); cursor: pointer; }
+        .archived-toggle:hover { color: var(--navy); text-decoration: underline; }
+        .pw-panel { scroll-margin-top: 90px; }
+        /* Téléphone : formulaires sur une colonne (ces règles doivent venir après .row2 / .row3) ; libellés courts */
+        @media (max-width: 600px) { .row2, .row3 { grid-template-columns: 1fr; } }
+        @media (max-width: 760px) {
+            .tab .t-lbl[data-short] { font-size: 0; }
+            .tab .t-lbl[data-short]::after { content: attr(data-short); font-size: .68rem; }
+        }
     </style>
 </head>
 <body>
@@ -360,24 +389,80 @@
         <label for="password" class="sr-only">Mot de passe</label>
         <input type="password" id="password" autocomplete="current-password" placeholder="🔑 Mot de passe">
         <button class="btn" id="unlock" type="button" title="Actualiser">Se connecter</button>
-        <button class="btn secondary" id="lock" type="button" title="Se déconnecter" aria-label="Se déconnecter" hidden>🔒 Se déconnecter</button>
+        <div class="acct" id="acct" hidden>
+            <button class="btn secondary" id="acct-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="acct-menu" title="Mon compte : changer le mot de passe, se déconnecter">👤 <span id="acct-name">Mon compte</span> ▾</button>
+            <div class="acct-menu" id="acct-menu" hidden>
+                <div class="menu-who" id="acct-who"></div>
+                <button class="menu-item" id="change-pw" type="button">🔑 Changer le mot de passe</button>
+                <button class="menu-item" id="lock" type="button">🔒 Se déconnecter</button>
+            </div>
+        </div>
         <span class="status inline" id="lock-status" role="status"></span>
     </div>
 
     <p class="locked-hint" id="locked-hint">Espace parents : saisis ton pseudo et ton mot de passe. À la toute première connexion, le pseudo que tu choisis devient ton identifiant.</p>
     <!-- lien discret vers la connexion élève (target _top : l'application s'affiche dans un cadre Google) -->
-    <p class="switch-zone" id="to-student-zone"><a class="switch-link" id="to-student" href="https://script.google.com/macros/s/AKfycbzzqlCAUDZAoHOmhxufvj4CAAHWX8JtU8vBsTB0ZsoEK_mLu2tW4BoESRUdrg4b7bkF/exec" target="_top">🎒 Espace élève</a></p>
+    <p class="switch-zone" id="to-student-zone"><button class="switch-link link-btn" id="signup-open" type="button" aria-expanded="false" aria-controls="signup">👪 Créer ma famille</button> · <a class="switch-link" id="to-student" href="https://script.google.com/macros/s/AKfycbzzqlCAUDZAoHOmhxufvj4CAAHWX8JtU8vBsTB0ZsoEK_mLu2tW4BoESRUdrg4b7bkF/exec" target="_top">🎒 Espace élève</a></p>
+    <section class="signup" id="signup" hidden>
+        <h2>👪 Créer ma famille</h2>
+        <p class="hint">Il te faut le <strong>code d'invitation</strong> donné par l'administrateur de l'appli. Tu pourras ensuite créer les comptes de tes enfants et suivre leurs révisions ; personne d'autre ne les voit.</p>
+        <label for="su-code">Code d'invitation</label>
+        <input type="text" id="su-code" maxlength="20" placeholder="Ex : ABCD-EFGH" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <label for="su-famille">Nom de la famille</label>
+        <input type="text" id="su-famille" maxlength="40" placeholder="Ex : Famille Martin" autocomplete="off">
+        <div class="row2">
+            <div>
+                <label for="su-pseudo">Ton pseudo</label>
+                <input type="text" id="su-pseudo" maxlength="30" placeholder="Ex : Maman Martin" autocomplete="username" autocapitalize="off" spellcheck="false">
+            </div>
+            <div>
+                <label for="su-pw">Mot de passe (8 caractères minimum)</label>
+                <input type="password" id="su-pw" autocomplete="new-password">
+            </div>
+        </div>
+        <label for="su-pw2">Confirme le mot de passe</label>
+        <input type="password" id="su-pw2" autocomplete="new-password">
+        <div class="actions">
+            <button class="btn" id="su-save" type="button">👪 Créer ma famille</button>
+            <button class="btn secondary" id="su-cancel" type="button">Annuler</button>
+        </div>
+        <div class="status" id="su-status" role="status"></div>
+    </section>
 
     <div class="shell" id="admin-area" hidden>
         <header class="topnav">
         <nav class="tabs" role="tablist" aria-label="Sections de l'administration">
             <button class="tab" role="tab" id="tab-programmes" data-tab="programmes" title="Voir où en est chaque élève"><span class="t-ico" aria-hidden="true">📈</span><span class="t-lbl">Suivi</span></button>
             <button class="tab" role="tab" id="tab-eleves" data-tab="eleves" title="Comptes des élèves"><span class="t-ico" aria-hidden="true">👥</span><span class="t-lbl">Élèves</span><span class="count" id="count-eleves"></span></button>
+            <button class="tab" role="tab" id="tab-parents" data-tab="parents" title="Les familles inscrites et le code d'invitation" hidden><span class="t-ico" aria-hidden="true">👪</span><span class="t-lbl">Parents</span><span class="count" id="count-parents"></span></button>
             <button class="tab" role="tab" id="tab-quiz-liste" data-tab="quiz-liste" title="Leçons (quiz) et à qui les donner"><span class="t-ico" aria-hidden="true">📚</span><span class="t-lbl">Leçons</span><span class="count" id="count-quiz"></span></button>
-            <button class="tab" role="tab" id="tab-fc-ajout" data-tab="fc-ajout" title="Paquets de flashcards en plus"><span class="t-ico" aria-hidden="true">🃏</span><span class="t-lbl">Flashcards</span><span class="count" id="count-decks"></span></button>
+            <button class="tab" role="tab" id="tab-fc-ajout" data-tab="fc-ajout" title="Paquets de flashcards en plus"><span class="t-ico" aria-hidden="true">🃏</span><span class="t-lbl" data-short="Cartes">Flashcards</span><span class="count" id="count-decks"></span></button>
         </nav>
         <div id="lock-dock"></div>
         </header>
+
+        <section class="pw-panel" id="pw-panel" hidden>
+            <button class="back-link" type="button" id="pw-close">✕ Fermer</button>
+            <h2>🔑 Changer le mot de passe</h2>
+            <div class="row3">
+                <div>
+                    <label for="pw-old">Mot de passe actuel</label>
+                    <input type="password" id="pw-old" autocomplete="current-password">
+                </div>
+                <div>
+                    <label for="pw-new">Nouveau mot de passe</label>
+                    <input type="password" id="pw-new" autocomplete="new-password" placeholder="8 caractères minimum">
+                </div>
+                <div>
+                    <label for="pw-new2">Confirme le nouveau</label>
+                    <input type="password" id="pw-new2" autocomplete="new-password">
+                </div>
+            </div>
+            <div class="actions">
+                <button class="btn" id="pw-save" type="button">💾 Enregistrer le nouveau mot de passe</button>
+            </div>
+            <div class="status" id="pw-status" role="status"></div>
+        </section>
 
         <main class="content">
 
@@ -414,7 +499,7 @@
             <section class="intro">
                 <div class="intro-txt">
                     <h2>👥 Élèves</h2>
-                    <p class="hint">Chaque enfant a son compte : une classe, un pseudo et un code PIN pour se connecter sur la page élève. Ici tu peux ajouter, modifier ou supprimer un élève ; « Progression » ouvre son suivi.</p>
+                    <p class="hint">Chaque enfant a son compte : une classe, un pseudo et un code PIN pour se connecter sur la page élève. Ici tu peux ajouter, modifier ou supprimer un élève ; « Suivi » montre où il en est.</p>
                 </div>
                 <button class="btn" id="tab-eleve-ajout" type="button">➕ Ajouter un élève</button>
             </section>
@@ -422,6 +507,26 @@
                 <h2>Liste des élèves</h2>
                 <div class="status" id="eleves-status" role="status"></div>
                 <div id="student-list"></div>
+            </section>
+        </div>
+
+        <!-- ================= PARENTS (administrateur principal) ================= -->
+        <div class="pane" id="pane-parents" role="tabpanel" aria-labelledby="tab-parents" hidden>
+            <section class="intro">
+                <div class="intro-txt">
+                    <h2>👪 Parents</h2>
+                    <p class="hint">Les familles qui utilisent l'appli. Chaque parent ne voit que ses enfants, leur suivi et ses propres leçons. Pour inviter une famille, donne-lui l'adresse de l'espace parents et le code d'invitation : elle crée son compte avec « 👪 Créer ma famille ».</p>
+                </div>
+            </section>
+            <section>
+                <h2>🎟️ Inviter une famille</h2>
+                <div id="invite-box"></div>
+            </section>
+            <section>
+                <h2>Familles inscrites</h2>
+                <div class="status" id="parents-status" role="status"></div>
+                <div id="stockage"></div>
+                <div id="parent-list"></div>
             </section>
         </div>
 
@@ -468,10 +573,10 @@
                 <div class="pour" id="quiz-pour"></div>
                 <p class="hint">Seuls les élèves cochés verront ce quiz. Sans destinataire, il reste caché.</p>
 
-                <p class="hint" id="builtin-note" hidden>✏️ Tu modifies un <strong>quiz intégré</strong> : l'original est conservé et peut être rétabli à tout moment depuis « Liste des quiz ».</p>
+                <p class="hint" id="builtin-note" hidden>✏️ Tu modifies un <strong>quiz intégré</strong> : l'original est conservé et peut être rétabli à tout moment depuis l'onglet « Leçons ».</p>
 
                 <h2 style="margin-top:22px">Questions</h2>
-                <p class="hint">Tu peux corriger une question à tout moment, même après l'avoir enregistrée : <strong>la progression des élèves sur cette question est conservée</strong>, même si tu changes l'énoncé ou la réponse. Pour que les élèves repartent de zéro, utilise « Programmes de révision ».</p>
+                <p class="hint">Tu peux corriger une question à tout moment, même après l'avoir enregistrée : <strong>la progression des élèves sur cette question est conservée</strong>, même si tu changes l'énoncé ou la réponse. Pour qu'un élève reparte de zéro, onglet « Suivi » : bouton « + » de la leçon, puis « Remettre cette leçon à zéro ».</p>
                 <p class="hint">Choix : remplis au moins 2 réponses et coche la bonne (les réponses sont mélangées à chaque partie, tu peux donc mettre la bonne où tu veux). Réponse écrite : l'élève tape sa réponse au clavier. Plusieurs champs : un champ par blanc à remplir.</p>
                 <div class="q-tools" id="q-tools">
                     <input type="search" id="q-search" placeholder="🔎 Retrouver une question (énoncé ou réponse)…" aria-label="Rechercher une question">
@@ -504,7 +609,7 @@
             <div class="status" id="quizlist-status" role="status"></div>
             <section>
                 <h2>🏛️ Leçons fournies avec le site</h2>
-                <p class="hint">Coche les élèves qui y ont accès, puis « Enregistrer l'accès ». « Modifier » corrige les questions (l'original peut être rétabli).</p>
+                <p class="hint" id="builtin-hint">Coche les élèves qui y ont accès, puis « Enregistrer l'accès ». « Modifier » corrige les questions (l'original peut être rétabli).</p>
                 <div id="builtin-list"></div>
             </section>
             <section>
@@ -576,9 +681,9 @@
             </section>
             <details class="advanced">
                 <summary>⚙️ Remise à zéro générale</summary>
-                <p class="hint">Efface toute la progression de tous les élèves, sur toutes les leçons. À utiliser en dernier recours.</p>
+                <p class="hint">Efface toute la progression de tous tes élèves, sur toutes les leçons. À utiliser en dernier recours.</p>
                 <div class="actions">
-                    <button class="btn danger" id="reset-all" type="button" style="padding:10px 22px">Tout remettre à zéro pour tous les élèves</button>
+                    <button class="btn danger" id="reset-all" type="button" style="padding:10px 22px">Tout remettre à zéro pour tous mes élèves</button>
                 </div>
             </details>
         </div>
@@ -605,8 +710,8 @@
 
     <script>
         const OPTION_LETTERS = ["A", "B", "C", "D"];
-        const TABS = ["eleve-ajout", "eleves", "quiz-ajout", "quiz-liste", "fc-ajout", "programmes"];
-        let DATA = { students: [], quizzes: [], decks: [], builtins: [], progress: {} };
+        const TABS = ["eleve-ajout", "eleves", "parents", "quiz-ajout", "quiz-liste", "fc-ajout", "programmes"];
+        let DATA = { moi: { owner: false, pseudo: "" }, students: [], quizzes: [], decks: [], builtins: [], progress: {} };
         let editingStudentId = null;
         let editingQuizId = null;   // id du quiz en cours de modification, null = nouveau
         let editingDeckId = null;
@@ -654,7 +759,7 @@
 
         // ---------- onglets ----------
         // 4 sections dans la barre du haut ; les formulaires « Ajouter / Créer » s'ouvrent depuis leur section
-        const NAV = ["programmes", "eleves", "quiz-liste", "fc-ajout"];
+        const NAV = ["programmes", "eleves", "parents", "quiz-liste", "fc-ajout"];
         const NAV_OF = { "eleve-ajout": "eleves", "quiz-ajout": "quiz-liste" };
         function go(tab) {
             TABS.forEach(t => { $("pane-" + t).hidden = t !== tab; });
@@ -691,17 +796,19 @@
             $("lockbar").classList.add("docked");
             $("lock-dock").append($("lockbar"));
             $("unlock").textContent = "↻ Actualiser";
-            $("lock").hidden = false;
+            $("acct").hidden = false;
         }
         function undockLock() {
             const bar = $("lockbar");
             bar.classList.remove("docked");
             document.body.insertBefore(bar, $("locked-hint"));
             $("unlock").textContent = "Se connecter";
-            $("lock").hidden = true;
+            $("acct").hidden = true;
+            closeMenu();
         }
         function lockAgain() {
             $("password").value = "";
+            showPwPanel(false);
             $("admin-area").hidden = true;
             $("locked-hint").hidden = false; $("to-student-zone").hidden = false;
             $("lock-status").className = "status inline";
@@ -714,7 +821,7 @@
             try {
                 await reload();
                 $("admin-area").hidden = false;
-                $("locked-hint").hidden = true; $("to-student-zone").hidden = true;
+                $("locked-hint").hidden = true; $("to-student-zone").hidden = true; showSignup(false);
                 dockLock();
                 showStatus($("lock-status"), "ok", "Connecté.");
                 try { localStorage.setItem(ADMIN_PSEUDO_KEY, pw().pseudo); } catch (e) { /* stockage indisponible */ }
@@ -728,6 +835,14 @@
         }
 
         function renderAll() {
+            const owner = !!(DATA.moi && DATA.moi.owner);
+            $("acct-name").textContent = DATA.moi.pseudo || "Mon compte";
+            $("acct-who").textContent = owner ? "👤 " + DATA.moi.pseudo + " · administrateur" : "👤 " + DATA.moi.pseudo + " · " + DATA.moi.famille;
+            $("tab-parents").hidden = !owner;
+            if (!owner && !$("pane-parents").hidden) go("programmes");
+            $("builtin-hint").textContent = owner
+                ? "Coche les élèves qui y ont accès, puis « Enregistrer l'accès ». « Modifier » corrige les questions pour toutes les familles (l'original peut être rétabli)."
+                : "Coche tes enfants qui y ont accès, puis « Enregistrer l'accès ».";
             $("count-eleves").textContent = DATA.students.length;
             $("count-quiz").textContent = DATA.quizzes.length + DATA.builtins.length;
             $("count-decks").textContent = DATA.decks.length;
@@ -739,12 +854,13 @@
             renderBuiltins();
             renderDeckList();
             renderProgrammes();
+            renderParents();
         }
 
         function pourBoxes(container, selected) {
             container.replaceChildren();
             if (DATA.students.length === 0) {
-                container.append(h("p", { class: "hint" }, "Crée d'abord un élève (rubrique « Nouvel élève ») : sans destinataire, un contenu reste caché."));
+                container.append(h("p", { class: "hint" }, "Crée d'abord un élève (onglet « Élèves », « Ajouter un élève ») : sans destinataire, un contenu reste caché."));
                 return;
             }
             DATA.students.forEach(s => {
@@ -774,8 +890,9 @@
                         h("div", {}, "👤"),
                         h("div", { class: "info" },
                             h("strong", {}, s.pseudo),
-                            h("span", {}, r.lecons ? r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") + " · avancement " + r.avancement + " %" : "Aucune leçon attribuée")),
-                        h("button", { class: "btn secondary small", type: "button", onclick: () => { progFilter = "s:" + s.id; renderProgrammes(); go("programmes"); } }, "Progression"),
+                            h("span", {}, (r.lecons ? r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") + " · avancement " + r.avancement + " %" : r.archivees ? "Aucune leçon en cours" : "Aucune leçon attribuée") +
+                                (r.archivees ? " · " + r.archivees + " archivée" + (r.archivees > 1 ? "s" : "") : ""))),
+                        h("button", { class: "btn secondary small", type: "button", title: "Voir où en est " + s.pseudo, onclick: () => { progFilter = "s:" + s.id; renderProgrammes(); go("programmes"); } }, "📈 Suivi"),
                         h("button", { class: "btn secondary small", type: "button", onclick: () => loadStudent(s) }, "Modifier"),
                         h("button", { class: "btn danger", type: "button", onclick: () => removeStudent(s) }, "Supprimer"));
                 }))));
@@ -1180,8 +1297,9 @@
                         await reload();
                     } catch (e) { status.textContent = e.message; }
                 } }, "Enregistrer l'accès");
-                const edit = h("button", { class: "btn secondary small", type: "button", onclick: () => editBuiltin(q) }, "✏️ Modifier");
-                const restore = q.modifie ? h("button", { class: "btn danger", type: "button", onclick: () => restoreBuiltin(q) }, "Rétablir l'original") : null;
+                const owner = DATA.moi.owner;
+                const edit = owner ? h("button", { class: "btn secondary small", type: "button", onclick: () => editBuiltin(q) }, "✏️ Modifier") : null;
+                const restore = owner && q.modifie ? h("button", { class: "btn danger", type: "button", onclick: () => restoreBuiltin(q) }, "Rétablir l'original") : null;
                 const open = openBuiltins.has(q.id);
                 const details = h("div", { class: "builtin-details" },
                     h("div", { class: "info" },
@@ -1280,15 +1398,16 @@
             return "Plan : " + done + " / " + l.plan.length + " séances faites" + (next ? " · prochaine " + timeFr(next) : "");
         }
         function lessonsSummary(id) {
-            const l = DATA.progress[id] || [];
+            const all = DATA.progress[id] || [];
+            const l = all.filter(x => x.mode !== "archive");   // les leçons archivées ne comptent plus dans l'avancement
             const total = l.reduce((n, x) => n + x.total, 0), sues = l.reduce((n, x) => n + x.niveaux[3] + x.niveaux[4], 0);
             // avancement : chemin parcouru (découverte 1/3, rappelée 2/3, ancrée ou maîtrisée 3/3), pondéré par le nombre de questions
             const pas = l.reduce((n, x) => n + x.niveaux[1] + 2 * x.niveaux[2] + 3 * (x.niveaux[3] + x.niveaux[4]), 0);
             const avancement = total ? Math.round(pas / (3 * total) * 100) : 0;
-            const week = l.reduce((acc, x) => { x.seances.forEach(s => { if (s.debut > DATA.now - 7 * 86400000) { acc.n++; acc.t += s.duree; } }); return acc; }, { n: 0, t: 0 });
-            const last = l.reduce((m, x) => Math.max(m, x.maj || 0), 0);
-            const due = l.reduce((n, x) => n + (x.mode === "archive" ? 0 : x.aReviser), 0);
-            return { lecons: l.length, total, sues, pct: total ? Math.round(sues / total * 100) : 0, week, last, due, avancement };
+            const week = all.reduce((acc, x) => { x.seances.forEach(s => { if (s.debut > DATA.now - 7 * 86400000) { acc.n++; acc.t += s.duree; } }); return acc; }, { n: 0, t: 0 });
+            const last = all.reduce((m, x) => Math.max(m, x.maj || 0), 0);
+            const due = l.reduce((n, x) => n + x.aReviser, 0);
+            return { lecons: l.length, archivees: all.length - l.length, total, sues, pct: total ? Math.round(sues / total * 100) : 0, week, last, due, avancement };
         }
         function avBar(pct) { return h("div", { class: "bar av-bar", role: "progressbar", "aria-valuenow": String(pct), "aria-valuemin": "0", "aria-valuemax": "100" }, h("span", { style: "width:" + pct + "%" })); }
         // Guide affiché tant que les premières étapes ne sont pas faites
@@ -1326,6 +1445,7 @@
         // EN UN COUP D'ŒIL : par élève, ses leçons et leur pourcentage d'avancement.
         // Le bouton « + » d'une leçon déplie tout son détail ; celui de l'élève, son résumé et ses actions.
         const openLessons = new Set();   // « idÉlève|idLeçon » dépliées
+        const openArchived = new Set();  // élèves dont les leçons archivées sont affichées
         const plusBtn = (open, label, onclick) => h("button", { class: "plus" + (open ? " on" : ""), type: "button", "aria-expanded": String(open), title: label, "aria-label": label, onclick }, open ? "−" : "+");
         function studentCard(s) {
             const open = openDetails.has(s.id);
@@ -1341,7 +1461,10 @@
                 card.append(h("p", { class: "hint" }, "Aucune leçon pour l'instant : onglet « 📚 Leçons », bouton « ⚙️ Gérer », puis coche son nom."));
                 return card;
             }
-            card.append(h("ul", { class: "lesson-list" }, lessons.map(l => {
+            const archived = lessons.filter(l => l.mode === "archive");
+            const showArch = openArchived.has(s.id);
+            const shown = lessons.filter(l => l.mode !== "archive" || showArch);
+            if (shown.length) card.append(h("ul", { class: "lesson-list" }, shown.map(l => {
                 const k = s.id + "|" + l.id, lo = openLessons.has(k);
                 const badge = examBadge(l);
                 return h("li", { class: "lesson-row" + (l.mode === "archive" ? " archived" : ""), "data-quiz": l.id },
@@ -1353,6 +1476,12 @@
                         plusBtn(lo, "Détail de « " + l.titre + " »", () => { if (lo) openLessons.delete(k); else openLessons.add(k); renderProgrammes(); })),
                     lo ? lessonDetail(s, l) : null);
             })));
+            if (archived.length) {
+                const n = archived.length, label = "📦 " + n + " leçon" + (n > 1 ? "s" : "") + " archivée" + (n > 1 ? "s" : "");
+                card.append(h("button", { class: "archived-toggle", type: "button", "aria-expanded": String(showArch),
+                    onclick: () => { if (showArch) openArchived.delete(s.id); else openArchived.add(s.id); renderProgrammes(); } },
+                    label + (showArch ? " · masquer ▴" : " · afficher ▾")));
+            }
             return card;
         }
         // Badge court du contrôle (ou de l'état) d'une leçon, affiché sur sa ligne
@@ -1415,7 +1544,9 @@
             try {
                 await server("setLessonModeAdmin", pw(), s.id, l.id, mode);
                 await reload();
-                showStatus(status, "ok", (mode === "archive" ? "Leçon archivée : " : "Leçon réactivée : ") + "« " + l.titre + " » (" + s.pseudo + ").");
+                showStatus(status, "ok", mode === "archive"
+                    ? "Leçon archivée : « " + l.titre + " » (" + s.pseudo + "). Elle est rangée sous « 📦 leçons archivées »."
+                    : "Leçon réactivée : « " + l.titre + " » (" + s.pseudo + ").");
             } catch (e) { showStatus(status, "err", e.message); }
         }
         async function resetProgress(studentId, quizId, label) {
@@ -1431,6 +1562,134 @@
             }
         }
 
+        // ================= COMPTE : menu, changer le mot de passe =================
+        function closeMenu() { $("acct-menu").hidden = true; $("acct-btn").setAttribute("aria-expanded", "false"); }
+        function toggleMenu() {
+            const open = $("acct-menu").hidden;
+            $("acct-menu").hidden = !open;
+            $("acct-btn").setAttribute("aria-expanded", String(open));
+        }
+        function showPwPanel(open) {
+            $("pw-panel").hidden = !open;
+            ["pw-old", "pw-new", "pw-new2"].forEach(id => { $(id).value = ""; });
+            $("pw-status").className = "status";
+            if (open) { $("pw-panel").scrollIntoView({ block: "start" }); $("pw-old").focus(); }
+        }
+        async function changePassword() {
+            const st = $("pw-status"), old = $("pw-old").value, n1 = $("pw-new").value, n2 = $("pw-new2").value;
+            if (!old) return showStatus(st, "err", "Saisis ton mot de passe actuel.");
+            if (n1.length < 8) return showStatus(st, "err", "Le nouveau mot de passe doit faire au moins 8 caractères.");
+            if (n1 !== n2) return showStatus(st, "err", "Les deux nouveaux mots de passe ne sont pas identiques.");
+            showStatus(st, "info", "Enregistrement…");
+            $("pw-save").disabled = true;
+            try {
+                await server("changePassword", { pseudo: pw().pseudo, password: old }, n1);
+                $("password").value = n1;   // la session continue avec le nouveau mot de passe
+                ["pw-old", "pw-new", "pw-new2"].forEach(id => { $(id).value = ""; });
+                showStatus(st, "ok", "✅ Mot de passe changé. Utilise le nouveau à ta prochaine connexion.");
+            } catch (e) {
+                showStatus(st, "err", /incorrect/.test(e.message) ? "Mot de passe actuel incorrect." : e.message);
+            } finally { $("pw-save").disabled = false; }
+        }
+
+        // ================= INSCRIPTION D'UNE FAMILLE (page de connexion) =================
+        function showSignup(open) {
+            $("signup").hidden = !open;
+            $("signup-open").setAttribute("aria-expanded", String(open));
+            if (open) { $("su-status").className = "status"; $("signup").scrollIntoView({ block: "start" }); $("su-code").focus(); }
+        }
+        async function createFamily() {
+            const st = $("su-status");
+            const info = { famille: $("su-famille").value.trim(), pseudo: $("su-pseudo").value.trim(), password: $("su-pw").value };
+            if (!$("su-code").value.trim()) return showStatus(st, "err", "Saisis le code d'invitation.");
+            if (info.password.length < 8) return showStatus(st, "err", "Le mot de passe doit faire au moins 8 caractères.");
+            if (info.password !== $("su-pw2").value) return showStatus(st, "err", "Les deux mots de passe ne sont pas identiques.");
+            showStatus(st, "info", "Création de ta famille…");
+            $("su-save").disabled = true;
+            try {
+                const res = await server("createFamily", $("su-code").value, info);
+                $("admin-pseudo").value = res.pseudo;
+                $("password").value = info.password;
+                ["su-code", "su-famille", "su-pseudo", "su-pw", "su-pw2"].forEach(id => { $(id).value = ""; });
+                showSignup(false);
+                await unlock();
+            } catch (e) {
+                showStatus(st, "err", e.message);
+            } finally { $("su-save").disabled = false; }
+        }
+
+        // ================= PARENTS (administrateur principal) =================
+        const adminUrl = () => $("to-student").getAttribute("href") + "?p=admin";
+        const ko = n => Math.round(n / 1000);
+        function renderParents() {
+            if (!DATA.moi.owner) return;
+            const parents = DATA.parents || [];
+            $("count-parents").textContent = parents.length || "";
+            // code d'invitation
+            const box = $("invite-box");
+            const btn = (txt, cls, fn) => h("button", { class: "btn " + cls, type: "button", onclick: fn }, txt);
+            if (DATA.invitation) {
+                const url = h("input", { type: "text", readonly: "", value: adminUrl(), "aria-label": "Adresse de l'espace parents", onfocus: e => e.target.select() });
+                box.replaceChildren(
+                    h("p", {}, "Code d'invitation : ", h("strong", { class: "invite-code", id: "invite-code" }, DATA.invitation)),
+                    h("div", { class: "invite-url" }, h("label", {}, "Adresse de l'espace parents à donner :"), url),
+                    h("p", { class: "hint" }, "La famille ouvre cette adresse, touche « 👪 Créer ma famille » et saisit le code. Un nouveau code remplace l'ancien."),
+                    h("div", { class: "actions" }, btn("🎲 Nouveau code", "secondary small", () => inviteCode("new")), btn("🚫 Fermer les inscriptions", "danger", () => inviteCode("close"))));
+            } else {
+                box.replaceChildren(
+                    h("p", { class: "hint" }, "🚫 Inscriptions fermées : personne ne peut créer de famille."),
+                    h("div", { class: "actions" }, btn("🎟️ Créer un code d'invitation", "small", () => inviteCode("new"))));
+            }
+            // stockage
+            const st = DATA.stockage || { octets: 0, max: 500000 };
+            const pct = Math.min(100, Math.round(st.octets / st.max * 100));
+            $("stockage").replaceChildren(h("div", { class: "stockage" + (pct >= 80 ? " warn" : "") },
+                "💾 Stockage utilisé : " + ko(st.octets) + " Ko sur " + ko(st.max) + " Ko (" + pct + " %)", avBar(pct),
+                pct >= 80 ? h("p", { class: "hint warn" }, "Bientôt plein : au-delà de 85 %, plus aucune famille ne peut s'inscrire.") : null));
+            // familles
+            const mine = DATA.students.length;
+            const rows = [h("div", { class: "item", "data-parent": "" },
+                h("div", {}, "⭐"),
+                h("div", { class: "info" }, h("strong", {}, "Ta famille"),
+                    h("span", {}, "👤 " + DATA.moi.pseudo + " (toi, administrateur) · " + mine + " enfant" + (mine > 1 ? "s" : ""))))];
+            parents.forEach(p => rows.push(h("div", { class: "item", "data-parent": p.id },
+                h("div", {}, "👪"),
+                h("div", { class: "info" }, h("strong", {}, p.famille),
+                    h("span", {}, "👤 " + p.pseudo + " · " + p.enfants + " enfant" + (p.enfants > 1 ? "s" : "") + " · inscrite le " + new Date(p.ajoute).toLocaleDateString("fr-FR") +
+                        " · " + (p.vu ? "dernière connexion " + timeFr(p.vu) : "jamais connectée"))),
+                h("button", { class: "btn secondary small", type: "button", onclick: () => newParentPassword(p) }, "🔑 Nouveau mot de passe"),
+                h("button", { class: "btn danger", type: "button", onclick: () => removeFamily(p) }, "Supprimer"))));
+            if (!parents.length) rows.push(h("p", { class: "empty" }, "Aucune autre famille pour l'instant."));
+            $("parent-list").replaceChildren(...rows);
+        }
+        async function inviteCode(action) {
+            if (action === "close" && !confirm("Fermer les inscriptions ? Le code actuel ne marchera plus (les familles déjà inscrites ne sont pas touchées).")) return;
+            const status = $("parents-status");
+            try {
+                await server("setInviteCode", pw(), action);
+                await reload();
+                showStatus(status, "ok", action === "close" ? "Inscriptions fermées." : "Nouveau code d'invitation : " + DATA.invitation);
+            } catch (e) { showStatus(status, "err", e.message); }
+        }
+        async function newParentPassword(p) {
+            const np = prompt("Nouveau mot de passe pour « " + p.pseudo + " » (8 caractères minimum). Donne-le-lui : il pourra le changer ensuite depuis son menu.");
+            if (np == null) return;
+            const status = $("parents-status");
+            try {
+                await server("resetParentPassword", pw(), p.id, np);
+                showStatus(status, "ok", "Nouveau mot de passe enregistré pour « " + p.pseudo + " ».");
+            } catch (e) { showStatus(status, "err", e.message); }
+        }
+        async function removeFamily(p) {
+            if (!confirm("Supprimer la famille « " + p.famille + " » ? Le compte de " + p.pseudo + ", ses " + p.enfants + " enfant(s), leurs leçons, flashcards et progressions seront effacés définitivement.")) return;
+            const status = $("parents-status");
+            try {
+                await server("deleteFamily", pw(), p.id);
+                await reload();
+                showStatus(status, "ok", "Famille « " + p.famille + " » supprimée.");
+            } catch (e) { showStatus(status, "err", e.message); }
+        }
+
         // ---------- événements ----------
         NAV.forEach(t => $("tab-" + t).addEventListener("click", () => go(t)));
         $("tab-eleve-ajout").addEventListener("click", () => { resetStudentForm(); $("student-status").className = "status"; go("eleve-ajout"); });
@@ -1439,7 +1698,18 @@
         $("deck-form-close").addEventListener("click", () => showDeckForm(false));
         document.querySelectorAll(".back-link[data-go]").forEach(b => b.addEventListener("click", () => go(b.dataset.go)));
         $("unlock").addEventListener("click", unlock);
-        $("lock").addEventListener("click", lockAgain);
+        $("lock").addEventListener("click", () => { closeMenu(); lockAgain(); });
+        $("acct-btn").addEventListener("click", e => { e.stopPropagation(); toggleMenu(); });
+        $("change-pw").addEventListener("click", () => { closeMenu(); showPwPanel(true); });
+        document.addEventListener("click", e => { if (!$("acct").contains(e.target)) closeMenu(); });
+        document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenu(); });
+        $("pw-close").addEventListener("click", () => showPwPanel(false));
+        $("pw-save").addEventListener("click", changePassword);
+        $("pw-new2").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); changePassword(); } });
+        $("signup-open").addEventListener("click", () => showSignup($("signup").hidden));
+        $("su-cancel").addEventListener("click", () => showSignup(false));
+        $("su-save").addEventListener("click", createFamily);
+        $("su-pw2").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); createFamily(); } });
         $("password").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); unlock(); } });
         $("admin-pseudo").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("password").focus(); } });
         try { $("admin-pseudo").value = localStorage.getItem(ADMIN_PSEUDO_KEY) || ""; } catch (e) { /* stockage indisponible */ }
@@ -1454,7 +1724,7 @@
         $("reset-deck").addEventListener("click", () => { resetDeckForm(); $("deck-status").className = "status"; });
         $("save-deck").addEventListener("click", () => saveItem("deck"));
         $("prog-filtre").addEventListener("change", e => { progFilter = e.target.value; renderProgrammes(); });
-        $("reset-all").addEventListener("click", () => resetProgress("all", "all", "TOUTE la progression de TOUS les élèves"));
+        $("reset-all").addEventListener("click", () => resetProgress("all", "all", "TOUTE la progression de TOUS tes élèves"));
 
         resetQuizForm();
         resetDeckForm();

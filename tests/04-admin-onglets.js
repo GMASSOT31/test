@@ -28,12 +28,17 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
   ok(w.props.ADMIN_PSEUDO === 'Papa', 'première connexion réussie : le pseudo « Papa » devient l\'identifiant parent');
   ok(await a.locator('#admin-area').isVisible() && await a.locator('#locked-hint').isHidden(), 'bon pseudo et mot de passe (touche Entrée) : espace parents ouvert');
   const labels = (await a.locator('.topnav .tab').allInnerTexts()).map(t => t.replace(/\s*\d+\s*$/, '').replace(/\s+/g, ' ').trim());
-  ok(JSON.stringify(labels) === JSON.stringify(['📈 Suivi', '👥 Élèves', '📚 Leçons', '🃏 Flashcards']), 'BARRE DU HAUT, 4 sections claires : ' + labels.join(' | '));
+  ok(JSON.stringify(labels) === JSON.stringify(['📈 Suivi', '👥 Élèves', '👪 Parents', '📚 Leçons', '🃏 Flashcards']), 'BARRE DU HAUT, 5 sections claires (Parents à côté d\'Élèves, administrateur) : ' + labels.join(' | '));
   ok((await visiblePane()) === 'pane-programmes' && (await a.locator('#tab-programmes').getAttribute('aria-selected')) === 'true', 'on arrive sur le Suivi');
   ok((await a.locator('#guide .guide li').count()) === 3 && (await a.locator('#guide').innerText()).includes('Pour commencer') && (await a.locator('#guide').innerText()).includes('Crée le compte de ton enfant'), 'sans élève : guide « Pour commencer » en 3 étapes');
-  const navBox = await a.locator('.topnav').boundingBox(), lockBox = await a.locator('#lock').boundingBox();
-  ok(await a.locator('.topnav #lockbar.docked').count() === 1 && Math.abs((lockBox.y + lockBox.height / 2) - (navBox.y + navBox.height / 2)) < 20, 'Actualiser et Verrouiller sont sur la même ligne que les sections');
-  ok(await a.locator('body > #lockbar').count() === 0 && (await a.locator('#unlock').innerText()).includes('Actualiser') && await a.locator('#lock').isVisible(), 'la barre du haut a disparu ; boutons « ↻ Actualiser » et « 🔒 Verrouiller » dans la barre latérale');
+  const navBox = await a.locator('.topnav').boundingBox(), lockBox = await a.locator('#acct-btn').boundingBox();
+  ok(await a.locator('.topnav #lockbar.docked').count() === 1 && Math.abs((lockBox.y + lockBox.height / 2) - (navBox.y + navBox.height / 2)) < 20, 'Actualiser et le menu du compte sont sur la même ligne que les sections');
+  ok(await a.locator('body > #lockbar').count() === 0 && (await a.locator('#unlock').innerText()).includes('Actualiser') && (await a.locator('#acct-btn').innerText()).includes('Papa') && await a.locator('#lock').isHidden(), 'boutons « ↻ Actualiser » et « Papa ▾ » (menu du compte, replié)');
+  await a.click('#acct-btn');
+  ok(await a.locator('#change-pw').isVisible() && await a.locator('#lock').isVisible() && (await a.locator('#acct-who').innerText()).includes('administrateur'), 'menu du compte : « Changer le mot de passe » et « Se déconnecter »');
+  await a.click('#tab-programmes');
+  ok(await a.locator('#acct-menu').isHidden(), 'un clic ailleurs referme le menu');
+  await a.click('#acct-btn');
   ok(await a.locator('#to-student').isHidden(), 'une fois connecté : le lien « Espace élève » disparaît');
   await a.click('#lock');
   ok(await a.locator('#admin-area').isHidden() && (await a.locator('#password').inputValue()) === '' && await a.locator('body > #lockbar').count() === 1 && (await a.locator('#unlock').innerText()) === 'Se connecter' && (await a.locator('#admin-pseudo').inputValue()) === 'Papa' && await a.locator('#locked-hint').isVisible(), '« Verrouiller » : gestion masquée, mot de passe effacé, barre remise en haut');
@@ -42,7 +47,7 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
   ok((await a.locator('#lock-status').innerText()).trim() === 'Pseudo ou mot de passe incorrect.', 'un autre pseudo avec le bon mot de passe : refusé (le pseudo est enregistré)');
   await a.fill('#admin-pseudo', ' papa '); await a.fill('#password', PW); await a.click('#unlock'); await waitOk('#lock-status');
   ok(await a.locator('#admin-area').isVisible() && await a.locator('#lock-dock #password').count() === 1, 'reconnexion (« papa », sans tenir compte des majuscules ni des espaces) : les boutons retournent dans la barre du haut');
-  for (const [t, pane] of [['eleves', 'pane-eleves'], ['quiz-ajout', 'pane-quiz-ajout'], ['quiz-liste', 'pane-quiz-liste'], ['fc-ajout', 'pane-fc-ajout'], ['programmes', 'pane-programmes'], ['eleve-ajout', 'pane-eleve-ajout']]) {
+  for (const [t, pane] of [['eleves', 'pane-eleves'], ['parents', 'pane-parents'], ['quiz-ajout', 'pane-quiz-ajout'], ['quiz-liste', 'pane-quiz-liste'], ['fc-ajout', 'pane-fc-ajout'], ['programmes', 'pane-programmes'], ['eleve-ajout', 'pane-eleve-ajout']]) {
     await tab(t);
     if ((await visiblePane()) !== pane || (await a.locator('.tab[aria-selected="true"]').count()) !== 1 || (await a.locator('.tab[aria-selected="true"]').getAttribute('data-tab')) !== (PARENT[t] || t)) ok(false, 'onglet ' + t + ' : mauvais affichage (' + await visiblePane() + ')');
   }
