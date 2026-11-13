@@ -58,8 +58,8 @@ w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' }); w.run('
   // suivi parent sur téléphone
   const c = await b.newContext({ viewport: { width: 375, height: 740 } }); await install(c, w);
   const a = await c.newPage(); a.on('pageerror', e => errs.push(e.message));
-  await a.goto('file://' + SRC + 'admin.html'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])'); await a.click('#tab-programmes');
-  await a.locator('.prog-card[data-student="leo"]').locator('text=Détails').click();
+  await a.goto('file://' + SRC + 'admin.html'); await a.fill('#admin-pseudo', 'Papa'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])'); await a.click('#tab-programmes');
+  await a.locator('.prog-card[data-student="leo"] .lesson-row[data-quiz="zootopia"] .plus').click();
   const r = await a.evaluate(() => ({ scroll: document.documentElement.scrollWidth, bad: [...document.querySelectorAll('.lesson .btn, .exam-input, .lvl-bar, .pret')].filter(e => e.getBoundingClientRect().right > innerWidth + 1).length }));
   ok(r.scroll <= 375 && r.bad === 0, 'SUIVI PARENT à 375 px : niveaux, date du contrôle et boutons dans l\'écran');
   ok(errs.length === 0, 'aucune erreur JavaScript ' + JSON.stringify(errs));

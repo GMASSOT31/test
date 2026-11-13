@@ -19,10 +19,14 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
 
   // ---- 1. verrouillé, puis barre latérale ----
   ok(await a.locator('#admin-area').isHidden() && await a.locator('#locked-hint').isVisible(), 'au départ : gestion masquée et message d\'invitation à saisir le mot de passe');
-  await a.fill('#password', 'mauvais'); await a.click('#unlock'); await a.waitForSelector('#lock-status.err');
-  ok((await a.locator('#lock-status').innerText()).trim() === 'Mot de passe incorrect.' && await a.locator('#admin-area').isHidden(), 'mauvais mot de passe : refusé, rien ne s\'affiche');
+  ok(await a.locator('#admin-pseudo').isVisible() && (await a.locator('#admin-pseudo').getAttribute('placeholder')).includes('Pseudo') && (await a.locator('#unlock').innerText()) === 'Se connecter', 'CONNEXION PARENTS : pseudo + mot de passe, bouton « Se connecter »');
+  await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#lock-status.err');
+  ok((await a.locator('#lock-status').innerText()).trim() === 'Saisis ton pseudo.' && await a.locator('#admin-area').isHidden(), 'sans pseudo : « Saisis ton pseudo. »');
+  await a.fill('#admin-pseudo', 'Papa'); await a.fill('#password', 'mauvais'); await a.click('#unlock'); await a.waitForSelector('#lock-status.err');
+  ok((await a.locator('#lock-status').innerText()).trim() === 'Pseudo ou mot de passe incorrect.' && await a.locator('#admin-area').isHidden() && !w.props.ADMIN_PSEUDO, 'mauvais mot de passe : refusé, rien ne s\'affiche, aucun pseudo enregistré');
   await a.fill('#password', PW); await a.press('#password', 'Enter'); await waitOk('#lock-status');
-  ok(await a.locator('#admin-area').isVisible() && await a.locator('#locked-hint').isHidden(), 'bon mot de passe (touche Entrée) : gestion déverrouillée');
+  ok(w.props.ADMIN_PSEUDO === 'Papa', 'première connexion réussie : le pseudo « Papa » devient l\'identifiant parent');
+  ok(await a.locator('#admin-area').isVisible() && await a.locator('#locked-hint').isHidden(), 'bon pseudo et mot de passe (touche Entrée) : espace parents ouvert');
   const labels = (await a.locator('.topnav .tab').allInnerTexts()).map(t => t.replace(/\s*\d+\s*$/, '').replace(/\s+/g, ' ').trim());
   ok(JSON.stringify(labels) === JSON.stringify(['📈 Suivi', '👥 Élèves', '📚 Leçons', '🃏 Flashcards']), 'BARRE DU HAUT, 4 sections claires : ' + labels.join(' | '));
   ok((await visiblePane()) === 'pane-programmes' && (await a.locator('#tab-programmes').getAttribute('aria-selected')) === 'true', 'on arrive sur le Suivi');
@@ -32,10 +36,12 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
   ok(await a.locator('body > #lockbar').count() === 0 && (await a.locator('#unlock').innerText()).includes('Actualiser') && await a.locator('#lock').isVisible(), 'la barre du haut a disparu ; boutons « ↻ Actualiser » et « 🔒 Verrouiller » dans la barre latérale');
   ok(await a.locator('#to-student').isHidden(), 'une fois connecté : le lien « Espace élève » disparaît');
   await a.click('#lock');
-  ok(await a.locator('#admin-area').isHidden() && (await a.locator('#password').inputValue()) === '' && await a.locator('body > #lockbar').count() === 1 && (await a.locator('#unlock').innerText()) === 'Déverrouiller' && await a.locator('#locked-hint').isVisible(), '« Verrouiller » : gestion masquée, mot de passe effacé, barre remise en haut');
+  ok(await a.locator('#admin-area').isHidden() && (await a.locator('#password').inputValue()) === '' && await a.locator('body > #lockbar').count() === 1 && (await a.locator('#unlock').innerText()) === 'Se connecter' && (await a.locator('#admin-pseudo').inputValue()) === 'Papa' && await a.locator('#locked-hint').isVisible(), '« Verrouiller » : gestion masquée, mot de passe effacé, barre remise en haut');
   ok(await a.locator('#to-student').isVisible(), 'après « Verrouiller » : le lien « Espace élève » revient');
-  await a.fill('#password', PW); await a.click('#unlock'); await waitOk('#lock-status');
-  ok(await a.locator('#admin-area').isVisible() && await a.locator('#lock-dock #password').count() === 1, 'redéverrouillage : les boutons retournent dans la barre du haut');
+  await a.fill('#admin-pseudo', 'Maman'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#lock-status.err');
+  ok((await a.locator('#lock-status').innerText()).trim() === 'Pseudo ou mot de passe incorrect.', 'un autre pseudo avec le bon mot de passe : refusé (le pseudo est enregistré)');
+  await a.fill('#admin-pseudo', ' papa '); await a.fill('#password', PW); await a.click('#unlock'); await waitOk('#lock-status');
+  ok(await a.locator('#admin-area').isVisible() && await a.locator('#lock-dock #password').count() === 1, 'reconnexion (« papa », sans tenir compte des majuscules ni des espaces) : les boutons retournent dans la barre du haut');
   for (const [t, pane] of [['eleves', 'pane-eleves'], ['quiz-ajout', 'pane-quiz-ajout'], ['quiz-liste', 'pane-quiz-liste'], ['fc-ajout', 'pane-fc-ajout'], ['programmes', 'pane-programmes'], ['eleve-ajout', 'pane-eleve-ajout']]) {
     await tab(t);
     if ((await visiblePane()) !== pane || (await a.locator('.tab[aria-selected="true"]').count()) !== 1 || (await a.locator('.tab[aria-selected="true"]').getAttribute('data-tab')) !== (PARENT[t] || t)) ok(false, 'onglet ' + t + ' : mauvais affichage (' + await visiblePane() + ')');

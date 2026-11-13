@@ -1,12 +1,12 @@
 // Suivi parent (admin) : niveaux par leçon, prête pour le contrôle, questions difficiles, historique, date du contrôle, archivage, remises à zéro
 const { chromium } = require('playwright');
-const { makeWorld, install, ok, summary, login, LEO, PW, SRC, startLesson, answerCurrent } = require('./harness');
+const { makeWorld, install, ok, summary, login, LEO, PW, ADM, SRC, startLesson, answerCurrent } = require('./harness');
 const DAY = 86400000;
 
 (async () => {
   const w = makeWorld();
-  for (const [c, p, n] of [['5B', 'Léo', '1234'], ['5B', 'Emma', '4321'], ['6A', 'Nina', '2468'], ['5e A', 'Zoé', '1357']]) w.run('saveStudent', PW, { classe: c, pseudo: p, pin: n });
-  w.run('setBuiltinAssign', PW, 'zootopia', ['leo', 'emma']); w.run('setBuiltinAssign', PW, 'byzance-30', ['leo']); w.run('setBuiltinAssign', PW, 'musique-carnaval', ['emma', 'nina']);
+  for (const [c, p, n] of [['5B', 'Léo', '1234'], ['5B', 'Emma', '4321'], ['6A', 'Nina', '2468'], ['5e A', 'Zoé', '1357']]) w.run('saveStudent', ADM, { classe: c, pseudo: p, pin: n });
+  w.run('setBuiltinAssign', ADM, 'zootopia', ['leo', 'emma']); w.run('setBuiltinAssign', ADM, 'byzance-30', ['leo']); w.run('setBuiltinAssign', ADM, 'musique-carnaval', ['emma', 'nina']);
   const zoo = w.ctx.BUILTIN_QUIZZES.find(q => q.id === 'zootopia'), byz = w.ctx.BUILTIN_QUIZZES.find(q => q.id === 'byzance-30');
   const zid = zoo.questions.map(q => w.ctx.qhash_(q.question)), bid = byz.questions.map(q => w.ctx.qhash_(q.question));
   const now = w.now();
@@ -22,22 +22,28 @@ const DAY = 86400000;
   const c = await b.newContext({ viewport: { width: 1200, height: 1000 } }); await install(c, w);
   const errs = [];
   const a = await c.newPage(); a.on('pageerror', e => errs.push(e.message)); a.on('dialog', d => d.accept());
-  await a.goto('file://' + SRC + 'admin.html'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])');
+  await a.goto('file://' + SRC + 'admin.html'); await a.fill('#admin-pseudo', 'Papa'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])');
   await a.click('#tab-programmes');
   const card = id => a.locator(`.prog-card[data-student="${id}"]`);
   const lesson = (sid, qid) => card(sid).locator(`.lesson[data-quiz="${qid}"]`);
 
-  // ---- 0. par défaut : une ligne par élève, son activité, et « Détails » ----
+  // ---- 0. EN UN COUP D'ŒIL : chaque élève, ses leçons et leur pourcentage ; le reste derrière « + » ----
   ok((await a.locator('#pane-programmes h2').first().innerText()).includes('Suivi des révisions'), 'onglet « Suivi des révisions »');
-  ok((await a.locator('.prog-card').count()) === 4 && (await a.locator('.prog-card .lesson').count()) === 0, 'PAR DÉFAUT : une ligne par élève, détails repliés');
-  const sumLeo = (await card('leo').locator('.student-sum').innerText());
-  ok(sumLeo.includes('2 séances cette semaine (12 min)') && sumLeo.includes('3 questions à réviser') && sumLeo.includes('dernière activité'), 'résumé de Léo : « ' + sumLeo + ' »');
-  ok((await card('zoe').locator('.student-sum').innerText()).startsWith('0 séance cette semaine'), 'Zoé : aucune séance');
-  ok((await card('leo').locator('.prog-head .avancement').innerText()) === 'Avancement 15 %' && (await card('leo').locator('.av-bar').count()) === 1, 'AVANCEMENT visible sans ouvrir les détails : Léo 15 % (en cours d\'apprentissage, même sans question ancrée)');
-  ok((await card('emma').locator('.prog-head .avancement').innerText()) === 'Avancement 1 %' && (await card('zoe').locator('.avancement').count()) === 0, 'Emma (1 question découverte sur 50) : 1 % ; Zoé (aucune leçon) : pas d\'indicateur');
+  const rows = async id => (await card(id).locator('.lesson-row .lr-main').allInnerTexts()).map(t => t.replace(/\s+/g, ' ').trim());
+  const rl = await rows('leo');
+  ok(rl.length === 2 && rl.some(t => t.includes('Zootopia') && t.includes('57 %')) && rl.some(t => t.includes('Grand quiz') && t.includes('1 %')), 'Léo : ses 2 leçons et leur pourcentage, d\'un coup d\'œil : ' + rl.join(' | '));
+  ok((await card('leo').locator('.st-pct').innerText()) === '15 %' && (await card('emma').locator('.st-pct').innerText()) === '1 %' && (await card('zoe').locator('.st-pct').count()) === 0, 'avancement global à côté du nom : Léo 15 %, Emma 1 % ; Zoé (aucune leçon) : rien');
+  ok((await a.locator('.prog-card .lesson').count()) === 0 && (await a.locator('.prog-card .student-sum').count()) === 0 && (await a.locator('.prog-card .exam-input').count()) === 0, 'PAR DÉFAUT : ni détail, ni résumé, ni réglage : seulement les leçons et leur %');
+  ok((await card('zoe').innerText()).includes('Aucune leçon pour l\'instant'), 'élève sans leçon : comment lui en donner une');
   ok((await a.locator('#guide').innerText()) === '', 'des élèves sont au travail : plus de guide « Pour commencer »');
-  for (const id of ['leo', 'emma', 'nina', 'zoe']) await card(id).locator('text=Détails').click();
-
+  // « + » de l'élève : son activité et ses actions
+  await card('leo').locator('.prog-head .plus').click();
+  const sumLeo = (await card('leo').locator('.student-sum').innerText());
+  ok(sumLeo.includes('2 séances cette semaine (12 min)') && sumLeo.includes('3 questions à réviser') && sumLeo.includes('dernière activité'), '« + » de Léo : « ' + sumLeo + ' »');
+  ok((await card('leo').locator('.prog-head .plus').innerText()) === '−' && (await card('leo').locator('text=Tout remettre à zéro pour Léo').count()) === 1, 'le « + » devient « − » ; la remise à zéro de l\'élève est là');
+  // « + » d'une leçon : tout son détail
+  const openLesson = async (sid, qid) => card(sid).locator(`.lesson-row[data-quiz="${qid}"] .plus`).click();
+  await openLesson('leo', 'zootopia'); await openLesson('emma', 'musique-carnaval');
   // ---- 1. une leçon : niveaux, prête pour le contrôle, à réviser, questions difficiles, historique ----
   const lz = lesson('leo', 'zootopia');
   ok((await lz.locator('.lvl-legend').innerText()).replace(/\s+/g, ' ').includes('🌱 Nouvelle 3 🌿 Découverte 1 🌳 Rappelée 2 ⭐ Ancrée 4 🏆 Maîtrisée 0'), 'niveaux de Zootopia : ' + (await lz.locator('.lvl-legend').innerText()).replace(/\s+/g, ' '));
@@ -51,9 +57,8 @@ const DAY = 86400000;
   await lz.locator('.historique summary').click();
   const hist = await lz.locator('.historique li').allInnerTexts();
   ok(hist.length === 2 && hist[0].includes('5 min · 6 / 8 réussies du premier coup') && hist[1].includes('7 min · 7 / 10'), 'historique (récent d\'abord) : ' + hist.join(' | '));
-  ok((await card('leo').locator('.prog-detail .total').innerText()).includes('Avancement 15 % sur 2 leçons · 4 / 40 questions ancrées'), 'total de Léo : ' + await card('leo').locator('.prog-detail .total').innerText());
+  ok((await card('leo').locator('.student-extra .total').innerText()).includes('Avancement 15 % sur 2 leçons · 4 / 40 questions ancrées'), 'total de Léo : ' + await card('leo').locator('.student-extra .total').innerText());
   ok((await lesson('emma', 'musique-carnaval').innerText()).includes('Jamais commencée') && (await lesson('emma', 'musique-carnaval').locator('.pret').innerText()).includes('0 %'), 'leçon jamais commencée');
-  ok((await card('zoe').innerText()).includes('Aucune leçon attribuée'), 'élève sans leçon : message');
 
   // ---- 2. le parent fixe la date du contrôle : plan recalculé, l'élève le voit ----
   const tomorrow = new Date(w.now() + DAY).toISOString().slice(0, 10);
@@ -67,6 +72,7 @@ const DAY = 86400000;
   ok((await lesson('leo', 'zootopia').locator('.exam-txt').innerText()) === 'Pas de contrôle prévu', '« Pas de contrôle » : la date est retirée');
 
   // ---- 3. archiver / réactiver ----
+  await openLesson('leo', 'byzance-30');
   await lesson('leo', 'byzance-30').locator('text=Archiver').click(); await a.waitForFunction(() => document.querySelector('#prog-status').textContent.includes('archivée'));
   ok((await lesson('leo', 'byzance-30').locator('.exam-txt').innerText()) === '📦 Archivée' && JSON.parse(w.props['srs_leo__byzance-30']).mode === 'archive', 'leçon archivée');
   await lesson('leo', 'byzance-30').locator('text=Réactiver').click(); await a.waitForFunction(() => document.querySelector('#prog-status').textContent.includes('réactivée'));
@@ -90,13 +96,16 @@ const DAY = 86400000;
   // ---- 6. remises à zéro ----
   await lesson('leo', 'zootopia').locator('text=Remettre cette leçon à zéro').click(); await a.waitForSelector('#prog-status.ok');
   ok((await lesson('leo', 'zootopia').locator('.lvl-legend').innerText()).includes('Nouvelle 10') && !w.props['srs_leo__zootopia'] && !!w.props['srs_leo__byzance-30'] && !!w.props['srs_emma__zootopia'], 'remise à zéro d\'UNE leçon de Léo : le reste est intact');
+  await card('emma').locator('.prog-head .plus').click();
   await card('emma').locator('text=Tout remettre à zéro pour Emma').click(); await a.waitForSelector('#prog-status.ok');
   ok(!Object.keys(w.props).some(k => k.startsWith('srs_emma__')) && !!w.props['srs_leo__byzance-30'], 'tout remettre à zéro pour Emma : Léo intact');
+  ok(!(await a.locator('#reset-all').isVisible()), 'la remise à zéro générale est rangée dans un volet replié');
+  await a.locator('details.advanced summary').click();
   await a.click('#reset-all'); await a.waitForSelector('#prog-status.ok');
   ok(!Object.keys(w.props).some(k => k.startsWith('srs_')), 'remise à zéro générale : plus aucune révision');
   await a.evaluate(() => { document.getElementById('password').value = 'mauvais'; });
   await lesson('leo', 'zootopia').locator('text=Remettre cette leçon à zéro').click(); await a.waitForSelector('#prog-status.err');
-  ok((await a.locator('#prog-status').innerText()).includes('Mot de passe incorrect'), 'sans le bon mot de passe : refusé');
+  ok((await a.locator('#prog-status').innerText()).includes('Pseudo ou mot de passe incorrect'), 'sans le bon mot de passe : refusé');
   ok(errs.length === 0, 'aucune erreur JavaScript ' + JSON.stringify(errs));
   await b.close(); process.exit(summary() ? 1 : 0);
 })().catch(e => { console.log('ECHEC:', e.message.split('\n')[0]); process.exit(1); });

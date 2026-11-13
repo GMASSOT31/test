@@ -1,13 +1,13 @@
 const { chromium } = require('playwright');
-const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harness'); const { startLesson } = require('./harness');
-const w = makeWorld(); w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' });
+const { makeWorld, install, ok, summary, login, LEO, PW, ADM, SRC } = require('./harness'); const { startLesson } = require('./harness');
+const w = makeWorld(); w.run('saveStudent', ADM, { classe: '5B', pseudo: 'Léo', pin: '1234' });
 const Q = (extra) => ({ titre: 'T', questions: [{ question: 'q ?', ...extra }] });
-const err = q => w.try('saveQuiz', PW, q).err;
+const err = q => w.try('saveQuiz', ADM, q).err;
 
 (async () => {
   // ---- serveur : validation des questions à plusieurs champs et du lien ----
   const f2 = [{ label: 'A', reponses: ['a'] }, { label: 'B', reponses: ['b'] }];
-  const good = w.run('saveQuiz', PW, { titre: 'Champs', pour: ['leo'], lien: { texte: 'Extraits', url: 'https://digipad.app/p/1' }, questions: [{ question: 'Q ?', libre: true, champs: [{ label: 'A', reponses: ['a', 'A bis'] }, { label: 'B', reponses: ['b'], groupe: 'g1' }] }] });
+  const good = w.run('saveQuiz', ADM, { titre: 'Champs', pour: ['leo'], lien: { texte: 'Extraits', url: 'https://digipad.app/p/1' }, questions: [{ question: 'Q ?', libre: true, champs: [{ label: 'A', reponses: ['a', 'A bis'] }, { label: 'B', reponses: ['b'], groupe: 'g1' }] }] });
   const st = JSON.parse(w.props['quiz_' + good.id]);
   ok(st.questions[0].champs.length === 2 && st.questions[0].libre === true && st.questions[0].champs[1].groupe === 'g1' && !('options' in st.questions[0]) && !('reponses' in st.questions[0]), 'question à champs enregistrée (libre, groupe, sans options) : ' + JSON.stringify(st.questions[0]).slice(0, 110));
   ok(JSON.stringify(st.lien) === '{"texte":"Extraits","url":"https://digipad.app/p/1"}', 'lien enregistré : ' + JSON.stringify(st.lien));
@@ -18,20 +18,20 @@ const err = q => w.try('saveQuiz', PW, q).err;
   ok(err(Q({ champs: [{ label: 'A', reponses: ['a'], groupe: '<b>' }, f2[1]] })).includes('groupe'), 'nom de groupe avec des signes dangereux refusé');
   ok(err({ titre: 'T', lien: { url: 'javascript:alert(1)' }, questions: [{ question: 'q', options: ['a', 'b'], correct: 0 }] }).includes('http'), 'lien « javascript: » refusé');
   ok(err({ titre: 'T', lien: { url: 'ftp://x.org/f' }, questions: [{ question: 'q', options: ['a', 'b'], correct: 0 }] }).includes('http'), 'lien « ftp: » refusé');
-  const noLink = w.run('saveQuiz', PW, { titre: 'Sans lien', lien: { texte: 'seul' }, questions: [{ question: 'q', options: ['a', 'b'], correct: 0 }] });
+  const noLink = w.run('saveQuiz', ADM, { titre: 'Sans lien', lien: { texte: 'seul' }, questions: [{ question: 'q', options: ['a', 'b'], correct: 0 }] });
   ok(!('lien' in JSON.parse(w.props['quiz_' + noLink.id])), 'texte sans adresse : aucun lien enregistré');
-  const defTxt = w.run('saveQuiz', PW, { titre: 'Texte par défaut', lien: { url: 'https://exemple.org' }, questions: [{ question: 'q', options: ['a', 'b'], correct: 0 }] });
+  const defTxt = w.run('saveQuiz', ADM, { titre: 'Texte par défaut', lien: { url: 'https://exemple.org' }, questions: [{ question: 'q', options: ['a', 'b'], correct: 0 }] });
   ok(JSON.parse(w.props['quiz_' + defTxt.id]).lien.texte === 'Ouvrir le lien', 'adresse sans texte : « Ouvrir le lien » par défaut');
-  for (const id of [noLink.id, defTxt.id]) w.run('deleteQuiz', PW, id);
+  for (const id of [noLink.id, defTxt.id]) w.run('deleteQuiz', ADM, id);
 
   // ---- administration : création complète par l'interface ----
   const b = await chromium.launch();
   const c = await b.newContext({ viewport: { width: 1100, height: 1000 } }); await install(c, w);
   const errs = [];
   const a = await c.newPage(); a.on('pageerror', e => errs.push(e.message)); a.on('dialog', d => d.accept());
-  await a.goto('file://' + SRC + 'admin.html'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])');
+  await a.goto('file://' + SRC + 'admin.html'); await a.fill('#admin-pseudo', 'Papa'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])');
   // on repart d'un site propre : on retire le quiz « Champs » créé pour le test serveur
-  w.run('deleteQuiz', PW, good.id); await a.click('#unlock'); await a.waitForSelector('#lock-status.ok');
+  w.run('deleteQuiz', ADM, good.id); await a.click('#unlock'); await a.waitForSelector('#lock-status.ok');
 
   await a.click('#tab-quiz-liste'); await a.click('#tab-quiz-ajout');
   await a.fill('#titre', 'Analyse musicale'); await a.fill('#matiere', 'Musique');
