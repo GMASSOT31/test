@@ -74,7 +74,12 @@ const DAY = 86400000;
   // ---- 3. archiver / réactiver ----
   await openLesson('leo', 'byzance-30');
   await lesson('leo', 'byzance-30').locator('text=Archiver').click(); await a.waitForFunction(() => document.querySelector('#prog-status').textContent.includes('archivée'));
-  ok((await lesson('leo', 'byzance-30').locator('.exam-txt').innerText()) === '📦 Archivée' && JSON.parse(w.props['srs_leo__byzance-30']).mode === 'archive', 'leçon archivée');
+  const toggle = card('leo').locator('.archived-toggle');
+  ok(JSON.parse(w.props['srs_leo__byzance-30']).mode === 'archive' && (await card('leo').locator('.lesson-row[data-quiz="byzance-30"]').count()) === 0 && (await toggle.innerText()).includes('📦 1 leçon archivée') && (await toggle.getAttribute('aria-expanded')) === 'false',
+    'leçon archivée : elle disparaît de la liste, rangée sous « ' + await toggle.innerText() + ' »');
+  ok((await card('leo').locator('.st-pct').innerText()) === '57 %' && (await card('emma').locator('.archived-toggle').count()) === 0, 'l\'avancement de Léo ne compte plus la leçon archivée (57 % = Zootopia seule) ; Emma n\'a rien d\'archivé : pas de bouton');
+  await toggle.click();
+  ok((await card('leo').locator('.lesson-row.archived[data-quiz="byzance-30"]').count()) === 1 && (await lesson('leo', 'byzance-30').locator('.exam-txt').innerText()) === '📦 Archivée' && (await toggle.innerText()).includes('masquer'), 'on la déploie : elle réapparaît (grisée) avec son détail');
   await lesson('leo', 'byzance-30').locator('text=Réactiver').click(); await a.waitForFunction(() => document.querySelector('#prog-status').textContent.includes('réactivée'));
   ok(JSON.parse(w.props['srs_leo__byzance-30']).mode === 'entretien', 'réactivée (rappels espacés)');
 
@@ -83,8 +88,8 @@ const DAY = 86400000;
   ok(opts[0] === 'Tous les élèves' && opts.includes('Toute la classe 5B') && opts.includes('👤 Léo'), 'filtre : ' + opts.join(' | '));
   await a.selectOption('#prog-filtre', 'c:5b'); ok((await a.locator('.prog-card').count()) === 2, 'filtre « Toute la classe 5B » : 2 fiches');
   await a.selectOption('#prog-filtre', 'all');
-  await a.click('#tab-eleves'); await a.locator('#student-list .item', { hasText: 'Emma' }).locator('text=Progression').click();
-  ok((await a.locator('#prog-filtre').inputValue()) === 's:emma' && (await a.locator('.prog-card').count()) === 1, '« Progression » (liste des élèves) ouvre le suivi d\'Emma');
+  await a.click('#tab-eleves'); await a.locator('#student-list .item', { hasText: 'Emma' }).locator('button', { hasText: 'Suivi' }).click();
+  ok((await a.locator('#prog-filtre').inputValue()) === 's:emma' && (await a.locator('.prog-card').count()) === 1, '« 📈 Suivi » (liste des élèves, ex-« Progression ») ouvre le suivi d\'Emma');
   await a.selectOption('#prog-filtre', 'all');
 
   // ---- 5. ce que l'élève fait se voit dans le suivi ----
