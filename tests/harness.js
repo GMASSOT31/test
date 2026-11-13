@@ -68,6 +68,8 @@ async function login(p, c = { classe: '5B', pseudo: 'Léo', pin: '1234' }) {
   await p.waitForSelector('#app:not([hidden])', { timeout: 8000 });
 }
 const LEO = { classe: '5B', pseudo: 'Léo', pin: '1234' }, EMMA = { classe: '5B', pseudo: 'Emma', pin: '4321' };
+// identifiants parent (pseudo + mot de passe), comme les envoie la page d'administration
+const ADM = { pseudo: 'Papa', password: 'secret' };
 // ---- aides pour les séances (parcours v3) ----
 const esc = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // Ouvre une leçon et lance une séance ; à la première ouverture, répond à « Quand est ton contrôle ? » et « déjà travaillée ? »
@@ -107,4 +109,4 @@ async function finishSession(p, good = () => true) {
   await p.waitForSelector('.result .actions');
   return n;
 }
-Object.assign(module.exports, { seed, login, LEO, EMMA, PW, startLesson, answerCurrent, finishSession, esc });
+Object.assign(module.exports, { seed, login, LEO, EMMA, PW, ADM, startLesson, answerCurrent, finishSession, esc });

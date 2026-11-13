@@ -764,15 +764,27 @@ function remove_(prefix, id) {
   return true;
 }
 
-function checkAdmin_(password) {
-  var expected = PropertiesService.getScriptProperties().getProperty('ADMIN_PASSWORD');
+// Identifiants de l'administrateur (parent) : { pseudo, password } envoyés par la page d'administration.
+// Le pseudo est enregistré dans la propriété ADMIN_PSEUDO à la première connexion réussie (le parent choisit son pseudo) ;
+// ensuite pseudo ET mot de passe doivent correspondre. Un mot de passe seul (ancienne forme) n'est accepté que tant
+// qu'aucun pseudo n'est enregistré.
+function checkAdmin_(cred) {
+  var store = PropertiesService.getScriptProperties();
+  var expected = store.getProperty('ADMIN_PASSWORD');
   if (!expected) {
     throw new Error("Mot de passe administrateur non défini : ajoute la propriété de script ADMIN_PASSWORD.");
   }
-  if (password !== expected) {
+  var withPseudo = !!cred && typeof cred === 'object';
+  var password = withPseudo ? cred.password : cred;
+  var pseudo = withPseudo ? str_(cred.pseudo, 30) : '';
+  var saved = store.getProperty('ADMIN_PSEUDO') || '';
+  if (withPseudo && !pseudo) throw new Error('Saisis ton pseudo.');
+  var pseudoOk = !saved || (withPseudo && norm_(pseudo) === norm_(saved));
+  if (password !== expected || !pseudoOk) {
     Utilities.sleep(1000); // ralentit les essais répétés
-    throw new Error('Mot de passe incorrect.');
+    throw new Error(withPseudo ? 'Pseudo ou mot de passe incorrect.' : 'Mot de passe incorrect.');
   }
+  if (withPseudo && !saved) store.setProperty('ADMIN_PSEUDO', pseudo);
 }
 
 // Une question est de l'un des trois types : à choix (options + correct), à réponse écrite (reponses),

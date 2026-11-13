@@ -21,7 +21,7 @@ const URL_ = 'file://' + SRC + 'Index.html';
   ok(!/sahara square|Justinien|Constantinople|Zootopia/.test(html), 'le fichier de la page ne contient plus aucun quiz (ils viennent du serveur)');
   ok((await p.evaluate(() => QUIZZES.length + FLASHCARDS.length)) === 0, 'avant connexion : aucune donnée en mémoire');
   const toAdmin = p.locator('#to-admin');
-  ok(await toAdmin.isVisible() && (await toAdmin.innerText()).includes('Espace enseignant') && (await toAdmin.getAttribute('href')).endsWith('/exec?p=admin') && (await toAdmin.getAttribute('target')) === '_top', 'lien discret « Espace enseignant » sous la connexion (vers ?p=admin, dans toute la fenêtre)');
+  ok(await toAdmin.isVisible() && (await toAdmin.innerText()).includes('Espace parents') && (await toAdmin.getAttribute('href')).endsWith('/exec?p=admin') && (await toAdmin.getAttribute('target')) === '_top', 'lien discret « Espace parents » sous la connexion (vers ?p=admin, dans toute la fenêtre)');
   ok((await toAdmin.evaluate(e => parseFloat(getComputedStyle(e).fontSize))) < 14 && (await p.locator('#to-admin').boundingBox()).y > (await p.locator('#login-btn').boundingBox()).y, 'le lien est petit et placé sous le bouton « Entrer »');
 
   // ---- 2. mauvais identifiants ----

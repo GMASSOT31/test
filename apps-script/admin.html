@@ -169,7 +169,8 @@
         /* Barre du mot de passe */
         .lockbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; max-width: 1180px; margin: 16px auto 0; padding: 12px 16px; background: #fff; border-radius: 16px; box-shadow: var(--soft); }
         .lockbar label { margin: 0; font-weight: 800; color: var(--navy); }
-        .lockbar input { width: auto; flex: 1; min-width: 180px; max-width: 320px; }
+        .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+        .lockbar input { width: auto; flex: 1; min-width: 150px; max-width: 260px; }
         .lockbar .btn { padding: 9px 20px; }
         .status.inline { display: none; margin: 0; padding: 7px 12px; }
         .status.inline.ok, .status.inline.err, .status.inline.info { display: inline-block; }
@@ -274,6 +275,37 @@
         .exam-label { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: .88rem; }
         .exam-input { width: auto; padding: 5px 8px; }
         .plan-txt { color: var(--navy); font-weight: 700; }
+        /* Suivi en un coup d'œil : élève, leçons et pourcentage ; « + » pour le détail */
+        .prog-card.compact .prog-head { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; margin-bottom: 6px; }
+        .st-name { flex: 1; min-width: 0; font-size: 1.1rem; }
+        .st-pct { font-weight: 900; font-size: 1.1rem; color: #07603b; }
+        .plus { flex: 0 0 auto; width: 34px; height: 34px; padding: 0; border-radius: 50%; border: 2px solid var(--line); background: #fff; color: var(--navy);
+                font: inherit; font-size: 1.3rem; font-weight: 900; line-height: 1; cursor: pointer; box-shadow: var(--sticker); }
+        .plus.on { background: var(--gold); }
+        .plus:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
+        .lesson-list { list-style: none; margin: 0; padding: 0; }
+        .lesson-row { border-top: 1px solid var(--line); padding: 8px 0; }
+        .lesson-row.archived { opacity: .6; }
+        .lr-main { display: grid; grid-template-columns: minmax(0, 1fr) auto 140px 48px 34px; align-items: center; gap: 10px; }
+        .lr-name { font-weight: 700; color: var(--navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lr-exam { font-size: .75rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: #eef2ff; color: var(--navy); white-space: nowrap; }
+        .lr-exam.empty { background: none; padding: 0; }
+        .lr-bar { display: block; height: 10px; border-radius: 999px; background: #e8ecf8; overflow: hidden; }
+        .lr-bar span { display: block; height: 100%; background: linear-gradient(90deg, #9be7c4, #2fbf7f); }
+        .lr-pct { font-weight: 900; text-align: right; color: var(--navy); }
+        .lesson-row .lesson { border-top: 0; margin-top: 6px; padding: 10px 12px; border-radius: 12px; background: #fff; border: 2px solid var(--line); }
+        .student-extra { margin: 4px 0 8px; }
+        details.advanced { background: #fff; border-radius: 18px; box-shadow: var(--soft); padding: 14px 22px; }
+        details.advanced summary { cursor: pointer; font-weight: 800; color: var(--muted); }
+        @media (max-width: 600px) {
+            .lr-main { grid-template-columns: auto minmax(0, 1fr) 48px 34px; grid-template-areas: "name name name name" "exam bar pct plus"; row-gap: 4px; column-gap: 8px; }
+            .lr-name { grid-area: name; white-space: normal; }
+            .lr-exam { grid-area: exam; }
+            .lr-exam.empty { display: none; }
+            .lr-bar { grid-area: bar; }
+            .lr-pct { grid-area: pct; }
+            .lr-main .plus { grid-area: plus; }
+        }
         /* Programmes de révision : un nom par élève, le détail se déplie */
         .prog-card.compact { padding: 10px 14px; margin: 8px 0; }
         .prog-card.compact .prog-head { margin-bottom: 0; }
@@ -304,14 +336,14 @@
       <span aria-hidden="true" class="rv-float rv-f4">🎯</span>
     
       <div class="rv-inner">
-        <span class="rv-sticker"><span class="rv-dot"></span> Espace administrateur</span>
+        <span class="rv-sticker"><span class="rv-dot"></span> Espace parents</span>
         <h1 class="rv-title">Espace <span class="rv-hl">admin</span> ⚙️</h1>
         <p class="rv-sub" id="rvSub">Suis les révisions de tes élèves et donne-leur des leçons</p>
         <div class="rv-chips">
           <span class="rv-chip">📈 Suivi</span>
           <span class="rv-chip">👥 Élèves</span>
           <span class="rv-chip">📚 Leçons</span>
-          <span class="rv-chip">🔒 Réservé aux parents et enseignants</span>
+          <span class="rv-chip">🔒 Réservé aux parents</span>
         </div>
       </div>
     
@@ -323,14 +355,16 @@
     </header>
 
     <div class="lockbar" id="lockbar">
-        <label for="password">🔑 Mot de passe administrateur</label>
+        <label for="admin-pseudo" class="sr-only">Pseudo</label>
+        <input type="text" id="admin-pseudo" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="30" placeholder="👤 Pseudo">
+        <label for="password" class="sr-only">Mot de passe</label>
         <input type="password" id="password" autocomplete="current-password" placeholder="🔑 Mot de passe">
-        <button class="btn" id="unlock" type="button" title="Actualiser">Déverrouiller</button>
-        <button class="btn secondary" id="lock" type="button" title="Verrouiller" aria-label="Verrouiller" hidden>🔒 Verrouiller</button>
+        <button class="btn" id="unlock" type="button" title="Actualiser">Se connecter</button>
+        <button class="btn secondary" id="lock" type="button" title="Se déconnecter" aria-label="Se déconnecter" hidden>🔒 Se déconnecter</button>
         <span class="status inline" id="lock-status" role="status"></span>
     </div>
 
-    <p class="locked-hint" id="locked-hint">Saisis le mot de passe administrateur pour afficher la gestion. Il se définit dans les propriétés du script (ADMIN_PASSWORD).</p>
+    <p class="locked-hint" id="locked-hint">Espace parents : saisis ton pseudo et ton mot de passe. À la toute première connexion, le pseudo que tu choisis devient ton identifiant.</p>
     <!-- lien discret vers la connexion élève (target _top : l'application s'affiche dans un cadre Google) -->
     <p class="switch-zone" id="to-student-zone"><a class="switch-link" id="to-student" href="https://script.google.com/macros/s/AKfycbzzqlCAUDZAoHOmhxufvj4CAAHWX8JtU8vBsTB0ZsoEK_mLu2tW4BoESRUdrg4b7bkF/exec" target="_top">🎒 Espace élève</a></p>
 
@@ -534,19 +568,19 @@
             <section>
                 <h2>📈 Suivi des révisions</h2>
                 <div id="guide"></div>
-                <p class="hint"><strong>Avancement</strong> : le chemin parcouru dans l'apprentissage (🌿 découverte = 1/3, 🌳 rappelée sans choix = 2/3, ⭐ ancrée ou 🏆 maîtrisée = 3/3). <strong>Prête pour le contrôle</strong> : part des questions au moins rappelées. Tu peux aussi fixer la date du contrôle : le plan de séances s'adapte (révision express si c'est demain).</p>
+                <p class="hint">Chaque élève, ses leçons et leur <strong>avancement</strong>. Touche <strong>+</strong> pour voir le détail d'une leçon (niveaux, date du contrôle, questions difficiles…) ou d'un élève.</p>
                 <label for="prog-filtre">Afficher</label>
                 <select id="prog-filtre"></select>
                 <div class="status" id="prog-status" role="status"></div>
                 <div id="prog-list"></div>
             </section>
-            <section>
-                <h2>⚠️ Remise à zéro générale</h2>
+            <details class="advanced">
+                <summary>⚙️ Remise à zéro générale</summary>
                 <p class="hint">Efface toute la progression de tous les élèves, sur toutes les leçons. À utiliser en dernier recours.</p>
                 <div class="actions">
                     <button class="btn danger" id="reset-all" type="button" style="padding:10px 22px">Tout remettre à zéro pour tous les élèves</button>
                 </div>
-            </section>
+            </details>
         </div>
 
         </main>
@@ -584,7 +618,9 @@
         const qList = document.getElementById("questions");
         const hasServer = !!(window.google && google.script && google.script.run);
         const $ = id => document.getElementById(id);
-        const pw = () => $("password").value;
+        // identifiants envoyés au serveur à chaque appel : pseudo + mot de passe
+        const pw = () => ({ pseudo: $("admin-pseudo").value.trim(), password: $("password").value });
+        const ADMIN_PSEUDO_KEY = "revision-admin-pseudo";   // localStorage : préremplit le pseudo (jamais le mot de passe)
 
         function h(tag, props, ...children) {
             const el = document.createElement(tag);
@@ -661,7 +697,7 @@
             const bar = $("lockbar");
             bar.classList.remove("docked");
             document.body.insertBefore(bar, $("locked-hint"));
-            $("unlock").textContent = "Déverrouiller";
+            $("unlock").textContent = "Se connecter";
             $("lock").hidden = true;
         }
         function lockAgain() {
@@ -680,7 +716,8 @@
                 $("admin-area").hidden = false;
                 $("locked-hint").hidden = true; $("to-student-zone").hidden = true;
                 dockLock();
-                showStatus($("lock-status"), "ok", "Déverrouillé.");
+                showStatus($("lock-status"), "ok", "Connecté.");
+                try { localStorage.setItem(ADMIN_PSEUDO_KEY, pw().pseudo); } catch (e) { /* stockage indisponible */ }
                 if (firstUnlock) { firstUnlock = false; go("programmes"); }
             } catch (e) {
                 $("admin-area").hidden = true;
@@ -738,7 +775,7 @@
                         h("div", { class: "info" },
                             h("strong", {}, s.pseudo),
                             h("span", {}, r.lecons ? r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") + " · avancement " + r.avancement + " %" : "Aucune leçon attribuée")),
-                        h("button", { class: "btn secondary small", type: "button", onclick: () => { progFilter = "s:" + s.id; openDetails.add(s.id); renderProgrammes(); go("programmes"); } }, "Progression"),
+                        h("button", { class: "btn secondary small", type: "button", onclick: () => { progFilter = "s:" + s.id; renderProgrammes(); go("programmes"); } }, "Progression"),
                         h("button", { class: "btn secondary small", type: "button", onclick: () => loadStudent(s) }, "Modifier"),
                         h("button", { class: "btn danger", type: "button", onclick: () => removeStudent(s) }, "Supprimer"));
                 }))));
@@ -1286,39 +1323,63 @@
                 h("summary", {}, "Classe " + g.label + " · " + g.students.length + " élève" + (g.students.length > 1 ? "s" : "")),
                 g.students.map(s => studentCard(s)))));
         }
-        // Une ligne par élève : son nom, un résumé et un bouton « Détails » qui déplie chaque leçon.
+        // EN UN COUP D'ŒIL : par élève, ses leçons et leur pourcentage d'avancement.
+        // Le bouton « + » d'une leçon déplie tout son détail ; celui de l'élève, son résumé et ses actions.
+        const openLessons = new Set();   // « idÉlève|idLeçon » dépliées
+        const plusBtn = (open, label, onclick) => h("button", { class: "plus" + (open ? " on" : ""), type: "button", "aria-expanded": String(open), title: label, "aria-label": label, onclick }, open ? "−" : "+");
         function studentCard(s) {
             const open = openDetails.has(s.id);
             const r = lessonsSummary(s.id);
+            const lessons = (DATA.progress[s.id] || []).slice().sort((a, b) => (a.mode === "archive") - (b.mode === "archive") || a.titre.localeCompare(b.titre, "fr", { sensitivity: "base" }));
             const card = h("div", { class: "prog-card compact", "data-student": s.id },
                 h("div", { class: "prog-head" },
-                    h("div", { class: "info" }, h("strong", {}, "👤 " + s.pseudo,
-                            r.lecons ? h("span", { class: "avancement", title: "Avancement de l'apprentissage sur ses " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") }, "Avancement " + r.avancement + " %") : null),
-                        r.lecons ? avBar(r.avancement) : null,
-                        h("span", { class: "student-sum" }, r.week.n + " séance" + (r.week.n > 1 ? "s" : "") + " cette semaine (" + Math.round(r.week.t / 60) + " min)" +
-                            (r.due ? " · " + r.due + " question" + (r.due > 1 ? "s" : "") + " à réviser" : "") + (r.last ? " · dernière activité " + timeFr(r.last) : ""))),
-                    h("button", { class: "btn secondary small", type: "button", "aria-expanded": String(open), onclick: () => {
-                        if (openDetails.has(s.id)) openDetails.delete(s.id); else openDetails.add(s.id);
-                        renderProgrammes();
-                    } }, open ? "Masquer" : "Détails")));
-            if (open) card.append(studentDetail(s));
+                    h("strong", { class: "st-name" }, "👤 " + s.pseudo),
+                    r.lecons ? h("span", { class: "st-pct", title: "Avancement moyen sur ses " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") }, r.avancement + " %") : null,
+                    plusBtn(open, "Plus d'infos sur " + s.pseudo, () => { if (open) openDetails.delete(s.id); else openDetails.add(s.id); renderProgrammes(); })));
+            if (open) card.append(studentExtra(s, r));
+            if (!lessons.length) {
+                card.append(h("p", { class: "hint" }, "Aucune leçon pour l'instant : onglet « 📚 Leçons », bouton « ⚙️ Gérer », puis coche son nom."));
+                return card;
+            }
+            card.append(h("ul", { class: "lesson-list" }, lessons.map(l => {
+                const k = s.id + "|" + l.id, lo = openLessons.has(k);
+                const badge = examBadge(l);
+                return h("li", { class: "lesson-row" + (l.mode === "archive" ? " archived" : ""), "data-quiz": l.id },
+                    h("div", { class: "lr-main" },
+                        h("span", { class: "lr-name" }, (l.emoji || "📘") + " " + l.titre),
+                        h("span", { class: "lr-exam" + (badge ? "" : " empty") }, badge || ""),   // toujours présent : les colonnes restent alignées
+                        h("span", { class: "lr-bar", "aria-hidden": "true" }, h("span", { style: "width:" + l.avancement + "%" })),
+                        h("span", { class: "lr-pct", title: "Avancement de l'apprentissage" }, l.avancement + " %"),
+                        plusBtn(lo, "Détail de « " + l.titre + " »", () => { if (lo) openLessons.delete(k); else openLessons.add(k); renderProgrammes(); })),
+                    lo ? lessonDetail(s, l) : null);
+            })));
             return card;
         }
-        function studentDetail(s) {
-            const lessons = (DATA.progress[s.id] || []).slice().sort((a, b) => a.titre.localeCompare(b.titre, "fr", { sensitivity: "base" }));
-            const r = lessonsSummary(s.id);
-            const detail = h("div", { class: "prog-detail" },
-                h("p", { class: "total" }, r.lecons ? "Avancement " + r.avancement + " % sur " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") + " · " + r.sues + " / " + r.total + " questions ancrées" : "Aucune leçon attribuée."));
-            if (lessons.length === 0) {
-                detail.append(h("p", { class: "hint" }, "Donne-lui une leçon depuis l'onglet « 📚 Leçons » (bouton « Gérer », puis coche son nom) pour suivre ses révisions."));
-                return detail;
-            }
-            lessons.forEach(l => {
+        // Badge court du contrôle (ou de l'état) d'une leçon, affiché sur sa ligne
+        function examBadge(l) {
+            if (l.mode === "archive") return "📦 archivée";
+            if (!l.exam) return null;
+            const d = Math.round((new Date(l.exam + "T00:00").getTime() - new Date(new Date(DATA.now).toDateString()).getTime()) / 86400000);
+            if (d < 0) return null;
+            return (d <= 1 ? "🔥 " : "📅 ") + (d === 0 ? "aujourd'hui" : d === 1 ? "demain" : dayFr(new Date(l.exam + "T00:00")));
+        }
+        // « + » de l'élève : son activité de la semaine et ses actions
+        function studentExtra(s, r) {
+            return h("div", { class: "prog-detail student-extra" },
+                h("p", { class: "student-sum" }, r.week.n + " séance" + (r.week.n > 1 ? "s" : "") + " cette semaine (" + Math.round(r.week.t / 60) + " min)" +
+                    (r.due ? " · " + r.due + " question" + (r.due > 1 ? "s" : "") + " à réviser" : "") + (r.last ? " · dernière activité " + timeFr(r.last) : "")),
+                r.lecons ? h("p", { class: "total" }, "Avancement " + r.avancement + " % sur " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") + " · " + r.sues + " / " + r.total + " questions ancrées") : null,
+                h("p", { class: "hint" }, "Avancement : 🌿 découverte = 1/3 du chemin, 🌳 rappelée sans choix = 2/3, ⭐ ancrée ou 🏆 maîtrisée = 3/3."),
+                r.lecons ? h("div", { class: "detail-actions" },
+                    h("button", { class: "btn danger small", type: "button", onclick: () => resetProgress(s.id, "all", "toute la progression de " + s.pseudo) }, "Tout remettre à zéro pour " + s.pseudo)) : null);
+        }
+        // « + » d'une leçon : niveaux, prête pour le contrôle, date du contrôle, questions difficiles, historique, actions
+        function lessonDetail(s, l) {
                 const [cls, txt] = readiness(l);
                 const dateIn = h("input", { type: "date", class: "exam-input", value: l.exam || "", "aria-label": "Date du contrôle" });
                 const plan = planText(l);
-                detail.append(h("div", { class: "lesson", "data-quiz": l.id },
-                    h("div", { class: "lesson-title" }, h("strong", {}, (l.emoji || "📘") + " " + l.titre),
+                return h("div", { class: "lesson", "data-quiz": l.id },
+                    h("div", { class: "lesson-title" },
                         h("span", { class: "badges" }, h("span", { class: "avancement" }, "Avancement " + l.avancement + " %"), h("span", { class: "pret " + cls, title: "Prête pour le contrôle : part des questions au moins rappelées" }, txt))),
                     levelBarAdmin(l), levelLegendAdmin(l),
                     h("div", { class: "lesson-detail" },
@@ -1337,11 +1398,7 @@
                         l.mode === "archive"
                             ? h("button", { class: "btn secondary small", type: "button", onclick: () => setMode(s, l, "entretien") }, "Réactiver")
                             : h("button", { class: "btn secondary small", type: "button", onclick: () => setMode(s, l, "archive") }, "Archiver"),
-                        h("button", { class: "btn secondary small", type: "button", onclick: () => resetProgress(s.id, l.id, "la leçon « " + l.titre + " » de " + s.pseudo) }, "Remettre cette leçon à zéro"))));
-            });
-            detail.append(h("div", { class: "detail-actions" },
-                h("button", { class: "btn danger", type: "button", onclick: () => resetProgress(s.id, "all", "toute la progression de " + s.pseudo) }, "Tout remettre à zéro pour " + s.pseudo)));
-            return detail;
+                        h("button", { class: "btn secondary small", type: "button", onclick: () => resetProgress(s.id, l.id, "la leçon « " + l.titre + " » de " + s.pseudo) }, "Remettre cette leçon à zéro")));
         }
         async function setPlan(s, l, exam) {
             const status = $("prog-status");
@@ -1384,6 +1441,8 @@
         $("unlock").addEventListener("click", unlock);
         $("lock").addEventListener("click", lockAgain);
         $("password").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); unlock(); } });
+        $("admin-pseudo").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("password").focus(); } });
+        try { $("admin-pseudo").value = localStorage.getItem(ADMIN_PSEUDO_KEY) || ""; } catch (e) { /* stockage indisponible */ }
         $("save-student").addEventListener("click", saveStudent);
         $("reset-student-form").addEventListener("click", () => { resetStudentForm(); $("student-status").className = "status"; });
         $("add-question").addEventListener("click", () => { addQuestion(); filterQuestions(); });

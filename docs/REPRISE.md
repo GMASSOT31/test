@@ -16,16 +16,17 @@ Attends ma prochaine consigne.
 - Déploiement à mettre à jour : `AKfycbzzqlCAUDZAoHOmhxufvj4CAAHWX8JtU8vBsTB0ZsoEK_mLu2tW4BoESRUdrg4b7bkF` (ne jamais en créer un autre).
 - Script ID clasp : `1AuUOChTuh7QZBnUHmUnCCf9Y0U4Apr08pQvaLuxp862V7d_2CC2FsbLA`.
 - Un mot de passe admin temporaire (communiqué par l'utilisateur pendant une session) est peut-être encore en place : demander de le remplacer dans la propriété de script `ADMIN_PASSWORD`.
+- Connexion admin (« Espace parents ») = **pseudo + mot de passe**. Le premier pseudo saisi avec le bon mot de passe est enregistré dans la propriété `ADMIN_PSEUDO` (comparaison insensible à la casse et aux accents) ; pour en changer, modifier ou supprimer cette propriété.
 
 ## 2. Fichiers (`apps-script/`)
-- `Code.gs` serveur (→ `Code.js` pour clasp) ; `Contenu.gs` quiz intégrés (`BUILTIN_QUIZZES` : byzance, byzance-30, zootopia, musique-carnaval) ; `Index.html` page élève ; `admin.html` administration ; `appsscript.json` manifeste (`executeAs: USER_DEPLOYING`, `access: ANYONE_ANONYMOUS`).
+- `Code.gs` serveur (→ `Code.js` pour clasp) ; `Contenu.gs` quiz intégrés (`BUILTIN_QUIZZES` : byzance, byzance-30, zootopia, musique-carnaval, anglais-animaux, histoire-revolution, techno-5e-numerique, pc5-melanges, pc5-conversions, pc5-solubilite, pc5-graphiques) ; `Index.html` page élève ; `admin.html` administration ; `appsscript.json` manifeste (`executeAs: USER_DEPLOYING`, `access: ANYONE_ANONYMOUS`).
 - `cartes/` : anciennes pages statiques, ne pas toucher.
 - `tests/` : suites de tests (voir §5).
 
 ## 3. Architecture
 **Données** (`PropertiesService`) : `student_<id>` (classe, pseudo, sel + SHA-256 du PIN) ; `quiz_<id>`, `deck_<id>` (découpés en morceaux `<clé>~0, ~1…` si trop gros) ; `override_<id>` (quiz intégré modifié) ; `builtin_assign` ; `srs_<élève>__<quiz>` (révision espacée : `it:{idQuestion:[niveau, échéance ms, erreurs, réussites, erreursSûres]}`, `exam`, `plan`, `tf`, `cfg`, `mode`, `ses`) ; `schema_version` = '3'. Anti-force-brute du PIN (5 erreurs → 5 min) via `CacheService`.
 
-**Séparation** : un élève ne reçoit que les quiz/paquets dont il est destinataire (`pour`, retiré avant envoi). Pas de lecture publique de listes. Toute l'admin passe par `adminData(motDePasse)`. Les fonctions finissant par `_` sont internes.
+**Séparation** : un élève ne reçoit que les quiz/paquets dont il est destinataire (`pour`, retiré avant envoi). Pas de lecture publique de listes. Toute l'admin passe par `adminData(identifiants)` : `checkAdmin_` accepte `{pseudo, password}` (page admin) ou, pour compatibilité, la chaîne du mot de passe tant qu'aucun `ADMIN_PSEUDO` n'est enregistré. Les fonctions finissant par `_` sont internes.
 
 **Fonctions publiques** – élève : `getStudentData`, `answer`, `endSession`, `setLessonPlan`, `setLessonMode`. Admin : `adminData`, `saveStudent`, `deleteStudent`, `saveQuiz`, `saveDeck`, `deleteQuiz`, `deleteDeck`, `setBuiltinAssign`, `getBuiltinForEdit`, `saveBuiltin`, `restoreBuiltin`, `resetProgress`, `setLessonPlanAdmin`, `setLessonModeAdmin`, `backupData`.
 
@@ -35,7 +36,7 @@ Attends ma prochaine consigne.
 
 **Page élève** : connexion Classe/Pseudo/PIN ; « Mes leçons » (révision du jour + leçons avec statut, badge du contrôle, barre des niveaux) ; écran de leçon (plan, niveaux, bouton principal, « Voir les cartes ») ; première ouverture : « Quand est ton contrôle ? » + « déjà travaillée en classe ? » ; « Flashcards » libres ; « Mes progrès ». Passage automatique après une bonne réponse du premier coup (1 s / 1,8 s ; `window.revisionAutoNext = false` le désactive). Envois : `enqueue()`/`enqueueOp()` (ordre, 3 essais, identifiant d'opération), `window.revisionFlush()` ; `window.revisionPreview(quizId, index, 'qcm'|'rappel')` affiche une question seule (tests).
 
-**Admin** : barre du haut à 4 sections — 📈 Suivi (page d'arrivée ; guide « Pour commencer » tant qu'aucun élève n'a révisé ; par élève et par leçon : **Avancement** = découverte 1/3, rappelée 2/3, ancrée/maîtrisée 3/3, « Prête pour le contrôle ? », niveaux, questions difficiles, historique, date du contrôle, archivage, remises à zéro), 👥 Élèves (bouton « Ajouter un élève »), 📚 Leçons (leçons fournies avec « ⚙️ Gérer » : accès, modifier, rétablir ; « Créer une leçon » ; réponse courte facultative pour le rappel écrit d'un QCM), 🃏 Flashcards (liste, « Créer un paquet »). Actualiser / Verrouiller à droite de la barre.
+**Admin (« Espace parents », jamais « enseignant »)** : connexion pseudo + mot de passe ; barre du haut à 4 sections — 📈 Suivi (page d'arrivée ; guide « Pour commencer » tant qu'aucun élève n'a révisé ; **en un coup d'œil** : par élève, son avancement global puis une ligne par leçon = nom, badge du contrôle, barre et % d'**Avancement** (découverte 1/3, rappelée 2/3, ancrée/maîtrisée 3/3) ; le reste est derrière les boutons « + » : « + » d'une leçon = « Prête pour le contrôle ? », niveaux, questions difficiles, historique, date du contrôle, archivage, remise à zéro de la leçon ; « + » de l'élève = activité de la semaine, total, remise à zéro de l'élève ; remise à zéro générale dans un volet replié en bas), 👥 Élèves (bouton « Ajouter un élève »), 📚 Leçons (leçons fournies avec « ⚙️ Gérer » : accès, modifier, rétablir ; « Créer une leçon » ; réponse courte facultative pour le rappel écrit d'un QCM), 🃏 Flashcards (liste, « Créer un paquet »). Actualiser / Verrouiller à droite de la barre.
 
 **Style** : bannière fournie par l'utilisateur dans `Index.html` et `admin.html` ; palette bleu #3b6fe0, or #ffd166, rose #ff8fb8, violet #785aff, menthe #5dffb0.
 

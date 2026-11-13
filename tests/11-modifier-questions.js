@@ -87,7 +87,7 @@ const orig = w.ctx.BUILTIN_QUIZZES.map(q => JSON.stringify(q)).join();
   const c = await b.newContext({ viewport: { width: 1200, height: 1000 } }); await install(c, w);
   const errs = [];
   const a = await c.newPage(); a.on('pageerror', e => errs.push(e.message)); a.on('dialog', d => d.accept());
-  await a.goto('file://' + SRC + 'admin.html'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])');
+  await a.goto('file://' + SRC + 'admin.html'); await a.fill('#admin-pseudo', 'Papa'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])');
   await a.click('#tab-quiz-liste');
   const row = id => a.locator(`.builtin[data-id="${id}"]`);
   const openRow = async id => { if (await row(id).locator('.builtin-details').isHidden()) await row(id).locator('.builtin-toggle').click(); };
