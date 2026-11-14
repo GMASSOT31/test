@@ -1,7 +1,7 @@
 // Largeurs 320, 375, 390 et 768 : aucune action hors écran horizontalement, boutons utiles jamais cachés par la barre du bas ;
 // suivi parent lisible sur téléphone
 const { chromium } = require('playwright');
-const { makeWorld, install, ok, summary, login, LEO, PW, SRC, answerCurrent } = require('./harness');
+const { makeWorld, install, ok, summary, login, LEO, PW, ADM, SRC, answerCurrent } = require('./harness');
 const w = makeWorld();
 w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' }); w.run('setBuiltinAssign', PW, 'zootopia', ['leo']); w.run('setBuiltinAssign', PW, 'byzance-30', ['leo']);
 
@@ -59,9 +59,25 @@ w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' }); w.run('
   const c = await b.newContext({ viewport: { width: 375, height: 740 } }); await install(c, w);
   const a = await c.newPage(); a.on('pageerror', e => errs.push(e.message));
   await a.goto('file://' + SRC + 'admin.html'); await a.fill('#admin-pseudo', 'Papa'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])'); await a.click('#tab-programmes');
-  await a.locator('.prog-card[data-student="leo"] .lesson-row[data-quiz="zootopia"] .plus').click();
+  ok((await a.locator('.prog-card.kid.open').count()) === 1, 'un seul enfant : sa fiche est dépliée d\'office');
+  await a.locator('.prog-card[data-student="leo"] .kid-head').click();
+  ok((await a.locator('.lesson-row').count()) === 0 && (await a.locator('.prog-card[data-student="leo"] .kid-head').boundingBox()).height < 80, 'on la replie : une seule ligne (initiale, nom, %)');
+  await a.locator('.prog-card[data-student="leo"] .kid-head').click();
+  const one = await a.locator('.prog-card[data-student="leo"] .lesson-row .lr-main').evaluateAll(l => l.map(e => Math.round(e.getBoundingClientRect().height)));
+  ok(one.length === 2 && one.every(hh => hh < 50), 'fiche dépliée : chaque leçon tient sur UNE ligne (' + one.join(', ') + ' px)');
+  await a.locator('.prog-card[data-student="leo"] .lesson-row[data-quiz="zootopia"] .lr-main').click();
   const r = await a.evaluate(() => ({ scroll: document.documentElement.scrollWidth, bad: [...document.querySelectorAll('.lesson .btn, .exam-input, .lvl-bar, .pret')].filter(e => e.getBoundingClientRect().right > innerWidth + 1).length }));
   ok(r.scroll <= 375 && r.bad === 0, 'SUIVI PARENT à 375 px : niveaux, date du contrôle et boutons dans l\'écran');
+  // plusieurs enfants : fiches repliées, et l'appareil se souvient de celles qu'on ouvre
+  w.run('saveStudent', ADM, { classe: '5B', pseudo: 'Emma', pin: '4321' });
+  const c2 = await b.newContext({ viewport: { width: 390, height: 844 } }); await install(c2, w);
+  const m = await c2.newPage(); m.on('pageerror', e => errs.push(e.message));
+  const adminLogin = async () => { await m.goto('file://' + SRC + 'admin.html'); await m.fill('#admin-pseudo', 'Papa'); await m.fill('#password', PW); await m.click('#unlock'); await m.waitForSelector('#admin-area:not([hidden])'); };
+  await adminLogin();
+  ok((await m.locator('.prog-card.kid').count()) === 2 && (await m.locator('.prog-card.kid.open').count()) === 0 && (await m.locator('.prog-card[data-student="leo"] .kid-sub').innerText()) === '2 leçons · 🔥 contrôle demain', 'téléphone, 2 enfants : une ligne chacun (« Léo · 2 leçons · 🔥 contrôle demain »), tout replié');
+  await m.locator('.prog-card[data-student="leo"] .kid-head').click();
+  await adminLogin();
+  ok(await m.locator('.prog-card[data-student="leo"]').evaluate(e => e.classList.contains('open')) && (await m.locator('.prog-card.kid.open').count()) === 1, 'à la connexion suivante sur ce téléphone : la fiche de Léo est restée ouverte, celle d\'Emma repliée');
   ok(errs.length === 0, 'aucune erreur JavaScript ' + JSON.stringify(errs));
   await b.close(); process.exit(summary() ? 1 : 0);
 })().catch(e => { console.log('ECHEC:', e.message.split('\n')[0]); process.exit(1); });
