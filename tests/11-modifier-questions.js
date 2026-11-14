@@ -91,7 +91,7 @@ const orig = w.ctx.BUILTIN_QUIZZES.map(q => JSON.stringify(q)).join();
   await a.click('#tab-quiz-liste');
   const row = id => a.locator(`.builtin[data-id="${id}"]`);
   const openRow = async id => { if (await row(id).locator('.builtin-details').isHidden()) await row(id).locator('.builtin-toggle').click(); };
-  ok((await a.locator('.builtin button', { hasText: 'Modifier' }).count()) === 11 && (await a.locator('.builtin button', { hasText: 'Rétablir' }).count()) === 1, 'LISTE DES QUIZ : un bouton « Modifier » sur chacun des 11 quiz intégrés ; « Rétablir l\'original » seulement sur celui déjà modifié (musique)');
+  ok((await a.locator('#builtin-list .builtin button', { hasText: 'Modifier' }).count()) === 11 && (await a.locator('#builtin-list .builtin button', { hasText: 'Rétablir' }).count()) === 1, 'LISTE DES QUIZ : un bouton « Modifier » sur chacun des 11 quiz intégrés ; « Rétablir l\'original » seulement sur celui déjà modifié (musique)');
   ok((await row('musique-carnaval').locator('.badge-modifie').count()) === 1 && (await row('zootopia').locator('.badge-modifie').count()) === 0, 'pastille « ✏️ modifié » sur le bon quiz');
   // modifier Zootopia depuis l'interface (correction d'une faute)
   await openRow('zootopia'); await row('zootopia').locator('text=Modifier').click();
@@ -121,7 +121,7 @@ const orig = w.ctx.BUILTIN_QUIZZES.map(q => JSON.stringify(q)).join();
   await openRow('zootopia'); await row('zootopia').locator('text=Rétablir').click(); await a.waitForFunction(() => document.querySelector('#quizlist-status').textContent.includes('rétablie'));
   ok((await row('zootopia').locator('.badge-modifie').count()) === 0 && quizOf(L, 'zootopia').questions[0].question === zoo.questions[0].question, 'RÉTABLIR : la version d\'origine revient (énoncé d\'origine, pastille retirée)');
   // modifier un quiz créé : la progression suit aussi
-  await a.click('#tab-quiz-liste'); await a.locator('#quiz-list .item', { hasText: 'Ancien' }).locator('text=Modifier').click();
+  await a.click('#tab-quiz-liste'); { const r = a.locator('#quiz-list .builtin', { hasText: 'Ancien' }); await r.locator('.builtin-toggle').click(); await r.locator('text=Modifier').click(); }
   ok((await a.locator('#questions .question').count()) === 3 && !(await a.locator('#builtin-note').isVisible()), 'un quiz créé : modifiable comme avant (3 questions), sans l\'avertissement « quiz intégré »');
   await a.locator('.q-text').nth(1).fill('Combien font deux plus deux ?'); await a.click('#save-quiz'); await a.waitForSelector('#quizlist-status.ok');
   const h1 = w.ctx.qhash_('2 + 2 ?');

@@ -21,8 +21,9 @@ const { makeWorld, install, ok, summary, SRC } = require('./harness');
 
   // ---- 1. administrateur : onglet Parents, code d'invitation ----
   await login('Papa', 'secret');
-  ok(await a.locator('#tab-parents').isVisible(), 'administrateur : onglet « 👪 Parents » à côté d\'« Élèves »');
-  await a.click('#tab-parents');
+  await a.click('#acct-btn');
+  ok(await a.locator('#menu-parents').isVisible(), 'administrateur : « 👪 Familles invitées » dans le menu du compte');
+  await a.click('#menu-parents');
   ok((await a.locator('#invite-box').innerText()).includes('Inscriptions fermées') && (await a.locator('#parent-list .item').count()) === 1 && (await a.locator('#parent-list').innerText()).includes('Ta famille'), 'pas encore de code : inscriptions fermées ; seule ta famille est listée');
   ok(/Stockage utilisé : \d+ Ko sur 500 Ko \(\d+ %\)/.test(await a.locator('#stockage').innerText()), 'stockage affiché : ' + (await a.locator('#stockage').innerText()).trim());
   await a.click('text=Créer un code d\'invitation'); await a.waitForSelector('#invite-code');
@@ -42,21 +43,21 @@ const { makeWorld, install, ok, summary, SRC } = require('./harness');
   ok(!!w.props.parent_dupont && await a.locator('#signup').isHidden() && (await a.locator('#admin-pseudo').inputValue()) === 'Dupont', 'famille créée : connexion automatique');
 
   // ---- 3. le parent invité : seulement sa famille ----
-  ok(await a.locator('#tab-parents').isHidden() && (await a.locator('#acct-btn').innerText()).includes('Dupont'), 'parent invité : pas d\'onglet Parents ; menu « Dupont ▾ »');
+  ok((await a.locator('#acct-btn').innerText()).includes('Dupont'), 'parent invité : menu « Dupont ▾ »');
   await a.click('#acct-btn');
-  ok((await a.locator('#acct-who').innerText()).includes('Famille Dupont'), 'le menu rappelle la famille');
+  ok((await a.locator('#acct-who').innerText()).includes('Famille Dupont') && await a.locator('#menu-parents').isHidden(), 'le menu rappelle la famille ; pas de « Familles invitées »');
   await a.click('#tab-programmes');
   ok((await a.locator('#guide').innerText()).includes('Pour commencer') && !(await a.locator('body').innerText()).includes('Jul'), 'nouvelle famille : guide « Pour commencer », aucun enfant d\'une autre famille');
-  await a.click('#tab-eleves'); await a.click('#tab-eleve-ajout');
-  await a.fill('#st-classe', 'Dupont'); await a.fill('#st-pseudo', 'Lou'); await a.fill('#st-pin', '2222'); await a.click('#save-student'); await a.waitForSelector('#eleves-status.ok');
+  await a.click('#tab-eleve-ajout');
+  await a.fill('#st-classe', 'Dupont'); await a.fill('#st-pseudo', 'Lou'); await a.fill('#st-pin', '2222'); await a.click('#save-student'); await a.waitForSelector('#prog-status.ok');
   ok(JSON.parse(w.props.student_lou).fam === 'dupont', 'le parent crée le compte de son enfant (rangé dans sa famille)');
   await a.click('#tab-quiz-liste');
-  ok((await a.locator('.builtin button', { hasText: 'Modifier' }).count()) === 0 && (await a.locator('#builtin-hint').innerText()).includes('Coche tes enfants'), 'leçons fournies : il coche ses enfants, mais ne peut pas les modifier');
+  ok((await a.locator('#builtin-list .builtin button', { hasText: 'Modifier' }).count()) === 0, 'leçons fournies : il coche ses enfants, mais ne peut pas les modifier');
   const zoo = a.locator('#builtin-list .builtin[data-id="zootopia"]');
   ok((await zoo.innerText()).includes('Donnée à personne'), 'Zootopia : donnée à personne de SA famille (Jul n\'apparaît pas)');
   await zoo.locator('.builtin-toggle').click();
-  ok((await zoo.locator('.pour-item').allInnerTexts()).join() === 'Lou (Dupont)', 'cases à cocher : seulement Lou');
-  await zoo.locator('.pour-item input').check(); await zoo.locator('text=Enregistrer l\'accès').click();
+  ok((await zoo.locator('.pour-item').allInnerTexts()).join() === 'Lou', 'cases à cocher : seulement Lou');
+  await zoo.locator('.pour-item input').check();
   await a.waitForFunction(() => document.querySelector('#builtin-list .builtin[data-id="zootopia"]').textContent.includes('👥 Lou'));
   ok(JSON.stringify(JSON.parse(w.props.builtin_assign).zootopia.sort()) === '["jul","lou"]', 'Zootopia donnée à Lou ; Jul (autre famille) la garde');
 
@@ -80,10 +81,10 @@ const { makeWorld, install, ok, summary, SRC } = require('./harness');
   await logout();
 
   // ---- 5. l'administrateur : la famille apparaît, nouveau mot de passe, suppression ----
-  await login('Papa', 'secret'); await a.click('#tab-parents');
+  await login('Papa', 'secret'); await a.click('#acct-btn'); await a.click('#menu-parents');
   const row = a.locator('#parent-list .item[data-parent="dupont"]');
-  ok((await row.innerText()).includes('Famille Dupont') && (await row.innerText()).includes('👤 Dupont · 1 enfant') && (await row.innerText()).includes('dernière connexion') && (await a.locator('#count-parents').innerText()) === '1', 'onglet Parents : « Famille Dupont », 1 enfant, dernière connexion');
-  ok(!(await a.locator('#pane-programmes').innerText()).includes('Lou'), 'l\'administrateur ne voit pas Lou dans son suivi');
+  ok((await row.innerText()).includes('Famille Dupont') && (await row.innerText()).includes('👤 Dupont · 1 enfant') && (await row.innerText()).includes('dernière connexion'), 'familles invitées : « Famille Dupont », 1 enfant, dernière connexion');
+  ok(!(await a.locator('#pane-programmes').innerText()).includes('Lou'), 'l\'administrateur ne voit pas Lou dans son suivi (même pas le message de la session précédente)');
   await row.locator('text=Nouveau mot de passe').click(); await a.waitForSelector('#parents-status.ok');
   ok(w.run('adminData', { pseudo: 'Dupont', password: 'temporaire-9' }).moi.famille === 'Famille Dupont', 'nouveau mot de passe donné à Dupont (mot de passe oublié)');
   await row.locator('text=Supprimer').click(); await a.waitForFunction(() => document.querySelector('#parents-status').textContent.includes('supprimée'));

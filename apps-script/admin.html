@@ -276,6 +276,7 @@
         .difficiles summary, .historique summary { cursor: pointer; font-weight: 800; color: var(--navy); }
         .exam-label { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: .88rem; }
         .exam-input { width: auto; padding: 5px 8px; }
+        .exam-row { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
         .plan-txt { color: var(--navy); font-weight: 700; }
         /* Suivi en un coup d'œil : élève, leçons et pourcentage ; « + » pour le détail */
         .prog-card.compact .prog-head { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; margin-bottom: 6px; }
@@ -348,11 +349,39 @@
         .archived-toggle { margin-top: 6px; background: none; border: 0; padding: 4px 0; font: inherit; font-size: .85rem; font-weight: 800; color: var(--muted); cursor: pointer; }
         .archived-toggle:hover { color: var(--navy); text-decoration: underline; }
         .pw-panel { scroll-margin-top: 90px; }
-        /* Téléphone : formulaires sur une colonne (ces règles doivent venir après .row2 / .row3) ; libellés courts */
+        /* Téléphone : formulaires sur une colonne (ces règles doivent venir après .row2 / .row3) */
         @media (max-width: 600px) { .row2, .row3 { grid-template-columns: 1fr; } }
+
+        /* ===== Espace parents épuré : 2 onglets (Enfants, Leçons), une fiche par enfant ===== */
+        .tabs { flex: 0 1 auto; }
+        .tab { flex: 0 1 200px; }
+        .pane-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+        .pane-head h2 { margin: 0; }
+        section .pane-head { margin-bottom: 8px; }
+        .foot-hint { text-align: center; margin: 4px 0 0; }
+        #guide:empty { display: none; }
+        .prog-card, .prog-card.compact { background: #fff; border: 0; border-radius: 18px; box-shadow: var(--soft); padding: 12px 16px; margin: 0 0 14px; }
+        .st-class { font-size: .8rem; font-weight: 700; color: var(--muted); margin-left: 6px; }
+        .card-foot { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
+        .pick-btn { padding: 7px 14px; font-size: .9rem; }
+        .picker { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: #f6f8ff; display: grid; gap: 2px; }
+        .pick-item { display: flex; align-items: center; gap: 10px; margin: 0; padding: 7px 4px; font-weight: 700; font-size: .95rem; cursor: pointer; border-radius: 8px; }
+        .pick-item:hover { background: #fff; }
+        .pick-item input { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--blue); }
+        .pick-group { font-size: .78rem; font-weight: 800; color: var(--muted); margin: 6px 4px 2px; text-transform: uppercase; letter-spacing: .4px; }
+        .extra-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+        .login-info { font-size: .85rem; color: var(--ink); margin: 6px 0 0; }
+        .access-msg { font-size: .8rem; font-weight: 700; color: #07603b; }
         @media (max-width: 760px) {
-            .tab .t-lbl[data-short] { font-size: 0; }
-            .tab .t-lbl[data-short]::after { content: attr(data-short); font-size: .68rem; }
+            /* 2 grands onglets côte à côte (icône + texte), faciles à toucher */
+            .tabs { flex: 1 1 auto; }
+            .tab { flex: 1 1 0; flex-direction: row; gap: 6px; padding: 9px 6px; font-size: .92rem; border-radius: 14px; }
+            .tab .t-ico { font-size: 1.1rem; }
+            .tab .count { position: static; padding: 0 6px; font-size: .7rem; }
+            .pane { gap: 14px; }
+            section { padding: 14px; border-radius: 16px; }
+            .prog-card, .prog-card.compact { padding: 10px 12px; }
+            .pane-head h2 { font-size: 1.15rem; }
         }
     </style>
 </head>
@@ -367,18 +396,18 @@
       <div class="rv-inner">
         <span class="rv-sticker"><span class="rv-dot"></span> Espace parents</span>
         <h1 class="rv-title">Espace <span class="rv-hl">admin</span> ⚙️</h1>
-        <p class="rv-sub" id="rvSub">Suis les révisions de tes élèves et donne-leur des leçons</p>
+        <p class="rv-sub" id="rvSub">Suis les révisions de tes enfants et donne-leur des leçons</p>
         <div class="rv-chips">
-          <span class="rv-chip">📈 Suivi</span>
-          <span class="rv-chip">👥 Élèves</span>
+          <span class="rv-chip">👨‍👧 Enfants</span>
           <span class="rv-chip">📚 Leçons</span>
+          <span class="rv-chip">📅 Contrôles</span>
           <span class="rv-chip">🔒 Réservé aux parents</span>
         </div>
       </div>
     
       <div class="rv-ticker" aria-hidden="true">
         <div class="rv-track">
-          SUIVI • ÉLÈVES • LEÇONS • FLASHCARDS • RÉVISION ESPACÉE : 1, 3, 7 JOURS • RÉVISION EXPRESS LA VEILLE • SUIVI • ÉLÈVES • LEÇONS • FLASHCARDS • RÉVISION ESPACÉE : 1, 3, 7 JOURS • RÉVISION EXPRESS LA VEILLE •&nbsp;
+          ENFANTS • LEÇONS • RÉVISION ESPACÉE : 1, 3, 7 JOURS • RÉVISION EXPRESS LA VEILLE • ENFANTS • LEÇONS • RÉVISION ESPACÉE : 1, 3, 7 JOURS • RÉVISION EXPRESS LA VEILLE •&nbsp;
         </div>
       </div>
     </header>
@@ -393,6 +422,7 @@
             <button class="btn secondary" id="acct-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="acct-menu" title="Mon compte : changer le mot de passe, se déconnecter">👤 <span id="acct-name">Mon compte</span> ▾</button>
             <div class="acct-menu" id="acct-menu" hidden>
                 <div class="menu-who" id="acct-who"></div>
+                <button class="menu-item" id="menu-parents" type="button" hidden>👪 Familles invitées</button>
                 <button class="menu-item" id="change-pw" type="button">🔑 Changer le mot de passe</button>
                 <button class="menu-item" id="lock" type="button">🔒 Se déconnecter</button>
             </div>
@@ -431,12 +461,9 @@
 
     <div class="shell" id="admin-area" hidden>
         <header class="topnav">
-        <nav class="tabs" role="tablist" aria-label="Sections de l'administration">
-            <button class="tab" role="tab" id="tab-programmes" data-tab="programmes" title="Voir où en est chaque élève"><span class="t-ico" aria-hidden="true">📈</span><span class="t-lbl">Suivi</span></button>
-            <button class="tab" role="tab" id="tab-eleves" data-tab="eleves" title="Comptes des élèves"><span class="t-ico" aria-hidden="true">👥</span><span class="t-lbl">Élèves</span><span class="count" id="count-eleves"></span></button>
-            <button class="tab" role="tab" id="tab-parents" data-tab="parents" title="Les familles inscrites et le code d'invitation" hidden><span class="t-ico" aria-hidden="true">👪</span><span class="t-lbl">Parents</span><span class="count" id="count-parents"></span></button>
-            <button class="tab" role="tab" id="tab-quiz-liste" data-tab="quiz-liste" title="Leçons (quiz) et à qui les donner"><span class="t-ico" aria-hidden="true">📚</span><span class="t-lbl">Leçons</span><span class="count" id="count-quiz"></span></button>
-            <button class="tab" role="tab" id="tab-fc-ajout" data-tab="fc-ajout" title="Paquets de flashcards en plus"><span class="t-ico" aria-hidden="true">🃏</span><span class="t-lbl" data-short="Cartes">Flashcards</span><span class="count" id="count-decks"></span></button>
+        <nav class="tabs" role="tablist" aria-label="Sections de l'espace parents">
+            <button class="tab" role="tab" id="tab-programmes" data-tab="programmes" title="Tes enfants : où ils en sont, leurs leçons, leur compte"><span class="t-ico" aria-hidden="true">👨‍👧</span><span class="t-lbl">Enfants</span><span class="count" id="count-eleves"></span></button>
+            <button class="tab" role="tab" id="tab-quiz-liste" data-tab="quiz-liste" title="Les leçons (et leurs cartes) à donner à tes enfants"><span class="t-ico" aria-hidden="true">📚</span><span class="t-lbl">Leçons</span></button>
         </nav>
         <div id="lock-dock"></div>
         </header>
@@ -466,11 +493,23 @@
 
         <main class="content">
 
-        <!-- ================= AJOUTER UN ÉLÈVE ================= -->
+        <!-- ================= ENFANTS (accueil) : où ils en sont, leurs leçons, leur compte ================= -->
+        <div class="pane" id="pane-programmes" role="tabpanel" aria-labelledby="tab-programmes" hidden>
+            <div class="pane-head">
+                <h2>👨‍👧 Mes enfants</h2>
+                <button class="btn small" id="tab-eleve-ajout" type="button">➕ Ajouter un enfant</button>
+            </div>
+            <div id="guide"></div>
+            <div class="status" id="prog-status" role="status"></div>
+            <div id="prog-list"></div>
+            <p class="hint foot-hint">Touche <strong>+</strong> pour le détail d'une leçon (date du contrôle, niveaux…) ou d'un enfant (modifier, PIN, remise à zéro).</p>
+        </div>
+
+        <!-- ================= AJOUTER / MODIFIER UN ENFANT ================= -->
         <div class="pane" id="pane-eleve-ajout" role="tabpanel" aria-labelledby="tab-eleve-ajout">
             <section>
-                <button class="back-link" type="button" data-go="eleves">← Retour aux élèves</button>
-                <h2 id="student-form-title">➕ Nouvel élève</h2>
+                <button class="back-link" type="button" data-go="programmes">← Retour à mes enfants</button>
+                <h2 id="student-form-title">➕ Ajouter un enfant</h2>
                 <div class="row3">
                     <div>
                         <label for="st-classe">Classe</label>
@@ -485,36 +524,87 @@
                         <input type="text" id="st-pin" maxlength="8" inputmode="numeric" placeholder="4 à 8 chiffres" autocomplete="off">
                     </div>
                 </div>
-                <p class="hint">L'élève se connecte avec ces trois informations. Le PIN est enregistré sans pouvoir être relu : note-le pour le lui donner. En modification, laisse le PIN vide pour le conserver.</p>
+                <p class="hint">Ton enfant se connecte sur la page élève avec ces trois informations. Le PIN ne peut plus être relu : note-le pour le lui donner. En modification, laisse le PIN vide pour le garder.</p>
                 <div class="actions">
-                    <button class="btn" id="save-student" type="button">💾 Enregistrer l'élève</button>
+                    <button class="btn" id="save-student" type="button">💾 Enregistrer</button>
                     <button class="btn secondary" id="reset-student-form" type="button">Réinitialiser</button>
                 </div>
                 <div class="status" id="student-status" role="status"></div>
             </section>
         </div>
 
-        <!-- ================= LISTE DES ÉLÈVES ================= -->
-        <div class="pane" id="pane-eleves" role="tabpanel" aria-labelledby="tab-eleves" hidden>
-            <section class="intro">
-                <div class="intro-txt">
-                    <h2>👥 Élèves</h2>
-                    <p class="hint">Chaque enfant a son compte : une classe, un pseudo et un code PIN pour se connecter sur la page élève. Ici tu peux ajouter, modifier ou supprimer un élève ; « Suivi » montre où il en est.</p>
-                </div>
-                <button class="btn" id="tab-eleve-ajout" type="button">➕ Ajouter un élève</button>
+        <!-- ================= LEÇONS (et cartes en plus) ================= -->
+        <div class="pane" id="pane-quiz-liste" role="tabpanel" aria-labelledby="tab-quiz-liste" hidden>
+            <div class="pane-head">
+                <h2>📚 Leçons</h2>
+                <button class="btn small" id="tab-quiz-ajout" type="button">➕ Créer une leçon</button>
+            </div>
+            <p class="hint" id="builtin-hint">« ⚙️ Gérer » : coche qui a la leçon (enregistré tout de suite). Les cartes de chaque leçon sont créées toutes seules.</p>
+            <div class="status" id="quizlist-status" role="status"></div>
+            <section id="my-lessons">
+                <h2>✏️ Mes leçons</h2>
+                <div id="quiz-list"></div>
             </section>
             <section>
-                <h2>Liste des élèves</h2>
-                <div class="status" id="eleves-status" role="status"></div>
-                <div id="student-list"></div>
+                <h2>🏛️ Leçons fournies</h2>
+                <div id="builtin-list"></div>
+            </section>
+            <section>
+                <div class="pane-head">
+                    <h2>🃏 Cartes en plus</h2>
+                    <button class="btn small secondary" id="new-deck" type="button">➕ Créer un paquet</button>
+                </div>
+                <p class="hint">Des paquets de flashcards en plus des leçons (par exemple du vocabulaire).</p>
+                <div class="status" id="decklist-status" role="status"></div>
+                <div id="deck-list"></div>
+            </section>
+        </div>
+
+        <!-- ================= PAQUET DE CARTES EN PLUS (formulaire) ================= -->
+        <div class="pane" id="pane-fc-ajout" role="tabpanel" hidden>
+            <section id="deck-form-section">
+                <button class="back-link" type="button" data-go="quiz-liste">← Retour aux leçons</button>
+                <h2 id="deck-form-title">➕ Nouveau paquet de flashcards</h2>
+
+                <label for="deck-titre">Titre</label>
+                <input type="text" id="deck-titre" maxlength="120" placeholder="Ex : Vocabulaire anglais – les animaux">
+
+                <div class="row">
+                    <div>
+                        <label for="deck-matiere">Matière</label>
+                        <input type="text" id="deck-matiere" maxlength="40" placeholder="Ex : Anglais">
+                    </div>
+                    <div>
+                        <label for="deck-description">Description courte</label>
+                        <input type="text" id="deck-description" maxlength="300" placeholder="Ex : 20 mots à connaître">
+                    </div>
+                    <div>
+                        <label for="deck-emoji">Emoji</label>
+                        <input type="text" id="deck-emoji" maxlength="8" placeholder="🃏">
+                    </div>
+                </div>
+
+                <label>Pour quels enfants ?</label>
+                <div class="pour" id="deck-pour"></div>
+
+                <label for="deck-cartes">Cartes</label>
+                <textarea id="deck-cartes" rows="10" placeholder="dog | chien&#10;cat | chat&#10;Quelle est la capitale de l'Empire byzantin ? | Constantinople"></textarea>
+                <p class="hint">Une carte par ligne : le recto, puis le caractère | , puis le verso. Chaque quiz a déjà son paquet généré automatiquement ; celui-ci est un paquet en plus.</p>
+
+                <div class="actions">
+                    <button class="btn" id="save-deck" type="button">💾 Enregistrer le paquet</button>
+                    <button class="btn secondary" id="reset-deck" type="button">Réinitialiser</button>
+                </div>
+                <div class="status" id="deck-status" role="status"></div>
             </section>
         </div>
 
         <!-- ================= PARENTS (administrateur principal) ================= -->
-        <div class="pane" id="pane-parents" role="tabpanel" aria-labelledby="tab-parents" hidden>
+        <div class="pane" id="pane-parents" role="tabpanel" hidden>
             <section class="intro">
                 <div class="intro-txt">
-                    <h2>👪 Parents</h2>
+                    <button class="back-link" type="button" data-go="programmes">← Retour à mes enfants</button>
+                    <h2>👪 Familles invitées</h2>
                     <p class="hint">Les familles qui utilisent l'appli. Chaque parent ne voit que ses enfants, leur suivi et ses propres leçons. Pour inviter une famille, donne-lui l'adresse de l'espace parents et le code d'invitation : elle crée son compte avec « 👪 Créer ma famille ».</p>
                 </div>
             </section>
@@ -569,9 +659,9 @@
                     </div>
                 </div>
 
-                <label>Pour quels élèves ?</label>
+                <label>Pour quels enfants ?</label>
                 <div class="pour" id="quiz-pour"></div>
-                <p class="hint">Seuls les élèves cochés verront ce quiz. Sans destinataire, il reste caché.</p>
+                <p class="hint">Seuls les enfants cochés verront cette leçon. Sans destinataire, elle reste cachée.</p>
 
                 <p class="hint" id="builtin-note" hidden>✏️ Tu modifies un <strong>quiz intégré</strong> : l'original est conservé et peut être rétabli à tout moment depuis l'onglet « Leçons ».</p>
 
@@ -597,97 +687,6 @@
             </section>
         </div>
 
-        <!-- ================= LISTE DES QUIZ ================= -->
-        <div class="pane" id="pane-quiz-liste" role="tabpanel" aria-labelledby="tab-quiz-liste" hidden>
-            <section class="intro">
-                <div class="intro-txt">
-                    <h2>📚 Leçons</h2>
-                    <p class="hint">Une leçon est un quiz : l'élève la révise avec des cartes, des QCM et des questions sans choix. Pour la donner à un élève, ouvre « Gérer » et coche son nom. Tu peux aussi modifier les questions ou créer ta propre leçon.</p>
-                </div>
-                <button class="btn" id="tab-quiz-ajout" type="button">➕ Créer une leçon</button>
-            </section>
-            <div class="status" id="quizlist-status" role="status"></div>
-            <section>
-                <h2>🏛️ Leçons fournies avec le site</h2>
-                <p class="hint" id="builtin-hint">Coche les élèves qui y ont accès, puis « Enregistrer l'accès ». « Modifier » corrige les questions (l'original peut être rétabli).</p>
-                <div id="builtin-list"></div>
-            </section>
-            <section>
-                <h2>✏️ Mes leçons créées</h2>
-                <div id="quiz-list"></div>
-            </section>
-        </div>
-
-        <!-- ================= AJOUTER DES FLASHCARDS ================= -->
-        <div class="pane" id="pane-fc-ajout" role="tabpanel" aria-labelledby="tab-fc-ajout" hidden>
-            <section class="intro">
-                <div class="intro-txt">
-                    <h2>🃏 Flashcards</h2>
-                    <p class="hint">Chaque leçon a déjà ses flashcards. Ici tu peux créer des paquets en plus (par exemple du vocabulaire) et choisir à quels élèves les donner.</p>
-                </div>
-                <button class="btn" id="new-deck" type="button">➕ Créer un paquet</button>
-            </section>
-            <section id="deck-form-section" hidden>
-                <button class="back-link" type="button" id="deck-form-close">✕ Fermer</button>
-                <h2 id="deck-form-title">➕ Nouveau paquet de flashcards</h2>
-
-                <label for="deck-titre">Titre</label>
-                <input type="text" id="deck-titre" maxlength="120" placeholder="Ex : Vocabulaire anglais – les animaux">
-
-                <div class="row">
-                    <div>
-                        <label for="deck-matiere">Matière</label>
-                        <input type="text" id="deck-matiere" maxlength="40" placeholder="Ex : Anglais">
-                    </div>
-                    <div>
-                        <label for="deck-description">Description courte</label>
-                        <input type="text" id="deck-description" maxlength="300" placeholder="Ex : 20 mots à connaître">
-                    </div>
-                    <div>
-                        <label for="deck-emoji">Emoji</label>
-                        <input type="text" id="deck-emoji" maxlength="8" placeholder="🃏">
-                    </div>
-                </div>
-
-                <label>Pour quels élèves ?</label>
-                <div class="pour" id="deck-pour"></div>
-
-                <label for="deck-cartes">Cartes</label>
-                <textarea id="deck-cartes" rows="10" placeholder="dog | chien&#10;cat | chat&#10;Quelle est la capitale de l'Empire byzantin ? | Constantinople"></textarea>
-                <p class="hint">Une carte par ligne : le recto, puis le caractère | , puis le verso. Chaque quiz a déjà son paquet généré automatiquement ; celui-ci est un paquet en plus.</p>
-
-                <div class="actions">
-                    <button class="btn" id="save-deck" type="button">💾 Enregistrer le paquet</button>
-                    <button class="btn secondary" id="reset-deck" type="button">Réinitialiser</button>
-                </div>
-                <div class="status" id="deck-status" role="status"></div>
-            </section>
-            <section>
-                <h2>Paquets enregistrés</h2>
-                <div id="deck-list"></div>
-            </section>
-        </div>
-
-        <!-- ================= PROGRAMMES DE RÉVISION ================= -->
-        <div class="pane" id="pane-programmes" role="tabpanel" aria-labelledby="tab-programmes" hidden>
-            <section>
-                <h2>📈 Suivi des révisions</h2>
-                <div id="guide"></div>
-                <p class="hint">Chaque élève, ses leçons et leur <strong>avancement</strong>. Touche <strong>+</strong> pour voir le détail d'une leçon (niveaux, date du contrôle, questions difficiles…) ou d'un élève.</p>
-                <label for="prog-filtre">Afficher</label>
-                <select id="prog-filtre"></select>
-                <div class="status" id="prog-status" role="status"></div>
-                <div id="prog-list"></div>
-            </section>
-            <details class="advanced">
-                <summary>⚙️ Remise à zéro générale</summary>
-                <p class="hint">Efface toute la progression de tous tes élèves, sur toutes les leçons. À utiliser en dernier recours.</p>
-                <div class="actions">
-                    <button class="btn danger" id="reset-all" type="button" style="padding:10px 22px">Tout remettre à zéro pour tous mes élèves</button>
-                </div>
-            </details>
-        </div>
-
         </main>
     </div>
 
@@ -695,9 +694,9 @@
 (function () {
   // Phrases qui tournent sous le titre
   var phrases = [
-    "Suis les révisions de tes élèves et donne-leur des leçons",
+    "Suis les révisions de tes enfants et donne-leur des leçons",
     "Une question courte et claire vaut mieux qu'une longue ✍️",
-    "Chaque élève ne voit que les leçons qu'on lui donne 🔒",
+    "Chaque enfant ne voit que les leçons qu'on lui donne 🔒",
     "Fixe la date du contrôle : le plan de révision s'adapte 📅"
   ];
   var el = document.getElementById("rvSub"), i = 0;
@@ -710,14 +709,13 @@
 
     <script>
         const OPTION_LETTERS = ["A", "B", "C", "D"];
-        const TABS = ["eleve-ajout", "eleves", "parents", "quiz-ajout", "quiz-liste", "fc-ajout", "programmes"];
+        const TABS = ["programmes", "eleve-ajout", "quiz-liste", "quiz-ajout", "fc-ajout", "parents"];
         let DATA = { moi: { owner: false, pseudo: "" }, students: [], quizzes: [], decks: [], builtins: [], progress: {} };
         let editingStudentId = null;
         let editingQuizId = null;   // id du quiz en cours de modification, null = nouveau
         let editingDeckId = null;
         let editingBuiltinId = null;   // id du quiz intégré en cours de modification, null sinon
         let questionCount = 0;      // sert uniquement à donner un name unique aux boutons radio
-        let progFilter = "all";     // « all », « c:<classe> » ou « s:<idÉlève> »
         let firstUnlock = true;
 
         const qList = document.getElementById("questions");
@@ -758,37 +756,22 @@
         const studentName = id => { const s = DATA.students.find(x => x.id === id); return s ? s.pseudo : null; };
 
         // ---------- onglets ----------
-        // 4 sections dans la barre du haut ; les formulaires « Ajouter / Créer » s'ouvrent depuis leur section
-        const NAV = ["programmes", "eleves", "parents", "quiz-liste", "fc-ajout"];
-        const NAV_OF = { "eleve-ajout": "eleves", "quiz-ajout": "quiz-liste" };
+        // 2 sections dans la barre du haut : Enfants (accueil) et Leçons ; les formulaires s'ouvrent depuis leur section,
+        // les familles invitées depuis le menu du compte (administrateur principal)
+        const NAV = ["programmes", "quiz-liste"];
+        const NAV_OF = { "eleve-ajout": "programmes", "quiz-ajout": "quiz-liste", "fc-ajout": "quiz-liste", "parents": "" };
         function go(tab) {
             TABS.forEach(t => { $("pane-" + t).hidden = t !== tab; });
-            const nav = NAV_OF[tab] || tab;
+            const nav = tab in NAV_OF ? NAV_OF[tab] : tab;
             NAV.forEach(t => $("tab-" + t).setAttribute("aria-selected", String(t === nav)));
             window.scrollTo({ top: 0 });
         }
-        function showDeckForm(open) {
-            $("deck-form-section").hidden = !open;
-            if (open) $("deck-form-section").scrollIntoView({ block: "start" });
-        }
-
-        // ---------- élèves rangés par classe (comme à la connexion : la casse et les espaces ne comptent pas) ----------
-        const classKey = c => String(c).trim().toLowerCase();
-        function groupByClass(students) {
-            const map = new Map();
-            students.forEach(s => {
-                const k = classKey(s.classe);
-                if (!map.has(k)) map.set(k, { key: k, label: s.classe, students: [] });
-                map.get(k).students.push(s);
-            });
-            const groups = [...map.values()].sort((a, b) => a.label.localeCompare(b.label, "fr", { numeric: true, sensitivity: "base" }));
-            groups.forEach(g => g.students.sort((a, b) => a.pseudo.localeCompare(b.pseudo, "fr", { sensitivity: "base" })));
-            return groups;
-        }
 
         // ---------- déverrouillage et chargement ----------
+        let lastLoad = 0;
         async function reload() {
             DATA = await server("adminData", pw());
+            lastLoad = Date.now();
             renderAll();
         }
         // Une fois connecté, la barre du mot de passe se range dans la barre latérale, sous les onglets.
@@ -809,6 +792,11 @@
         function lockAgain() {
             $("password").value = "";
             showPwPanel(false);
+            // rien de la session précédente ne doit rester visible (un autre parent peut se connecter sur cet appareil)
+            document.querySelectorAll("#admin-area .status").forEach(el => { el.className = "status"; el.textContent = ""; });
+            [openDetails, openLessons, openArchived, openPickers, openBuiltins].forEach(set => set.clear());
+            DATA = { moi: { owner: false, pseudo: "" }, students: [], quizzes: [], decks: [], builtins: [], progress: {}, now: Date.now() };
+            renderAll();
             $("admin-area").hidden = true;
             $("locked-hint").hidden = false; $("to-student-zone").hidden = false;
             $("lock-status").className = "status inline";
@@ -838,15 +826,9 @@
             const owner = !!(DATA.moi && DATA.moi.owner);
             $("acct-name").textContent = DATA.moi.pseudo || "Mon compte";
             $("acct-who").textContent = owner ? "👤 " + DATA.moi.pseudo + " · administrateur" : "👤 " + DATA.moi.pseudo + " · " + DATA.moi.famille;
-            $("tab-parents").hidden = !owner;
+            $("menu-parents").hidden = !owner;
             if (!owner && !$("pane-parents").hidden) go("programmes");
-            $("builtin-hint").textContent = owner
-                ? "Coche les élèves qui y ont accès, puis « Enregistrer l'accès ». « Modifier » corrige les questions pour toutes les familles (l'original peut être rétabli)."
-                : "Coche tes enfants qui y ont accès, puis « Enregistrer l'accès ».";
-            $("count-eleves").textContent = DATA.students.length;
-            $("count-quiz").textContent = DATA.quizzes.length + DATA.builtins.length;
-            $("count-decks").textContent = DATA.decks.length;
-            renderStudents();
+            $("count-eleves").textContent = DATA.students.length || "";
             // les cases « Pour quels élèves ? » gardent la sélection en cours quand la liste des élèves change
             pourBoxes($("quiz-pour"), pourValues($("quiz-pour")));
             pourBoxes($("deck-pour"), pourValues($("deck-pour")));
@@ -860,7 +842,7 @@
         function pourBoxes(container, selected) {
             container.replaceChildren();
             if (DATA.students.length === 0) {
-                container.append(h("p", { class: "hint" }, "Crée d'abord un élève (onglet « Élèves », « Ajouter un élève ») : sans destinataire, un contenu reste caché."));
+                container.append(h("p", { class: "hint" }, "Ajoute d'abord un enfant (onglet « Enfants ») : sans destinataire, un contenu reste caché."));
                 return;
             }
             DATA.students.forEach(s => {
@@ -875,31 +857,10 @@
             return names.length ? "Pour : " + names.join(", ") : "⚠️ Caché : aucun destinataire";
         }
 
-        // ================= ÉLÈVES =================
-        function renderStudents() {
-            const list = $("student-list");
-            if (DATA.students.length === 0) {
-                list.replaceChildren(h("p", { class: "empty" }, "Aucun élève pour le moment. Utilise « Ajouter un élève »."));
-                return;
-            }
-            list.replaceChildren(...groupByClass(DATA.students).map(g => h("details", { class: "classe", open: "" },
-                h("summary", {}, "Classe " + g.label + " · " + g.students.length + " élève" + (g.students.length > 1 ? "s" : "")),
-                g.students.map(s => {
-                    const r = lessonsSummary(s.id);
-                    return h("div", { class: "item" },
-                        h("div", {}, "👤"),
-                        h("div", { class: "info" },
-                            h("strong", {}, s.pseudo),
-                            h("span", {}, (r.lecons ? r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") + " · avancement " + r.avancement + " %" : r.archivees ? "Aucune leçon en cours" : "Aucune leçon attribuée") +
-                                (r.archivees ? " · " + r.archivees + " archivée" + (r.archivees > 1 ? "s" : "") : ""))),
-                        h("button", { class: "btn secondary small", type: "button", title: "Voir où en est " + s.pseudo, onclick: () => { progFilter = "s:" + s.id; renderProgrammes(); go("programmes"); } }, "📈 Suivi"),
-                        h("button", { class: "btn secondary small", type: "button", onclick: () => loadStudent(s) }, "Modifier"),
-                        h("button", { class: "btn danger", type: "button", onclick: () => removeStudent(s) }, "Supprimer"));
-                }))));
-        }
+        // ================= ENFANTS : compte (ajouter, modifier, supprimer) =================
         function resetStudentForm() {
             editingStudentId = null;
-            $("student-form-title").textContent = "➕ Nouvel élève";
+            $("student-form-title").textContent = "➕ Ajouter un enfant";
             ["st-classe", "st-pseudo", "st-pin"].forEach(id => $(id).value = "");
         }
         function loadStudent(s) {
@@ -918,12 +879,14 @@
             $("save-student").disabled = true;
             showStatus(status, "info", "Enregistrement…");
             try {
-                await server("saveStudent", pw(), payload);
+                const isNew = !editingStudentId;
+                const res = await server("saveStudent", pw(), payload);
+                if (isNew && res && res.id) { openPickers.clear(); openPickers.add(res.id); }   // nouvel enfant : on propose tout de suite ses leçons
                 resetStudentForm();
                 await reload();
                 status.className = "status";
-                showStatus($("eleves-status"), "ok", "Élève enregistré : « " + payload.pseudo.trim() + " » peut se connecter avec sa classe, son pseudo et son PIN.");
-                go("eleves");
+                showStatus($("prog-status"), "ok", "« " + payload.pseudo.trim() + " » enregistré : il se connecte avec sa classe, son pseudo et son PIN." + (isNew ? " Choisis maintenant ses leçons 👇" : ""));
+                go("programmes");
             } catch (e) {
                 showStatus(status, "err", e.message);
             } finally {
@@ -931,14 +894,13 @@
             }
         }
         async function removeStudent(s) {
-            if (!confirm("Supprimer l'élève « " + s.pseudo + " » ? Il n'aura plus accès à rien, sa progression sera effacée et il sera retiré de tous ses quiz et paquets.")) return;
-            const status = $("eleves-status");
+            if (!confirm("Supprimer « " + s.pseudo + " » ? Son compte et toute sa progression seront effacés, et il sera retiré de toutes ses leçons.")) return;
+            const status = $("prog-status");
             try {
                 await server("deleteStudent", pw(), s.id);
                 if (editingStudentId === s.id) resetStudentForm();
-                if (progFilter === "s:" + s.id) progFilter = "all";
                 await reload();
-                showStatus(status, "ok", "Élève supprimé.");
+                showStatus(status, "ok", "« " + s.pseudo + " » supprimé.");
             } catch (e) {
                 showStatus(status, "err", e.message);
             }
@@ -1187,39 +1149,83 @@
             pourBoxes($("deck-pour"), deck.pour || []);
             $("deck-status").className = "status";
             go("fc-ajout");
-            showDeckForm(true);
         }
 
-        // ================= LISTES =================
-        function renderQuizList() { renderItems($("quiz-list"), DATA.quizzes, "quiz"); }
-        function renderDeckList() { renderItems($("deck-list"), DATA.decks, "deck"); }
-        function renderItems(list, items, kind) {
-            const isQuiz = kind === "quiz";
-            if (items.length === 0) {
-                list.replaceChildren(h("p", { class: "empty" }, isQuiz ? "Aucune leçon créée pour le moment. Utilise « ➕ Créer une leçon » en haut de la page." : "Aucun paquet pour le moment."));
-                return;
+        // ================= LEÇONS ET PAQUETS : une ligne par élément, « ⚙️ Gérer » déplie les cases et les actions =================
+        function renderQuizList() {
+            $("my-lessons").hidden = DATA.quizzes.length === 0;
+            $("quiz-list").replaceChildren(...DATA.quizzes.map(q => accessRow(q, "quiz")));
+        }
+        function renderDeckList() {
+            $("deck-list").replaceChildren(...(DATA.decks.length ? DATA.decks.map(d => accessRow(d, "deck")) : [h("p", { class: "empty" }, "Aucun paquet en plus.")]));
+        }
+        function renderBuiltins() { $("builtin-list").replaceChildren(...DATA.builtins.map(q => accessRow(q, "builtin"))); }
+        const openBuiltins = new Set();   // « type:id » dont les réglages sont dépliés
+        function accessRow(it, kind) {
+            const key = kind + ":" + it.id, open = openBuiltins.has(key), owner = DATA.moi.owner;
+            const pour = it.pour || [];
+            const msg = h("span", { class: "access-msg", role: "status" });
+            const boxes = h("div", { class: "pour" });
+            if (!DATA.students.length) boxes.append(h("p", { class: "hint" }, "Ajoute d'abord un enfant (onglet « Enfants »)."));
+            DATA.students.forEach(s => {
+                const cb = h("input", { type: "checkbox", value: s.id });
+                cb.checked = pour.includes(s.id);
+                cb.addEventListener("change", () => setAccess(kind, it.id, [...boxes.querySelectorAll("input:checked")].map(i => i.value), msg, boxes));
+                boxes.append(h("label", { class: "pour-item" }, cb, s.pseudo));
+            });
+            const btn = (txt, cls, fn) => h("button", { class: "btn " + cls, type: "button", onclick: fn }, txt);
+            const actions = kind === "builtin"
+                ? [owner ? btn("✏️ Modifier", "secondary small", () => editBuiltin(it)) : null, owner && it.modifie ? btn("Rétablir l'original", "danger", () => restoreBuiltin(it)) : null]
+                : [btn("✏️ Modifier", "secondary small", () => kind === "quiz" ? loadQuiz(it) : loadDeck(it)), btn("Supprimer", "danger", () => removeItem(kind, it))];
+            const size = kind === "deck" ? it.cartes.length + " cartes" : (typeof it.questions === "number" ? it.questions : it.questions.length) + " questions";
+            const details = h("div", { class: "builtin-details" },
+                h("div", { class: "info" }, h("span", {}, (it.matiere || "Divers") + " · " + size)),
+                h("label", {}, "Qui l'a ?"), boxes, msg,
+                actions.some(Boolean) ? h("div", { class: "actions", style: "margin-top:8px" }, actions) : null);
+            details.hidden = !open;
+            const toggle = h("button", { class: "btn secondary small builtin-toggle", type: "button", "aria-expanded": String(open),
+                onclick: () => {
+                    const now = details.hidden;
+                    details.hidden = !now;
+                    toggle.setAttribute("aria-expanded", String(now));
+                    toggle.textContent = now ? "▲ Fermer" : "⚙️ Gérer";
+                    if (now) openBuiltins.add(key); else openBuiltins.delete(key);
+                } }, open ? "▲ Fermer" : "⚙️ Gérer");
+            const names = pour.map(studentName).filter(Boolean);
+            return h("div", { class: "builtin", "data-id": it.id },
+                h("div", { class: "builtin-head" },
+                    h("div", { class: "builtin-name" },
+                        h("strong", {}, (it.emoji || (kind === "deck" ? "🃏" : "📘")) + " " + it.titre, it.modifie ? h("span", { class: "badge-modifie" }, "✏️ modifié") : null),
+                        h("span", { class: "builtin-pour" + (names.length ? "" : " none") }, names.length ? "👥 " + names.join(", ") : "Donnée à personne")),
+                    toggle),
+                details);
+        }
+        // Donner / retirer une leçon ou un paquet (cases à cocher) : enregistré tout de suite
+        async function setAccess(kind, id, pour, msgEl, lockEl) {
+            const inputs = lockEl ? [...lockEl.querySelectorAll("input")] : [];
+            inputs.forEach(i => { i.disabled = true; });
+            if (msgEl) msgEl.textContent = "Enregistrement…";
+            try {
+                await server("setAccess", pw(), kind, id, pour);
+                await reload();
+                return true;
+            } catch (e) {
+                inputs.forEach(i => { i.disabled = false; });
+                if (msgEl) { msgEl.textContent = e.message; msgEl.classList.add("warn"); }
+                return false;
             }
-            list.replaceChildren(...items.map(it => h("div", { class: "item" },
-                h("div", {}, it.emoji || (isQuiz ? "📘" : "🃏")),
-                h("div", { class: "info" },
-                    h("strong", {}, it.titre),
-                    h("span", {}, (it.matiere || "Divers") + " · " + (isQuiz ? it.questions.length + " questions" : it.cartes.length + " cartes")),
-                    h("span", { class: (it.pour || []).length ? "" : "warn" }, pourText(it.pour))),
-                h("button", { class: "btn secondary small", type: "button", onclick: () => isQuiz ? loadQuiz(it) : loadDeck(it) }, "Modifier"),
-                h("button", { class: "btn danger", type: "button", onclick: () => removeItem(kind, it) }, "Supprimer")
-            )));
         }
 
         async function removeItem(kind, it) {
             const isQuiz = kind === "quiz";
             if (!confirm("Supprimer définitivement « " + it.titre + " »" + (isQuiz ? " et la progression des élèves sur ce quiz" : "") + " ?")) return;
-            const status = isQuiz ? $("quizlist-status") : $("deck-status");
+            const status = isQuiz ? $("quizlist-status") : $("decklist-status");
             try {
                 await server(isQuiz ? "deleteQuiz" : "deleteDeck", pw(), it.id);
                 if (isQuiz && editingQuizId === it.id) resetQuizForm();
                 if (!isQuiz && editingDeckId === it.id) resetDeckForm();
                 await reload();
-                showStatus(status, "ok", isQuiz ? "Quiz supprimé." : "Paquet supprimé.");
+                showStatus(status, "ok", isQuiz ? "Leçon supprimée." : "Paquet supprimé.");
             } catch (e) {
                 showStatus(status, "err", e.message);
             }
@@ -1260,10 +1266,10 @@
                 if (builtinId) await server("saveBuiltin", pw(), builtinId, payload);
                 else await server(isQuiz ? "saveQuiz" : "saveDeck", pw(), payload);
                 const msg = builtinId
-                    ? "Quiz intégré modifié (l'original peut être rétabli). La progression des élèves est conservée."
+                    ? "modifiée pour toutes les familles (l'original peut être rétabli). La progression des élèves est conservée."
                     : payload.pour.length
-                    ? "Enregistré. Il apparaît chez les élèves choisis."
-                    : "Enregistré, mais sans destinataire : il reste caché. Coche au moins un élève pour le montrer.";
+                    ? "enregistrée. Elle apparaît chez les enfants choisis."
+                    : "enregistrée, mais sans destinataire : elle reste cachée. Coche au moins un enfant pour la montrer.";
                 if (isQuiz) {
                     resetQuizForm();
                     status.className = "status";
@@ -1272,8 +1278,10 @@
                     go("quiz-liste");
                 } else {
                     resetDeckForm();
+                    status.className = "status";
                     await reload();
-                    showStatus(status, "ok", "Paquet « " + payload.titre + " » : " + msg);
+                    showStatus($("decklist-status"), "ok", "Paquet « " + payload.titre + " » : " + msg);
+                    go("quiz-liste");
                 }
             } catch (e) {
                 showStatus(status, "err", e.message);
@@ -1282,48 +1290,7 @@
             }
         }
 
-        // ================= QUIZ INTÉGRÉS =================
-        const openBuiltins = new Set();   // quiz intégrés dont les détails sont dépliés
-        function renderBuiltins() {
-            const list = $("builtin-list");
-            list.replaceChildren(...DATA.builtins.map(q => {
-                const boxes = h("div", { class: "pour" });
-                pourBoxes(boxes, q.pour || []);
-                const status = h("span", { class: "hint", role: "status" });
-                const save = h("button", { class: "btn secondary small", type: "button", onclick: async () => {
-                    status.textContent = "Enregistrement…";
-                    try {
-                        await server("setBuiltinAssign", pw(), q.id, pourValues(boxes));
-                        await reload();
-                    } catch (e) { status.textContent = e.message; }
-                } }, "Enregistrer l'accès");
-                const owner = DATA.moi.owner;
-                const edit = owner ? h("button", { class: "btn secondary small", type: "button", onclick: () => editBuiltin(q) }, "✏️ Modifier") : null;
-                const restore = owner && q.modifie ? h("button", { class: "btn danger", type: "button", onclick: () => restoreBuiltin(q) }, "Rétablir l'original") : null;
-                const open = openBuiltins.has(q.id);
-                const details = h("div", { class: "builtin-details" },
-                    h("div", { class: "info" },
-                        h("span", {}, q.matiere + " · " + q.questions + " questions"),
-                        h("span", { class: (q.pour || []).length ? "" : "warn" }, pourText(q.pour))),
-                    boxes, h("div", { class: "actions", style: "margin-top:8px" }, save, edit, restore, status));
-                details.hidden = !open;
-                const toggle = h("button", { class: "btn secondary small builtin-toggle", type: "button", "aria-expanded": String(open),
-                    onclick: () => {
-                        const now = details.hidden;
-                        details.hidden = !now;
-                        toggle.setAttribute("aria-expanded", String(now));
-                        toggle.textContent = now ? "▲ Fermer" : "⚙️ Gérer";
-                        if (now) openBuiltins.add(q.id); else openBuiltins.delete(q.id);
-                    } }, open ? "▲ Fermer" : "⚙️ Gérer");
-                return h("div", { class: "builtin", "data-id": q.id },
-                    h("div", { class: "builtin-head" },
-                        h("div", { class: "builtin-name" },
-                            h("strong", {}, (q.emoji || "📘") + " " + q.titre, q.modifie ? h("span", { class: "badge-modifie" }, "✏️ modifié") : null),
-                            h("span", { class: "builtin-pour" + ((q.pour || []).length ? "" : " none") }, (q.pour || []).length ? "👥 " + q.pour.map(studentName).filter(Boolean).join(", ") : "Donnée à personne")),
-                        toggle),
-                    details);
-            }));
-        }
+        // ================= LEÇONS FOURNIES : modifier / rétablir (administrateur principal) =================
         // Charge la version en vigueur d'un quiz intégré dans le formulaire (l'original reste intact côté serveur)
         async function editBuiltin(q) {
             const status = $("quizlist-status");
@@ -1350,19 +1317,7 @@
             }
         }
 
-        // ================= PROGRAMMES DE RÉVISION =================
-        function renderProgFilter() {
-            const sel = $("prog-filtre");
-            const groups = groupByClass(DATA.students);
-            sel.replaceChildren(
-                h("option", { value: "all" }, "Tous les élèves"),
-                ...groups.map(g => h("optgroup", { label: "Classe " + g.label },
-                    h("option", { value: "c:" + g.key }, "Toute la classe " + g.label),
-                    g.students.map(s => h("option", { value: "s:" + s.id }, "👤 " + s.pseudo)))));
-            const valid = [...sel.options].some(o => o.value === progFilter);
-            if (!valid) progFilter = "all";
-            sel.value = progFilter;
-        }
+        // ================= ENFANTS : suivi en un coup d'œil =================
         const openDetails = new Set();   // élèves dont le détail est déplié
         // ---------- Suivi des révisions : par élève, l'état réel de chaque leçon ----------
         const LEVELS = [["Nouvelle", "🌱"], ["Découverte", "🌿"], ["Rappelée", "🌳"], ["Ancrée", "⭐"], ["Maîtrisée", "🏆"]];
@@ -1421,31 +1376,23 @@
                 h("span", { class: "g-dot" }, done ? "✓" : String(n)), h("div", {}, h("strong", {}, title), h("span", {}, txt), done ? null : action));
             box.replaceChildren(h("div", { class: "guide" }, h("h3", {}, "🚀 Pour commencer"), h("ol", {},
                 step(hasStudent, 1, "Crée le compte de ton enfant", "Une classe, un pseudo et un code PIN.",
-                    h("button", { class: "btn small", type: "button", onclick: () => { resetStudentForm(); go("eleve-ajout"); } }, "➕ Ajouter un élève")),
-                step(hasLesson, 2, "Donne-lui une leçon", "Onglet « Leçons » : bouton « Gérer », coche son nom, puis « Enregistrer l'accès ».",
-                    h("button", { class: "btn small", type: "button", onclick: () => go("quiz-liste") }, "📚 Voir les leçons")),
+                    h("button", { class: "btn small", type: "button", onclick: () => { resetStudentForm(); go("eleve-ajout"); } }, "➕ Ajouter un enfant")),
+                step(hasLesson, 2, "Choisis ses leçons", "Sur sa fiche ci-dessous : « 📚 Choisir ses leçons », puis coche.",
+                    hasStudent ? h("button", { class: "btn small", type: "button", onclick: () => { openPickers.add(DATA.students[0].id); renderProgrammes(); } }, "📚 Choisir ses leçons") : null),
                 step(hasActivity, 3, "Il révise sur la page élève", "Il se connecte avec sa classe, son pseudo et son PIN. Sa progression s'affiche ici.",
                     h("a", { class: "btn small secondary", href: $("to-student").getAttribute("href"), target: "_blank", rel: "noopener" }, "🎒 Ouvrir la page élève")))));
         }
         function renderProgrammes() {
             renderGuide();
-            renderProgFilter();
-            const list = $("prog-list");
-            let groups = groupByClass(DATA.students);
-            if (progFilter.startsWith("c:")) groups = groups.filter(g => "c:" + g.key === progFilter);
-            if (progFilter.startsWith("s:")) groups = groups.map(g => ({ ...g, students: g.students.filter(s => "s:" + s.id === progFilter) })).filter(g => g.students.length);
-            if (groups.length === 0) {
-                list.replaceChildren(h("p", { class: "empty" }, "Aucun élève à afficher."));
-                return;
-            }
-            list.replaceChildren(...groups.map(g => h("details", { class: "classe", open: "" },
-                h("summary", {}, "Classe " + g.label + " · " + g.students.length + " élève" + (g.students.length > 1 ? "s" : "")),
-                g.students.map(s => studentCard(s)))));
+            const kids = DATA.students.slice().sort((a, b) => a.pseudo.localeCompare(b.pseudo, "fr", { sensitivity: "base" }));
+            $("prog-list").replaceChildren(...kids.map(studentCard));
         }
-        // EN UN COUP D'ŒIL : par élève, ses leçons et leur pourcentage d'avancement.
-        // Le bouton « + » d'une leçon déplie tout son détail ; celui de l'élève, son résumé et ses actions.
+        // EN UN COUP D'ŒIL : une fiche par enfant, ses leçons et leur pourcentage d'avancement.
+        // « + » d'une leçon : son détail (date du contrôle d'abord) ; « + » de l'enfant : son compte et ses actions ;
+        // « 📚 Choisir ses leçons » : cases à cocher, enregistrées tout de suite.
         const openLessons = new Set();   // « idÉlève|idLeçon » dépliées
         const openArchived = new Set();  // élèves dont les leçons archivées sont affichées
+        const openPickers = new Set();   // élèves dont le choix des leçons est ouvert
         const plusBtn = (open, label, onclick) => h("button", { class: "plus" + (open ? " on" : ""), type: "button", "aria-expanded": String(open), title: label, "aria-label": label, onclick }, open ? "−" : "+");
         function studentCard(s) {
             const open = openDetails.has(s.id);
@@ -1457,10 +1404,7 @@
                     r.lecons ? h("span", { class: "st-pct", title: "Avancement moyen sur ses " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") }, r.avancement + " %") : null,
                     plusBtn(open, "Plus d'infos sur " + s.pseudo, () => { if (open) openDetails.delete(s.id); else openDetails.add(s.id); renderProgrammes(); })));
             if (open) card.append(studentExtra(s, r));
-            if (!lessons.length) {
-                card.append(h("p", { class: "hint" }, "Aucune leçon pour l'instant : onglet « 📚 Leçons », bouton « ⚙️ Gérer », puis coche son nom."));
-                return card;
-            }
+            if (!lessons.length) card.append(h("p", { class: "hint" }, "Aucune leçon pour l'instant."));
             const archived = lessons.filter(l => l.mode === "archive");
             const showArch = openArchived.has(s.id);
             const shown = lessons.filter(l => l.mode !== "archive" || showArch);
@@ -1476,13 +1420,40 @@
                         plusBtn(lo, "Détail de « " + l.titre + " »", () => { if (lo) openLessons.delete(k); else openLessons.add(k); renderProgrammes(); })),
                     lo ? lessonDetail(s, l) : null);
             })));
+            // pied de fiche : choisir ses leçons (action la plus fréquente) ; leçons archivées repliées
+            const po = openPickers.has(s.id);
+            const foot = h("div", { class: "card-foot" },
+                h("button", { class: "btn " + (lessons.length ? "secondary " : "") + "small pick-btn", type: "button", "aria-expanded": String(po),
+                    onclick: () => { if (po) openPickers.delete(s.id); else openPickers.add(s.id); renderProgrammes(); } }, po ? "▲ Fermer le choix des leçons" : "📚 Choisir ses leçons"));
             if (archived.length) {
                 const n = archived.length, label = "📦 " + n + " leçon" + (n > 1 ? "s" : "") + " archivée" + (n > 1 ? "s" : "");
-                card.append(h("button", { class: "archived-toggle", type: "button", "aria-expanded": String(showArch),
+                foot.append(h("button", { class: "archived-toggle", type: "button", "aria-expanded": String(showArch),
                     onclick: () => { if (showArch) openArchived.delete(s.id); else openArchived.add(s.id); renderProgrammes(); } },
                     label + (showArch ? " · masquer ▴" : " · afficher ▾")));
             }
+            card.append(foot);
+            if (po) card.append(lessonPicker(s));
             return card;
+        }
+        // Choix des leçons d'un enfant : une case par leçon (les siennes d'abord), enregistrée tout de suite
+        function lessonPicker(s) {
+            const msg = h("span", { class: "access-msg", role: "status" });
+            const box = h("div", { class: "picker" });
+            const item = (kind, q) => {
+                const cb = h("input", { type: "checkbox" });
+                const pour = q.pour || [];
+                cb.checked = pour.includes(s.id);
+                cb.addEventListener("change", async () => {
+                    const next = cb.checked ? pour.concat(s.id) : pour.filter(x => x !== s.id);
+                    if (await setAccess(kind, q.id, next, msg, box))
+                        showStatus($("prog-status"), "ok", "« " + q.titre + " » " + (cb.checked ? "donnée à " : "retirée à ") + s.pseudo + ".");
+                });
+                return h("label", { class: "pick-item", "data-quiz": q.id }, cb, (q.emoji || "📘") + " " + q.titre);
+            };
+            box.append(h("p", { class: "hint", style: "margin:0 0 4px" }, "Coche les leçons de " + s.pseudo + " (enregistré tout de suite) :"));
+            if (DATA.quizzes.length) box.append(h("div", { class: "pick-group" }, "✏️ Mes leçons"), ...DATA.quizzes.map(q => item("quiz", q)));
+            box.append(h("div", { class: "pick-group" }, "🏛️ Leçons fournies"), ...DATA.builtins.map(q => item("builtin", q)), msg);
+            return box;
         }
         // Badge court du contrôle (ou de l'état) d'une leçon, affiché sur sa ligne
         function examBadge(l) {
@@ -1492,41 +1463,45 @@
             if (d < 0) return null;
             return (d <= 1 ? "🔥 " : "📅 ") + (d === 0 ? "aujourd'hui" : d === 1 ? "demain" : dayFr(new Date(l.exam + "T00:00")));
         }
-        // « + » de l'élève : son activité de la semaine et ses actions
+        // « + » de l'enfant : son activité, sa connexion, ses actions (modifier, remise à zéro, supprimer)
         function studentExtra(s, r) {
             return h("div", { class: "prog-detail student-extra" },
                 h("p", { class: "student-sum" }, r.week.n + " séance" + (r.week.n > 1 ? "s" : "") + " cette semaine (" + Math.round(r.week.t / 60) + " min)" +
                     (r.due ? " · " + r.due + " question" + (r.due > 1 ? "s" : "") + " à réviser" : "") + (r.last ? " · dernière activité " + timeFr(r.last) : "")),
                 r.lecons ? h("p", { class: "total" }, "Avancement " + r.avancement + " % sur " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") + " · " + r.sues + " / " + r.total + " questions ancrées") : null,
+                h("p", { class: "login-info" }, "🔑 Connexion : classe « " + s.classe + " », pseudo « " + s.pseudo + " » et son PIN."),
                 h("p", { class: "hint" }, "Avancement : 🌿 découverte = 1/3 du chemin, 🌳 rappelée sans choix = 2/3, ⭐ ancrée ou 🏆 maîtrisée = 3/3."),
-                r.lecons ? h("div", { class: "detail-actions" },
-                    h("button", { class: "btn danger small", type: "button", onclick: () => resetProgress(s.id, "all", "toute la progression de " + s.pseudo) }, "Tout remettre à zéro pour " + s.pseudo)) : null);
+                h("div", { class: "extra-actions" },
+                    h("button", { class: "btn secondary small", type: "button", onclick: () => loadStudent(s) }, "✏️ Modifier (pseudo, classe, PIN)"),
+                    r.lecons || r.archivees ? h("button", { class: "btn danger small", type: "button", onclick: () => resetProgress(s.id, "all", "toute la progression de " + s.pseudo) }, "Tout remettre à zéro pour " + s.pseudo) : null,
+                    h("button", { class: "btn danger small", type: "button", onclick: () => removeStudent(s) }, "🗑️ Supprimer " + s.pseudo)));
         }
-        // « + » d'une leçon : niveaux, prête pour le contrôle, date du contrôle, questions difficiles, historique, actions
+        // « + » d'une leçon : d'abord la date du contrôle (le plus utile), puis où il en est, puis les actions rares
         function lessonDetail(s, l) {
                 const [cls, txt] = readiness(l);
                 const dateIn = h("input", { type: "date", class: "exam-input", value: l.exam || "", "aria-label": "Date du contrôle" });
                 const plan = planText(l);
                 return h("div", { class: "lesson", "data-quiz": l.id },
-                    h("div", { class: "lesson-title" },
-                        h("span", { class: "badges" }, h("span", { class: "avancement" }, "Avancement " + l.avancement + " %"), h("span", { class: "pret " + cls, title: "Prête pour le contrôle : part des questions au moins rappelées" }, txt))),
-                    levelBarAdmin(l), levelLegendAdmin(l),
+                    h("div", { class: "lesson-actions exam-row" },
+                        h("label", { class: "exam-label" }, "📅 Date du contrôle : ", dateIn),
+                        h("button", { class: "btn small", type: "button", onclick: () => setPlan(s, l, dateIn.value) }, "Enregistrer la date"),
+                        l.exam ? h("button", { class: "btn secondary small", type: "button", onclick: () => setPlan(s, l, "") }, "Pas de contrôle") : null),
                     h("div", { class: "lesson-detail" },
                         h("span", { class: "exam-txt" }, examText(l)),
                         h("span", {}, l.aReviser ? l.aReviser + " question" + (l.aReviser > 1 ? "s" : "") + " à réviser maintenant" : "Rien à réviser maintenant"),
                         h("span", {}, l.maj ? "Dernière activité : " + timeFr(l.maj) : "Jamais commencée")),
                     plan ? h("div", { class: "lesson-detail plan-txt" }, plan) : null,
+                    h("div", { class: "lesson-title" },
+                        h("span", { class: "badges" }, h("span", { class: "avancement" }, "Avancement " + l.avancement + " %"), h("span", { class: "pret " + cls, title: "Prête pour le contrôle : part des questions au moins rappelées" }, txt))),
+                    levelBarAdmin(l), levelLegendAdmin(l),
                     l.difficiles.length ? h("details", { class: "difficiles" }, h("summary", {}, "Questions difficiles (" + l.difficiles.length + ")"),
                         h("ol", {}, l.difficiles.map(d => h("li", {}, d.question + " — " + d.erreurs + " erreur" + (d.erreurs > 1 ? "s" : "") + (d.sures ? " (dont " + d.sures + " en étant sûr·e)" : "") + " · " + LEVELS[d.niveau][1])))) : null,
                     l.seances.length ? h("details", { class: "historique" }, h("summary", {}, "Historique (" + l.nbSeances + " séance" + (l.nbSeances > 1 ? "s" : "") + ")"),
                         h("ul", {}, l.seances.map(x => h("li", {}, timeFr(x.debut) + " · " + Math.max(1, Math.round(x.duree / 60)) + " min · " + x.reussies + " / " + x.questions + " réussies du premier coup" + (x.bonus ? " · bonus" : ""))))) : null,
                     h("div", { class: "lesson-actions" },
-                        h("label", { class: "exam-label" }, "Date du contrôle : ", dateIn),
-                        h("button", { class: "btn small", type: "button", onclick: () => setPlan(s, l, dateIn.value) }, "Enregistrer la date"),
-                        l.exam ? h("button", { class: "btn secondary small", type: "button", onclick: () => setPlan(s, l, "") }, "Pas de contrôle") : null,
                         l.mode === "archive"
                             ? h("button", { class: "btn secondary small", type: "button", onclick: () => setMode(s, l, "entretien") }, "Réactiver")
-                            : h("button", { class: "btn secondary small", type: "button", onclick: () => setMode(s, l, "archive") }, "Archiver"),
+                            : h("button", { class: "btn secondary small", type: "button", onclick: () => setMode(s, l, "archive") }, "📦 Archiver"),
                         h("button", { class: "btn secondary small", type: "button", onclick: () => resetProgress(s.id, l.id, "la leçon « " + l.titre + " » de " + s.pseudo) }, "Remettre cette leçon à zéro")));
         }
         async function setPlan(s, l, exam) {
@@ -1624,7 +1599,6 @@
         function renderParents() {
             if (!DATA.moi.owner) return;
             const parents = DATA.parents || [];
-            $("count-parents").textContent = parents.length || "";
             // code d'invitation
             const box = $("invite-box");
             const btn = (txt, cls, fn) => h("button", { class: "btn " + cls, type: "button", onclick: fn }, txt);
@@ -1694,8 +1668,7 @@
         NAV.forEach(t => $("tab-" + t).addEventListener("click", () => go(t)));
         $("tab-eleve-ajout").addEventListener("click", () => { resetStudentForm(); $("student-status").className = "status"; go("eleve-ajout"); });
         $("tab-quiz-ajout").addEventListener("click", () => { resetQuizForm(); $("quiz-status").className = "status"; go("quiz-ajout"); });
-        $("new-deck").addEventListener("click", () => { resetDeckForm(); $("deck-status").className = "status"; showDeckForm(true); });
-        $("deck-form-close").addEventListener("click", () => showDeckForm(false));
+        $("new-deck").addEventListener("click", () => { resetDeckForm(); $("deck-status").className = "status"; go("fc-ajout"); });
         document.querySelectorAll(".back-link[data-go]").forEach(b => b.addEventListener("click", () => go(b.dataset.go)));
         $("unlock").addEventListener("click", unlock);
         $("lock").addEventListener("click", () => { closeMenu(); lockAgain(); });
@@ -1723,8 +1696,11 @@
         $("save-quiz").addEventListener("click", () => saveItem("quiz"));
         $("reset-deck").addEventListener("click", () => { resetDeckForm(); $("deck-status").className = "status"; });
         $("save-deck").addEventListener("click", () => saveItem("deck"));
-        $("prog-filtre").addEventListener("change", e => { progFilter = e.target.value; renderProgrammes(); });
-        $("reset-all").addEventListener("click", () => resetProgress("all", "all", "TOUTE la progression de TOUS tes élèves"));
+        $("menu-parents").addEventListener("click", () => { closeMenu(); go("parents"); });
+        // retour sur l'appli (téléphone) : les données se mettent à jour toutes seules
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible" && !$("admin-area").hidden && Date.now() - lastLoad > 60000) reload().catch(() => {});
+        });
 
         resetQuizForm();
         resetDeckForm();
