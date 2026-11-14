@@ -43,6 +43,17 @@ const quizAdm = w.run('saveQuiz', ADM, { titre: 'Secret de Papa', pour: ['jul'],
 ok(err('saveQuiz', DUP, { id: quizAdm.id, titre: 'piraté', questions: [{ question: 'q', reponses: ['r'] }] }) === 'Élément introuvable.' && err('deleteQuiz', DUP, quizAdm.id) === 'Élément introuvable.' && !!w.props['quiz_' + quizAdm.id], 'modifier ou supprimer la leçon d\'une autre famille : refusé');
 ok(w.run('adminData', ADM).quizzes.map(q => q.id).join() === quizAdm.id && w.run('adminData', DUP).quizzes.map(q => q.id).join() === quizDup.id, 'chacun ne voit que ses leçons créées');
 const deckDup = w.run('saveDeck', DUP, { titre: 'Mots', pour: ['lou'], cartes: [{ recto: 'dog', verso: 'chien' }] });
+// cases à cocher de la page parents : setAccess (enregistrement immédiat)
+w.run('setAccess', DUP, 'quiz', quizDup.id, []);
+ok(JSON.parse(w.props['quiz_' + quizDup.id]).pour.length === 0 && JSON.parse(w.props['quiz_' + quizDup.id]).questions.length === 1, 'setAccess : retirer Lou de sa leçon (le contenu ne bouge pas)');
+w.run('setAccess', DUP, 'quiz', quizDup.id, ['lou', 'jul']);
+ok(JSON.stringify(JSON.parse(w.props['quiz_' + quizDup.id]).pour) === '["lou"]', 'setAccess : remettre Lou ; un enfant d\'une autre famille est ignoré');
+ok(err('setAccess', DUP, 'quiz', quizAdm.id, ['lou']) === 'Élément introuvable.' && JSON.stringify(JSON.parse(w.props['quiz_' + quizAdm.id]).pour) === '["jul"]', 'setAccess sur la leçon d\'une autre famille : refusé');
+w.run('setAccess', DUP, 'deck', deckDup.id, []); w.run('setAccess', DUP, 'deck', deckDup.id, ['lou']);
+ok(JSON.stringify(JSON.parse(w.props['deck_' + deckDup.id]).pour) === '["lou"]' && err('setAccess', DUP, 'autre', 'x', []) === 'Type inconnu.', 'setAccess : paquets aussi ; type inconnu refusé');
+w.run('setAccess', DUP, 'builtin', 'musique-carnaval', ['lou']);
+ok((JSON.parse(w.props.builtin_assign)['musique-carnaval'] || []).join() === 'lou', 'setAccess : leçon fournie (même règle que setBuiltinAssign)');
+w.run('setAccess', DUP, 'builtin', 'musique-carnaval', []);
 ok(w.run('adminData', DUP).decks.length === 1 && w.run('adminData', ADM).decks.length === 0, 'paquets de flashcards séparés aussi');
 
 // ---- 4. progression : chacun chez soi ----

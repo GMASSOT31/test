@@ -69,7 +69,7 @@ const err = q => w.try('saveQuiz', ADM, q).err;
   await a.click('#reset-quiz');
 
   // modification : tout est rechargé tel quel, puis ré-enregistré à l'identique
-  await a.click('#tab-quiz-liste'); await a.locator('#quiz-list .item', { hasText: 'Analyse musicale' }).locator('text=Modifier').click();
+  await a.click('#tab-quiz-liste'); { const r = a.locator('#quiz-list .builtin', { hasText: 'Analyse musicale' }); await r.locator('.builtin-toggle').click(); await r.locator('text=Modifier').click(); }
   ok((await a.locator('#lien-url').inputValue()) === saved.lien.url && (await a.locator('#lien-texte').inputValue()) === saved.lien.texte, 'modification : lien rechargé');
   ok((await a.locator('.q-type').nth(0).inputValue()) === 'fields' && (await a.locator('.question').nth(0).locator('.field-row').count()) === 3 && (await a.locator('.q-libre').nth(1).inputValue()) === 'libre', 'modification : types, champs et ordre libre rechargés');
   await a.evaluate(() => { document.querySelector('#quizlist-status').className = 'status'; });

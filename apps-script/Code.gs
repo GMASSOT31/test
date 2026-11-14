@@ -438,7 +438,30 @@ function deleteDeck(cred, id) {
 
 // À qui est donné un quiz intégré (parmi les élèves de la famille ; les autres familles ne sont pas touchées)
 function setBuiltinAssign(cred, quizId, pour) {
+  return assignBuiltin_(checkAdmin_(cred), quizId, pour);
+}
+
+// Donner ou retirer une leçon (kind 'builtin' ou 'quiz') ou un paquet ('deck') : pour = les élèves de la famille qui l'ont.
+// Sert aux cases à cocher de la page parents (enregistrement immédiat, sans renvoyer tout le contenu).
+function setAccess(cred, kind, id, pour) {
   var me = checkAdmin_(cred);
+  if (kind === 'builtin') return assignBuiltin_(me, id, pour);
+  var prefix = kind === 'quiz' ? QUIZ_PREFIX : kind === 'deck' ? DECK_PREFIX : '';
+  if (!prefix) throw new Error('Type inconnu.');
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var item = checkOwned_(prefix, id, me);
+    if (!item) throw new Error('Élément introuvable.');
+    item.pour = cleanPour_(pour, familyIds_(me));
+    putItem_(PropertiesService.getScriptProperties(), prefix, item.id, item);
+    return { pour: item.pour };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function assignBuiltin_(me, quizId, pour) {
   if (!isBuiltin_(quizId)) throw new Error('Quiz intégré inconnu.');
   var ids = familyIds_(me);
   var lock = LockService.getScriptLock();
