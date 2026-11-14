@@ -22,7 +22,7 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
   };
   const visiblePane = async () => (await a.locator('.pane:visible').evaluateAll(l => l.map(e => e.id))).join();
   const card = id => a.locator(`.prog-card[data-student="${id}"]`);
-  const openKid = async id => { if (!(await card(id).locator('.student-extra').count())) await card(id).locator('.prog-head .plus').click(); };
+  const openKid = async id => { if (!(await card(id).locator('.student-extra').count())) await card(id).locator('.kid-acct').click(); };
 
   // ---- 1. verrouillé, puis barre latérale ----
   ok(await a.locator('#admin-area').isHidden() && await a.locator('#locked-hint').isVisible(), 'au départ : gestion masquée et message d\'invitation à saisir le mot de passe');
@@ -74,7 +74,7 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
 
   // ---- 3. une fiche par enfant, par ordre alphabétique ----
   const names = await a.locator('.prog-card .st-name').allInnerTexts();
-  ok(JSON.stringify(names) === JSON.stringify(['👤 Adam', '👤 Emma', '👤 Léo', '👤 Nina', '👤 Zoé']) && (await a.locator('details.classe').count()) === 0 && (await a.locator('#prog-filtre').count()) === 0, 'FICHES ENFANTS triées par pseudo, sans regroupement par classe ni filtre : ' + names.join(', '));
+  ok(JSON.stringify(names) === JSON.stringify(['Adam', 'Emma', 'Léo', 'Nina', 'Zoé']) && (await a.locator('details.classe').count()) === 0 && (await a.locator('#prog-filtre').count()) === 0, 'FICHES ENFANTS triées par pseudo, sans regroupement par classe ni filtre : ' + names.join(', '));
   ok(!(await a.locator('body').innerText()).match(/9753|1234|4321|2468|1357/) && !Object.values(w.props).some(v => v.includes('"1234"')), 'aucun PIN affiché ni stocké en clair');
   await tab('eleve-ajout'); await a.fill('#st-classe', '5b'); await a.fill('#st-pseudo', 'LEO'); await a.fill('#st-pin', '9999'); await a.click('#save-student'); await a.waitForSelector('#student-status.err');
   ok((await a.locator('#student-status').innerText()).includes('existe déjà'), 'doublon refusé : « ' + await a.locator('#student-status').innerText() + ' »');
@@ -82,7 +82,7 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
 
   // ---- 4. modifier un enfant depuis sa fiche (« + ») ----
   await tab('programmes'); await openKid('leo');
-  ok((await card('leo').locator('.login-info').innerText()).includes('classe « 5B », pseudo « Léo »'), '« + » de l\'enfant : rappel de sa connexion (classe, pseudo)');
+  ok((await card('leo').locator('.login-info').innerText()).includes('classe « 5B », pseudo « Léo »'), '« ⚙️ Compte » de l\'enfant : rappel de sa connexion (classe, pseudo)');
   await card('leo').locator('text=Modifier').click();
   ok((await visiblePane()) === 'pane-eleve-ajout' && (await a.locator('#student-form-title').innerText()).includes('Modifier : Léo') && (await a.locator('#st-pin').inputValue()) === '', '« ✏️ Modifier » ouvre le formulaire, prérempli, PIN vide');
   await a.fill('#st-pin', '5555'); await a.click('#save-student'); await waitOk('#prog-status');
@@ -114,7 +114,7 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
   await tab('quiz-liste');
   const rows = await a.locator('#builtin-list .builtin strong').allInnerTexts();
   ok(rows.length === 11, '11 leçons fournies listées : ' + rows.map(r => r.slice(0, 22)).join(' | '));
-  ok((await a.locator('#builtin-list .builtin-details:visible').count()) === 0 && (await a.locator('#builtin-list .builtin').first().innerText()).replace(/\s+/g, ' ').trim().split(' ').length < 12, 'LISTE COMPACTE : seuls les noms (réglages repliés)');
+  ok((await a.locator('#builtin-list .builtin-details:visible').count()) === 0 && (await a.locator('#builtin-list .builtin').first().innerText()).replace(/\s+/g, ' ').trim().split(' ').length < 14, 'LISTE COMPACTE : titre court, matière et destinataires (réglages repliés) : ' + (await a.locator('#builtin-list .builtin').first().innerText()).replace(/\s+/g, ' '));
   ok((await a.locator('#builtin-list .builtin-toggle').first().getAttribute('aria-expanded')) === 'false', 'un bouton « ⚙️ Gérer » par leçon (replié)');
   for (const id of ['byzance-30', 'zootopia']) {
     const row = a.locator(`#builtin-list .builtin[data-id="${id}"]`);
@@ -168,7 +168,7 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
   // ---- 9. supprimer un enfant depuis sa fiche (« + ») ----
   await tab('programmes'); await openKid('adam');
   await card('adam').locator('text=Supprimer Adam').click(); await waitOk('#prog-status');
-  ok(JSON.stringify(await a.locator('.prog-card .st-name').allInnerTexts()) === JSON.stringify(['👤 Emma', '👤 Léo', '👤 Nina', '👤 Zoé']) && (await a.locator('#count-eleves').innerText()) === '4', 'Adam supprimé (après confirmation) : 4 fiches');
+  ok(JSON.stringify(await a.locator('.prog-card .st-name').allInnerTexts()) === JSON.stringify(['Emma', 'Léo', 'Nina', 'Zoé']) && (await a.locator('#count-eleves').innerText()) === '4', 'Adam supprimé (après confirmation) : 4 fiches');
   await openKid('leo'); await card('leo').locator('text=Supprimer Léo').click(); await waitOk('#prog-status');
   ok(!w.props.builtin_assign.includes('leo') && !JSON.stringify(Object.values(w.props)).includes('"leo"') && w.try('getStudentData', '5B', 'Léo', '5555').err, 'Léo supprimé : retiré de toutes les attributions, connexion impossible');
   ok(errs.length === 0, 'aucune erreur JavaScript ' + JSON.stringify(errs));
