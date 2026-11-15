@@ -384,6 +384,46 @@
         .prog-card.kid .student-extra { border-top: 1px solid var(--line); padding-top: 10px; }
         .add-tile { width: 100%; border: 2px dashed #c9d4f5; border-radius: 16px; background: none; padding: 12px; font: inherit; font-weight: 800; color: var(--blue); cursor: pointer; }
         .add-tile:hover { background: #fff; }
+        /* Créer une leçon : choix de la méthode, assistant IA en 3 étapes */
+        .choices { display: grid; gap: 12px; margin-top: 6px; }
+        .choice { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 16px; border: 2px solid var(--line); border-radius: 16px;
+                  background: #fff; font: inherit; color: inherit; cursor: pointer; box-shadow: var(--sticker); }
+        .choice:hover { border-color: var(--blue); background: #f8faff; }
+        .choice:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+        .choice-ico { font-size: 2rem; flex: 0 0 auto; }
+        .choice-txt { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+        .choice-txt strong { font-size: 1.1rem; color: var(--navy); }
+        .choice-txt > span { color: var(--muted); font-size: .9rem; }
+        .choice-tag { font-size: .7rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--gold); color: var(--navy); vertical-align: middle; margin-left: 4px; }
+        .choice-go { font-size: 1.6rem; color: #b5bdd6; font-weight: 900; }
+        .stepper { list-style: none; display: flex; gap: 6px; padding: 0; margin: 2px 0 14px; }
+        .stepper li { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 4px; border-radius: 999px; background: #eef1f8;
+                      font-size: .8rem; font-weight: 800; color: var(--muted); white-space: nowrap; }
+        .stepper li span { display: inline-flex; width: 20px; height: 20px; border-radius: 50%; background: #fff; align-items: center; justify-content: center; font-size: .75rem; }
+        .stepper li.on { background: var(--gold); color: var(--navy); }
+        .stepper li.done { background: #d9fff0; color: #07603b; }
+        .stepper li.done span { background: var(--green); color: #fff; }
+        .ia-step h2 { margin-bottom: 4px; }
+        .seg { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0; }
+        .seg button { flex: 1 1 0; min-width: 48px; min-height: 44px; border: 2px solid var(--line); border-radius: 12px; background: #fff; font: inherit; font-weight: 900;
+                      font-size: 1.05rem; color: var(--navy); cursor: pointer; }
+        .seg button[aria-checked="true"] { background: var(--gold); border-color: #e6b84a; }
+        .btn.big { width: 100%; padding: 14px 22px; font-size: 1.1rem; }
+        .howto { margin: 12px 0 6px; padding-left: 22px; display: grid; gap: 6px; color: var(--ink); font-size: .95rem; }
+        .prompt-view summary, .ia-preview summary, .more-opts summary { cursor: pointer; font-weight: 800; color: var(--blue); margin: 6px 0; }
+        .prompt-view textarea { font-size: .8rem; font-family: ui-monospace, Menlo, Consolas, monospace; }
+        #ia-answer { font-size: .85rem; font-family: ui-monospace, Menlo, Consolas, monospace; min-height: 160px; }
+        .ia-sum { background: #f4f6ff; border-radius: 14px; padding: 12px 14px; }
+        .ia-sum strong { display: block; font-size: 1.1rem; color: var(--navy); }
+        .ia-sum span { display: block; font-size: .9rem; color: var(--muted); margin-top: 2px; }
+        .ia-sum .warn { margin-top: 6px; }
+        #ia-questions { padding-left: 22px; display: grid; gap: 8px; font-size: .9rem; }
+        #ia-questions .ok-ans { display: block; color: #07603b; font-weight: 700; font-size: .85rem; }
+        .facult { font-weight: 600; color: var(--muted); }
+        .ia-edit-line { text-align: center; margin: 12px 0 0; }
+        .ia-edit-line .link-btn { color: var(--muted); font-weight: 700; text-decoration: underline; }
+        .row-me { display: grid; grid-template-columns: 1fr 110px; gap: 12px; }
+        .more-opts { margin-top: 10px; }
         #guide:empty { display: none; }
         .prog-card, .prog-card.compact { background: #fff; border: 0; border-radius: 18px; box-shadow: var(--soft); padding: 12px 16px; margin: 0 0 14px; }
         .st-class { font-size: .8rem; font-weight: 700; color: var(--muted); margin-left: 6px; }
@@ -645,6 +685,96 @@
             </section>
         </div>
 
+        <!-- ================= CRÉER UNE LEÇON : choisir la méthode ================= -->
+        <div class="pane" id="pane-quiz-new" role="tabpanel" hidden>
+            <section>
+                <button class="back-link" type="button" data-go="quiz-liste">← Retour aux leçons</button>
+                <h2>➕ Créer une leçon</h2>
+                <div class="choices">
+                    <button class="choice" id="mode-ia" type="button">
+                        <span class="choice-ico" aria-hidden="true">🤖</span>
+                        <span class="choice-txt"><strong>Avec une IA <span class="choice-tag">le plus rapide</span></strong><span>Tu donnes les photos de la leçon à ton IA, elle écrit le quiz, tu le colles ici.</span></span>
+                        <span class="choice-go" aria-hidden="true">›</span>
+                    </button>
+                    <button class="choice" id="mode-manual" type="button">
+                        <span class="choice-ico" aria-hidden="true">✍️</span>
+                        <span class="choice-txt"><strong>À la main</strong><span>Tu écris toi-même chaque question et ses réponses.</span></span>
+                        <span class="choice-go" aria-hidden="true">›</span>
+                    </button>
+                </div>
+            </section>
+        </div>
+
+        <!-- ================= CRÉER UNE LEÇON AVEC UNE IA : 3 étapes ================= -->
+        <div class="pane" id="pane-quiz-ia" role="tabpanel" hidden>
+            <section>
+                <button class="back-link" type="button" id="ia-back">← Retour</button>
+                <ol class="stepper" aria-label="Étapes">
+                    <li data-step="1"><span>1</span> La demande</li>
+                    <li data-step="2"><span>2</span> La réponse</li>
+                    <li data-step="3"><span>3</span> Vérifier</li>
+                </ol>
+
+                <div class="ia-step" id="ia-step-1">
+                    <h2>Prépare la demande pour ton IA</h2>
+                    <label id="ia-count-label">Combien de questions ?</label>
+                    <div class="seg" id="ia-count" role="radiogroup" aria-labelledby="ia-count-label">
+                        <button type="button" role="radio" aria-checked="false" data-n="10">10</button>
+                        <button type="button" role="radio" aria-checked="false" data-n="20">20</button>
+                        <button type="button" role="radio" aria-checked="false" data-n="30">30</button>
+                        <button type="button" role="radio" aria-checked="false" data-n="40">40</button>
+                        <button type="button" role="radio" aria-checked="false" data-n="50">50</button>
+                        <button type="button" role="radio" aria-checked="false" data-n="60">60</button>
+                    </div>
+                    <p class="hint">Leçon courte : 10 à 20 · un chapitre : 30 · une grosse leçon : 40 à 60.</p>
+                    <label for="ia-classe">Classe de l'enfant</label>
+                    <select id="ia-classe">
+                        <option>CE2</option>
+                        <option>CM1</option>
+                        <option>CM2</option>
+                        <option>6ᵉ</option>
+                        <option>5ᵉ</option>
+                        <option>4ᵉ</option>
+                        <option>3ᵉ</option>
+                        <option>2nde</option>
+                        <option>1re</option>
+                        <option>Terminale</option>
+                    </select>
+                    <div class="actions"><button class="btn big" id="ia-copy" type="button">📋 Copier la demande</button></div>
+                    <div class="status" id="ia-copy-status" role="status"></div>
+                    <ol class="howto">
+                        <li>Ouvre ton IA (ChatGPT, Gemini, Le Chat, Claude…).</li>
+                        <li>Colle la demande, <strong>ajoute les photos ou le document de la leçon</strong>, puis envoie.</li>
+                        <li>Copie <strong>toute</strong> sa réponse (son bouton « Copier »).</li>
+                    </ol>
+                    <details class="prompt-view" id="ia-prompt-box"><summary>👀 Voir la demande</summary><textarea id="ia-prompt" readonly rows="12" aria-label="Demande à donner à l'IA"></textarea></details>
+                    <div class="actions"><button class="btn secondary" id="ia-next-1" type="button">J'ai la réponse de l'IA →</button></div>
+                </div>
+
+                <div class="ia-step" id="ia-step-2" hidden>
+                    <h2>Colle la réponse de l'IA</h2>
+                    <textarea id="ia-answer" rows="9" placeholder="Colle ici toute la réponse de l'IA…" aria-label="Réponse de l'IA"></textarea>
+                    <div class="status" id="ia-parse-status" role="status"></div>
+                    <div class="actions"><button class="btn" id="ia-next-2" type="button" disabled>Vérifier le quiz →</button></div>
+                </div>
+
+                <div class="ia-step" id="ia-step-3" hidden>
+                    <h2>Vérifie et donne la leçon</h2>
+                    <div id="ia-summary"></div>
+                    <label for="ia-titre">Titre de la leçon</label>
+                    <input type="text" id="ia-titre" maxlength="120">
+                    <label>Pour qui ?</label>
+                    <div class="pour" id="ia-pour"></div>
+                    <label for="ia-exam">📅 Date du contrôle <span class="facult">(facultatif)</span></label>
+                    <input type="date" id="ia-exam" class="exam-input">
+                    <details class="ia-preview"><summary id="ia-preview-sum">👀 Voir les questions</summary><ol id="ia-questions"></ol></details>
+                    <div class="actions"><button class="btn big" id="ia-save" type="button">✅ Créer la leçon</button></div>
+                    <div class="status" id="ia-status" role="status"></div>
+                    <p class="ia-edit-line"><button class="link-btn" id="ia-edit" type="button">✏️ Retoucher les questions à la main</button></p>
+                </div>
+            </section>
+        </div>
+
         <!-- ================= AJOUTER UN QUIZ ================= -->
         <div class="pane" id="pane-quiz-ajout" role="tabpanel" aria-labelledby="tab-quiz-ajout" hidden>
             <section>
@@ -654,14 +784,10 @@
                 <label for="titre">Titre</label>
                 <input type="text" id="titre" maxlength="120" placeholder="Ex : La Révolution française">
 
-                <div class="row">
+                <div class="row-me">
                     <div>
                         <label for="matiere">Matière</label>
                         <input type="text" id="matiere" maxlength="40" placeholder="Ex : Histoire">
-                    </div>
-                    <div>
-                        <label for="description">Description courte</label>
-                        <input type="text" id="description" maxlength="300" placeholder="Ex : 1789, la Terreur, Napoléon…">
                     </div>
                     <div>
                         <label for="emoji">Emoji</label>
@@ -669,6 +795,10 @@
                     </div>
                 </div>
 
+                <details class="more-opts" id="quiz-more">
+                <summary>⚙️ Plus d'options (description, lien utile)</summary>
+                <label for="description">Description courte</label>
+                <input type="text" id="description" maxlength="300" placeholder="Ex : 1789, la Terreur, Napoléon…">
                 <div class="row3">
                     <div>
                         <label for="lien-texte">Lien utile (facultatif) : texte du bouton</label>
@@ -683,6 +813,7 @@
                         <input type="text" id="lien-icone" maxlength="8" placeholder="🔗">
                     </div>
                 </div>
+                </details>
 
                 <label>Pour quels enfants ?</label>
                 <div class="pour" id="quiz-pour"></div>
@@ -734,7 +865,7 @@
 
     <script>
         const OPTION_LETTERS = ["A", "B", "C", "D"];
-        const TABS = ["programmes", "eleve-ajout", "quiz-liste", "quiz-ajout", "fc-ajout", "parents"];
+        const TABS = ["programmes", "eleve-ajout", "quiz-liste", "quiz-new", "quiz-ia", "quiz-ajout", "fc-ajout", "parents"];
         let DATA = { moi: { owner: false, pseudo: "" }, students: [], quizzes: [], decks: [], builtins: [], progress: {} };
         let editingStudentId = null;
         let editingQuizId = null;   // id du quiz en cours de modification, null = nouveau
@@ -784,7 +915,7 @@
         // 2 sections dans la barre du haut : Enfants (accueil) et Leçons ; les formulaires s'ouvrent depuis leur section,
         // les familles invitées depuis le menu du compte (administrateur principal)
         const NAV = ["programmes", "quiz-liste"];
-        const NAV_OF = { "eleve-ajout": "programmes", "quiz-ajout": "quiz-liste", "fc-ajout": "quiz-liste", "parents": "" };
+        const NAV_OF = { "eleve-ajout": "programmes", "quiz-new": "quiz-liste", "quiz-ia": "quiz-liste", "quiz-ajout": "quiz-liste", "fc-ajout": "quiz-liste", "parents": "" };
         function go(tab) {
             TABS.forEach(t => { $("pane-" + t).hidden = t !== tab; });
             const nav = tab in NAV_OF ? NAV_OF[tab] : tab;
@@ -1105,7 +1236,7 @@
             editingBuiltinId = null;
             $("builtin-note").hidden = true;
             $("q-search").value = "";
-            $("quiz-form-title").textContent = "➕ Nouvelle leçon (quiz)";
+            $("quiz-form-title").textContent = "✍️ Nouvelle leçon";
             ["titre", "matiere", "emoji", "description", "lien-texte", "lien-url", "lien-icone"].forEach(id => $(id).value = "");
             pourBoxes($("quiz-pour"), []);
             qList.replaceChildren();
@@ -1122,6 +1253,7 @@
             $("lien-texte").value = quiz.lien ? quiz.lien.texte : "";
             $("lien-url").value = quiz.lien ? quiz.lien.url : "";
             $("lien-icone").value = quiz.lien && quiz.lien.icone ? quiz.lien.icone : "";
+            $("quiz-more").open = !!(quiz.description || quiz.lien);
             editingBuiltinId = null;
             $("builtin-note").hidden = true;
             $("q-search").value = "";
@@ -1131,6 +1263,235 @@
             filterQuestions();
             $("quiz-status").className = "status";
             go("quiz-ajout");
+        }
+
+        // ================= CRÉER UNE LEÇON AVEC UNE IA =================
+        // 1. le parent règle le nombre de questions et la classe, puis copie la demande (prompt) pour son IA ;
+        // 2. il colle la réponse de l'IA : on y cherche le quiz (JSON), avec tolérance (texte autour, ```json, virgules en trop) ;
+        // 3. il vérifie le titre, choisit ses enfants et, s'il veut, la date du contrôle, puis crée la leçon.
+        const AI_PREFS_KEY = "revision-ia-reglages";
+        const AI = { step: 1, count: 20, classe: "5ᵉ", quiz: null, ignored: 0, timer: 0 };
+        try { const p = JSON.parse(localStorage.getItem(AI_PREFS_KEY)); if (p && [10, 20, 30, 40, 50, 60].includes(p.count)) AI.count = p.count; if (p && p.classe) AI.classe = p.classe; } catch (e) { /* stockage indisponible */ }
+        function saveAiPrefs() { try { localStorage.setItem(AI_PREFS_KEY, JSON.stringify({ count: AI.count, classe: AI.classe })); } catch (e) { /* stockage indisponible */ } }
+        function buildPrompt(n, classe) {
+            return [
+                "Tu es un professeur expérimenté. Tu prépares un quiz de révision pour un élève de " + classe + ".",
+                "",
+                "Je te joins les photos ou le document de sa leçon : lis-les en entier. Si tu ne peux pas les lire, dis-le simplement au lieu d'inventer.",
+                "",
+                "Écris EXACTEMENT " + n + " questions qui couvrent toute la leçon, pour que l'élève la maîtrise et réussisse son contrôle.",
+                "",
+                "Règles :",
+                "1. Uniquement le contenu de la leçon jointe : n'invente rien.",
+                "2. Couvre toute la leçon, dans l'ordre : définitions, vocabulaire, dates, personnages, lieux, formules, méthodes, causes et conséquences, exemples du cours. Les notions essentielles peuvent revenir sous des angles différents.",
+                "3. Une question = une seule idée, claire, sans ambiguïté, compréhensible sans voir le document (jamais « d'après le document »).",
+                "4. 4 réponses par question, dont UNE SEULE juste. Les 3 fausses sont plausibles (erreurs fréquentes, confusions classiques) et de longueur proche de la bonne. Jamais « toutes les réponses » ni « aucune ».",
+                "5. Mélange les difficultés : un tiers faciles, un tiers moyennes, un tiers qui demandent d'avoir compris.",
+                "6. « rappel » : si la bonne réponse s'écrit de mémoire en 1 à 4 mots (mot, nom, date, nombre, formule courte), donne 1 à 3 façons correctes de l'écrire, sinon [].",
+                "7. « explication » : une phrase courte qui aide à retenir (le pourquoi, une astuce), tirée de la leçon.",
+                "8. En français, adapté à un élève de " + classe + " ; pour une leçon de langue étrangère, garde les mots dans la langue étudiée.",
+                "9. Longueur maximale : question 200 caractères, réponse 80, explication 200.",
+                "",
+                "Réponds UNIQUEMENT par un seul bloc de code JSON, sans texte avant ni après, exactement dans ce format :",
+                "",
+                "```json",
+                "{",
+                '  "titre": "Matière ' + classe + ' : thème de la leçon",',
+                '  "matiere": "Histoire",',
+                '  "emoji": "🏰",',
+                '  "description": "Ce que couvre la leçon, en une phrase",',
+                '  "questions": [',
+                "    {",
+                '      "question": "En quelle année commence la Révolution française ?",',
+                '      "options": ["1789", "1792", "1799", "1815"],',
+                '      "bonne_reponse": "1789",',
+                '      "rappel": ["1789"],',
+                '      "explication": "La prise de la Bastille, le 14 juillet 1789, marque le début de la Révolution."',
+                "    }",
+                "  ]",
+                "}",
+                "```",
+                "",
+                "Avant de répondre, vérifie : exactement " + n + " questions, chaque « bonne_reponse » recopiée à l'identique dans « options », JSON valide."
+            ].join("\n");
+        }
+        function renderAiSettings() {
+            [...$("ia-count").querySelectorAll("button")].forEach(b => b.setAttribute("aria-checked", String(Number(b.dataset.n) === AI.count)));
+            if ([...$("ia-classe").options].some(o => o.value === AI.classe)) $("ia-classe").value = AI.classe;
+            $("ia-prompt").value = buildPrompt(AI.count, AI.classe);
+        }
+        function startAi() {
+            AI.quiz = null; AI.ignored = 0;
+            $("ia-answer").value = ""; $("ia-titre").value = ""; $("ia-exam").value = "";
+            $("ia-pour").replaceChildren();   // nouvelle leçon : personne de coché d'avance (sauf enfant unique)
+            ["ia-copy-status", "ia-parse-status", "ia-status"].forEach(id => { $(id).className = "status"; $(id).textContent = ""; });
+            $("ia-next-2").disabled = true;
+            $("ia-prompt-box").open = false;
+            $("ia-copy").className = "btn big"; $("ia-copy").textContent = "📋 Copier la demande";
+            $("ia-next-1").className = "btn secondary";
+            renderAiSettings();
+            go("quiz-ia");
+            aiStep(1);
+        }
+        function aiStep(n) {
+            if (n === 3 && !AI.quiz) n = 2;
+            AI.step = n;
+            [1, 2, 3].forEach(i => { $("ia-step-" + i).hidden = i !== n; });
+            [...document.querySelectorAll(".stepper li")].forEach(li => {
+                const i = Number(li.dataset.step);
+                li.className = i === n ? "on" : i < n ? "done" : "";
+                li.querySelector("span").textContent = i < n ? "✓" : String(i);
+            });
+            if (n === 2) setTimeout(() => $("ia-answer").focus(), 50);
+            if (n === 3) renderAiReview();
+            window.scrollTo({ top: 0 });
+        }
+        async function copyPrompt() {
+            const text = $("ia-prompt").value, st = $("ia-copy-status");
+            let copied = false;
+            try { await navigator.clipboard.writeText(text); copied = true; } catch (e) { /* presse-papiers refusé : on essaie autrement */ }
+            if (!copied) {
+                $("ia-prompt-box").open = true;
+                const ta = $("ia-prompt"); ta.focus(); ta.select(); ta.setSelectionRange(0, text.length);
+                try { copied = document.execCommand("copy"); } catch (e) { copied = false; }
+            }
+            $("ia-copy").className = "btn secondary big"; $("ia-copy").textContent = "📋 Copier à nouveau";
+            $("ia-next-1").className = "btn";
+            showStatus(st, copied ? "ok" : "info", copied
+                ? "✅ Demande copiée ! Colle-la dans ton IA, ajoute les photos de la leçon et envoie."
+                : "Le texte est sélectionné ci-dessous : copie-le (appui long → Copier), puis colle-le dans ton IA.");
+        }
+        // ---------- lecture de la réponse de l'IA ----------
+        const normTxt = t => String(t == null ? "" : t).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+        function extractJson(text) {
+            const t = String(text || "").replace(/```(?:json|JSON)?/g, "");
+            const tries = [];
+            const a = t.indexOf("{"), b = t.lastIndexOf("}");
+            if (a >= 0 && b > a) tries.push(t.slice(a, b + 1));
+            const c = t.indexOf("["), d = t.lastIndexOf("]");
+            if (c >= 0 && d > c) tries.push(t.slice(c, d + 1));
+            for (const raw of tries) {
+                for (const fix of [x => x, x => x.replace(/,\s*([}\]])/g, "$1"), x => x.replace(/,\s*([}\]])/g, "$1").replace(/[“”]/g, '"')]) {
+                    try { return JSON.parse(fix(raw)); } catch (e) { /* essai suivant */ }
+                }
+            }
+            return null;
+        }
+        const pick = (o, keys) => { for (const k of keys) if (o && o[k] != null && o[k] !== "") return o[k]; return null; };
+        function normalizeQuestion(q) {
+            if (!q || typeof q !== "object") return null;
+            const question = String(pick(q, ["question", "enonce", "énoncé", "q"]) || "").trim();
+            let options = pick(q, ["options", "choix", "reponses", "réponses", "propositions"]);
+            if (!question || !Array.isArray(options)) return null;
+            options = options.map(o => String(o == null ? "" : (typeof o === "object" ? (o.texte || o.text || "") : o)).trim()).filter(Boolean);
+            options = options.filter((o, i) => options.findIndex(x => normTxt(x) === normTxt(o)) === i);   // sans doublon
+            const ans = pick(q, ["bonne_reponse", "bonne_réponse", "bonneReponse", "reponse", "réponse", "correct", "answer"]);
+            let correct = -1;
+            if (typeof ans === "number" && ans >= 0 && ans < options.length) correct = ans;
+            else if (ans != null) {
+                const s = String(ans).trim();
+                correct = options.findIndex(o => o === s);
+                if (correct < 0) correct = options.findIndex(o => normTxt(o) === normTxt(s));
+                if (correct < 0) { const m = s.match(/^([A-Fa-f])(?:[).:\s]|$)/); if (m) correct = m[1].toUpperCase().charCodeAt(0) - 65; }
+                if (correct >= options.length) correct = -1;
+            }
+            if (correct < 0 || options.length < 2) return null;
+            if (options.length > OPTION_LETTERS.length) {   // 4 réponses au plus (comme le formulaire), la bonne toujours gardée
+                const good = options[correct];
+                options = options.filter((o, i) => i !== correct).slice(0, OPTION_LETTERS.length - 1).concat(good);
+                correct = options.length - 1;
+            }
+            const out = { question: question.slice(0, 300), options: options.map(o => o.slice(0, 150)), correct };
+            let rappel = pick(q, ["rappel", "reponses_courtes", "reponses_acceptees", "accepte"]);
+            if (typeof rappel === "string") rappel = rappel.split(/[|;]/);
+            if (Array.isArray(rappel)) { rappel = rappel.map(r => String(r).trim()).filter(Boolean).slice(0, 10); if (rappel.length) out.rappel = rappel; }
+            const expl = pick(q, ["explication", "explanation", "astuce"]);
+            if (expl) out.explication = String(expl).trim().slice(0, 400);
+            return out;
+        }
+        function parseAiQuiz(text) {
+            const data = extractJson(text);
+            if (!data) return null;
+            const obj = Array.isArray(data) ? { questions: data } : data;
+            const raw = Array.isArray(obj.questions) ? obj.questions : Array.isArray(obj.quiz) ? obj.quiz : null;
+            if (!raw) return null;
+            let questions = raw.map(normalizeQuestion).filter(Boolean);
+            const ignored = raw.length - questions.length;
+            const cut = Math.max(0, questions.length - 60);
+            questions = questions.slice(0, 60);
+            if (!questions.length) return { quiz: null, ignored, cut };
+            const str = (v, n) => String(v == null ? "" : v).trim().slice(0, n);
+            return {
+                quiz: { titre: str(obj.titre || obj.title, 120) || "Nouvelle leçon", matiere: str(obj.matiere || obj.matière || obj.subject, 40) || "Divers",
+                        emoji: str(obj.emoji, 8) || "📘", description: str(obj.description, 300), questions },
+                ignored, cut
+            };
+        }
+        function analyseAnswer() {
+            const text = $("ia-answer").value, st = $("ia-parse-status");
+            AI.quiz = null;
+            $("ia-next-2").disabled = true;
+            if (!text.trim()) { st.className = "status"; st.textContent = ""; return; }
+            const res = parseAiQuiz(text);
+            if (!res || !res.quiz) {
+                showStatus(st, "err", res && res.ignored
+                    ? "❌ Les questions sont là, mais aucune n'a une bonne réponse reconnaissable. Redemande à l'IA en recollant la demande."
+                    : "❌ Je ne trouve pas de quiz dans ce texte. Copie toute la réponse de l'IA (le bloc qui commence par { et finit par }).");
+                return;
+            }
+            AI.quiz = res.quiz; AI.ignored = res.ignored; AI.cut = res.cut;
+            $("ia-titre").value = res.quiz.titre;
+            showStatus(st, "ok", "✅ " + res.quiz.questions.length + " questions trouvées : « " + res.quiz.titre + " »" + (res.ignored ? " (" + res.ignored + " ignorée" + (res.ignored > 1 ? "s" : "") + ")" : "") + ".");
+            $("ia-next-2").disabled = false;
+        }
+        function renderAiReview() {
+            const q = AI.quiz, n = q.questions.length, withRecall = q.questions.filter(x => x.rappel).length;
+            const notes = [];
+            if (AI.ignored) notes.push("⚠️ " + AI.ignored + " question" + (AI.ignored > 1 ? "s" : "") + " ignorée" + (AI.ignored > 1 ? "s" : "") + " (bonne réponse introuvable dans les choix).");
+            if (AI.cut) notes.push("⚠️ " + AI.cut + " question" + (AI.cut > 1 ? "s" : "") + " en trop retirée" + (AI.cut > 1 ? "s" : "") + " (60 au maximum).");
+            if (n < AI.count && !AI.ignored) notes.push("ℹ️ L'IA a écrit " + n + " questions au lieu de " + AI.count + ".");
+            $("ia-summary").replaceChildren(h("div", { class: "ia-sum" },
+                h("strong", {}, q.emoji + " " + n + " questions"),
+                h("span", {}, q.matiere + " · " + withRecall + " avec une réponse à écrire de mémoire" + (q.description ? " · " + q.description : "")),
+                notes.map(t => h("p", { class: "hint warn" }, t))));
+            const keep = pourValues($("ia-pour"));
+            pourBoxes($("ia-pour"), keep.length ? keep : DATA.students.length === 1 ? [DATA.students[0].id] : []);
+            $("ia-exam").min = new Date(DATA.now || Date.now()).toISOString().slice(0, 10);
+            $("ia-preview-sum").textContent = "👀 Voir les " + n + " questions";
+            $("ia-questions").replaceChildren(...q.questions.map(x => h("li", {}, x.question, h("span", { class: "ok-ans" }, "✅ " + x.options[x.correct]))));
+            $("ia-status").className = "status";
+        }
+        async function saveAiQuiz() {
+            const st = $("ia-status"), btn = $("ia-save");
+            const pour = pourValues($("ia-pour")), exam = $("ia-exam").value;
+            const titre = $("ia-titre").value.trim();
+            if (!titre) { showStatus(st, "err", "Donne un titre à la leçon."); return; }
+            btn.disabled = true;
+            showStatus(st, "info", "Création de la leçon…");
+            try {
+                const res = await server("saveQuiz", pw(), { ...AI.quiz, titre, pour });
+                if (exam) for (const sid of pour) await server("setLessonPlanAdmin", pw(), sid, res.id, exam);
+                pour.forEach(id => setKidOpen(id, true));   // avant le rechargement : les fiches s'affichent ouvertes
+                await reload();
+                const names = pour.map(studentName).filter(Boolean);
+                const msg = "✅ Leçon « " + titre + " » créée (" + AI.quiz.questions.length + " questions)";
+                AI.quiz = null;
+                if (names.length) {
+                    go("programmes");
+                    showStatus($("prog-status"), "ok", msg + " et donnée à " + names.join(", ") + (exam ? " · contrôle " + dayFr(new Date(exam + "T00:00")) + " : le plan de révision est prêt" : "") + ".");
+                } else {
+                    go("quiz-liste");
+                    showStatus($("quizlist-status"), "ok", msg + ". Elle est cachée : coche un enfant dans « ⚙️ Gérer » pour la lui donner.");
+                }
+            } catch (e) {
+                showStatus(st, "err", e.message);
+            } finally { btn.disabled = false; }
+        }
+        // Retoucher : le quiz lu part dans le formulaire « à la main » (nouvelle leçon, rien n'est encore enregistré)
+        function editAiQuiz() {
+            loadQuiz({ ...AI.quiz, titre: $("ia-titre").value.trim() || AI.quiz.titre, pour: pourValues($("ia-pour")) });
+            editingQuizId = null;
+            $("quiz-form-title").textContent = "✍️ Nouvelle leçon (préparée par l'IA)";
         }
 
         // ================= FLASHCARDS =================
@@ -1720,7 +2081,18 @@
         // ---------- événements ----------
         NAV.forEach(t => $("tab-" + t).addEventListener("click", () => go(t)));
         $("tab-eleve-ajout").addEventListener("click", () => { resetStudentForm(); $("student-status").className = "status"; go("eleve-ajout"); });
-        $("tab-quiz-ajout").addEventListener("click", () => { resetQuizForm(); $("quiz-status").className = "status"; go("quiz-ajout"); });
+        $("tab-quiz-ajout").addEventListener("click", () => go("quiz-new"));
+        $("mode-manual").addEventListener("click", () => { resetQuizForm(); $("quiz-status").className = "status"; go("quiz-ajout"); });
+        $("mode-ia").addEventListener("click", () => startAi());
+        $("ia-count").addEventListener("click", e => { const b = e.target.closest("button[data-n]"); if (b) { AI.count = Number(b.dataset.n); saveAiPrefs(); renderAiSettings(); } });
+        $("ia-classe").addEventListener("change", e => { AI.classe = e.target.value; saveAiPrefs(); renderAiSettings(); });
+        $("ia-copy").addEventListener("click", copyPrompt);
+        $("ia-next-1").addEventListener("click", () => aiStep(2));
+        $("ia-answer").addEventListener("input", () => { clearTimeout(AI.timer); AI.timer = setTimeout(analyseAnswer, 250); });
+        $("ia-next-2").addEventListener("click", () => aiStep(3));
+        $("ia-back").addEventListener("click", () => AI.step > 1 ? aiStep(AI.step - 1) : go("quiz-new"));
+        $("ia-save").addEventListener("click", saveAiQuiz);
+        $("ia-edit").addEventListener("click", editAiQuiz);
         $("new-deck").addEventListener("click", () => { resetDeckForm(); $("deck-status").className = "status"; go("fc-ajout"); });
         document.querySelectorAll(".back-link[data-go]").forEach(b => b.addEventListener("click", () => go(b.dataset.go)));
         $("unlock").addEventListener("click", unlock);
