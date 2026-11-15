@@ -118,6 +118,38 @@ N'hésite pas si tu veux plus de questions !`;
   ok(r && r.n === 1 && r.correct === 0, 'bonne réponse écrite sans accent ni majuscule : reconnue');
   ok((await parse('rien du tout')) === null, 'aucun JSON : rien');
 
+  // ---- 7 bis. téléphone : « 📤 Envoyer à mon IA » (menu de partage) ----
+  ok(await a.locator('#ia-share').isHidden(), 'ordinateur (pas de menu de partage tactile) : pas de bouton « Envoyer à mon IA »');
+  const m = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }); await install(m, w);
+  await m.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await m.addInitScript(() => {
+    window.__shareMode = 'ok';
+    Object.defineProperty(navigator, 'share', { configurable: true, value: async d => {
+      if (window.__shareMode !== 'ok') { const e = new Error('partage'); e.name = window.__shareMode; throw e; }
+      window.__shared = d;
+    } });
+  });
+  const t = await m.newPage(); t.on('pageerror', e => errs.push(e.message));
+  await t.goto('file://' + SRC + 'admin.html');
+  await t.fill('#admin-pseudo', 'Papa'); await t.fill('#password', 'secret'); await t.click('#unlock'); await t.waitForSelector('#admin-area:not([hidden])');
+  await t.click('#tab-quiz-liste'); await t.click('#tab-quiz-ajout'); await t.click('#mode-ia');
+  const cls = async id => t.locator(id).getAttribute('class');
+  ok(await t.locator('#ia-share').isVisible() && !(await cls('#ia-share')).includes('secondary') && (await cls('#ia-copy')).includes('secondary') && (await cls('#ia-next-1')).includes('secondary'), 'téléphone : « 📤 Envoyer à mon IA » en premier et mis en avant, « Copier » en second');
+  await t.evaluate(() => { window.__shareMode = 'AbortError'; });
+  await t.click('#ia-share'); await t.waitForTimeout(200);
+  ok((await t.locator('#ia-copy-status').innerText()) === '' && (await cls('#ia-next-1')).includes('secondary'), 'menu de partage refermé sans choisir d\'appli : rien ne change');
+  await t.evaluate(() => { window.__shareMode = 'ok'; });
+  await t.click('#ia-share'); await t.waitForSelector('#ia-copy-status.ok');
+  ok((await t.evaluate(() => window.__shared && window.__shared.text)) === await t.locator('#ia-prompt').inputValue() && (await t.locator('#ia-copy-status').innerText()).includes('Demande envoyée'), 'partage : la demande complète part vers l\'appli d\'IA, « ✅ Demande envoyée ! »');
+  ok(!(await cls('#ia-next-1')).includes('secondary') && (await cls('#ia-share')).includes('secondary') && (await t.locator('#ia-share').innerText()).includes('Envoyer à nouveau'), 'ensuite « J\'ai la réponse de l\'IA → » passe en avant');
+  const nb = await t.evaluate(() => { const r = document.getElementById('ia-next-1').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; });
+  ok(nb, 'et il est à l\'écran, sous le pouce, au retour de l\'appli d\'IA');
+  await t.click('#ia-back'); await t.click('#mode-ia');
+  await t.evaluate(() => { window.__shareMode = 'NotAllowedError'; });
+  await t.click('#ia-share'); await t.waitForSelector('#ia-copy-status.ok');
+  ok((await t.locator('#ia-copy-status').innerText()).includes('copiée') && (await t.evaluate(() => navigator.clipboard.readText())).includes('EXACTEMENT'), 'partage refusé par le téléphone : la demande est copiée à la place');
+  await m.close();
+
   // ---- 8. serveur : 60 questions au plus ----
   const big = n => ({ titre: 'Gros', pour: [], questions: Array.from({ length: n }, (x, i) => ({ question: 'Q' + i + ' ?', options: ['a', 'b'], correct: 0 })) });
   ok(!w.try('saveQuiz', ADM, big(60)).err && (w.try('saveQuiz', ADM, big(61)).err || '').includes('Maximum 60'), 'serveur : 60 questions acceptées, 61 refusées');
