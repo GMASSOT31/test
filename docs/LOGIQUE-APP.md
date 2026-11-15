@@ -1,0 +1,229 @@
+# Logique complète de l'application de révision
+
+Document de référence : **tout ce que l'application fait, et pourquoi**, indépendamment de la plateforme (Google Apps Script aujourd'hui).
+À lire avant toute réécriture ou migration : une nouvelle version doit respecter chaque règle ci-dessous (les suites `tests/` les vérifient).
+
+Sources : `apps-script/Code.gs` (serveur), `apps-script/Index.html` (page élève), `apps-script/admin.html` (espace parents),
+`apps-script/Contenu.gs` (leçons fournies). Voir aussi `docs/PARCOURS-V3.md` (genèse du parcours) et `docs/REPRISE.md` (exploitation).
+
+---
+
+## 1. Les acteurs
+
+| Acteur | Accès | Ce qu'il fait |
+|---|---|---|
+| **Élève (enfant)** | page élève (`/exec`) avec **classe + pseudo + PIN** | révise ses leçons, voit ses progrès, fait des flashcards |
+| **Parent invité** | espace parents (`?p=admin`) avec **pseudo + mot de passe** | gère SA famille : ses enfants, leurs leçons, leur suivi |
+| **Administrateur principal** (l'utilisateur) | même espace, son pseudo (`ADMIN_PSEUDO`) | comme un parent + modifie les leçons fournies, invite des familles (code), voit les familles, sauvegarde |
+
+Un élève ne voit **que** les leçons et paquets qui lui sont attribués. Un parent ne voit **que** sa famille.
+
+---
+
+## 2. Les données
+
+Stockage clé → valeur (aujourd'hui `PropertiesService`, ~500 Ko au total, 9 Ko par valeur : les gros éléments sont découpés
+en morceaux `<clé>~0, <clé>~1…` avec une tête `{ _chunks, id, ajoute }`).
+
+| Clé | Contenu |
+|---|---|
+| `student_<id>` | `{ id, classe, pseudo, salt, hash, ajoute, fam? }` — hash = SHA-256 hex de `salt + ':' + PIN` |
+| `parent_<id>` | famille invitée : `{ id, pseudo, famille, salt, hash, ajoute, vu }` (même hachage, mot de passe) |
+| `quiz_<id>` | leçon créée : `{ id, titre, matiere, emoji, description, lien?, pour:[idÉlève], questions:[…], ajoute, fam? }` |
+| `deck_<id>` | paquet de flashcards en plus : `{ id, titre, matiere, emoji, description, pour, cartes:[{recto, verso}], ajoute, fam? }` |
+| `override_<id>` | version modifiée d'une leçon fournie (l'original reste dans `Contenu.gs`, « Rétablir » supprime l'override) |
+| `builtin_assign` | `{ idLeçonFournie: [idÉlève…] }` — à qui est donnée chaque leçon fournie (toutes familles) |
+| `srs_<idÉlève>__<idLeçon>` | révision espacée d'un élève sur une leçon (voir §4) |
+| `schema_version` | `'3'` (migration unique déjà faite : anciennes clés `prog_`, `done_`, `parcours_` effacées) |
+| `ADMIN_PSEUDO` | pseudo de l'administrateur principal (choisi à sa 1re connexion) |
+| `ADMIN_PASSWORD` | mot de passe admin en clair (prioritaire ; sert de secours en cas d'oubli) |
+| `ADMIN_PASS_HASH` | `sel:hash` quand l'admin a changé son mot de passe depuis l'appli (`ADMIN_PASSWORD` est alors retiré) |
+| `INVITE_CODE` | code d'invitation `XXXX-XXXX` (absent = inscriptions fermées) |
+
+**Famille** : champ `fam` = id du parent invité ; absent = famille de l'administrateur principal.
+Les identifiants (`id`) sont des « slugs » du pseudo / titre, rendus uniques (`leo`, `leo-2`…).
+
+### Une question
+- QCM : `{ id, question, options:[2..6], correct:index, rappel?:[réponses courtes], explication? }`
+- Réponse écrite : `{ id, question, reponses:[1..10 acceptées], explication? }`
+- Plusieurs champs : `{ id, question, champs:[{ label, reponses, groupe? }], libre?, explication? }`
+- `id` = 8 caractères hexadécimaux, **stable** : la progression y est attachée. Une question sans `id` (leçons fournies d'origine)
+  prend l'empreinte **FNV-1a 32 bits** de son énoncé (`qhash_` serveur = `qhash` page : **les deux doivent rester identiques**).
+- Corriger l'énoncé ou la réponse garde l'`id`, donc la progression.
+- Comparaison des réponses écrites : insensible à la casse, aux accents, à la ponctuation et aux espaces ; un nombre décimal
+  « 0,25 » = « 0.25 » (mais ≠ « 25 »).
+- Limites : 60 questions par leçon, énoncé 300 car., réponse 150, explication 400, 150 cartes par paquet.
+
+---
+
+## 3. Les leçons
+- **Leçons fournies** (`Contenu.gs`, 11 aujourd'hui : Byzance, Grand quiz Byzance, Zootopia, Musique, Anglais animaux, Révolution,
+  Technologie 5ᵉ, Physique-chimie 5ᵉ ×4). Chaque parent les donne à ses enfants ; seul l'administrateur principal les modifie
+  (pour tous) ou les rétablit.
+- **Leçons créées** par un parent : à la main (formulaire) ou **avec une IA** (assistant en 3 étapes, §8). Rangées dans sa famille.
+- **Flashcards** : chaque leçon donne automatiquement un paquet (recto = question, verso = bonne réponse) ; des paquets « en plus » peuvent être créés.
+
+---
+
+## 4. Le cœur : la révision espacée (parcours v3)
+
+### 4.1 Principes pédagogiques
+1. **Se tester plutôt que relire** : le niveau ne dépend que des réponses, jamais de l'avis de l'enfant.
+2. **Espacer** : une question réussie revient de plus en plus tard ; une erreur la fait revenir vite.
+3. **Réapprendre dans la séance** : une question ratée revient 4 écrans plus loin, jusqu'à être réussie.
+4. **Retrouver plutôt que reconnaître** : QCM pour découvrir, puis questions **sans choix** pour ancrer.
+5. **Correction immédiate** : la bonne réponse et l'explication s'affichent tout de suite.
+6. **Mélanger** : la révision du jour mélange les leçons.
+
+### 4.2 Les 5 niveaux d'une question
+Enregistrement `it[idQuestion] = [niveau, échéance(ms), erreurs, réussites, erreursSûres]`.
+
+| Niveau | Nom | Atteint quand | Revient (sans contrôle) |
+|---|---|---|---|
+| 0 | 🌱 Nouvelle | jamais réussie | — |
+| 1 | 🌿 Découverte | réussie en QCM, ou après une erreur (retour au niveau 1) | demain (J+1) |
+| 2 | 🌳 Rappelée | réussie **sans choix**, du premier coup, alors qu'elle était **à revoir** | J+3 |
+| 3 | ⭐ Ancrée | idem | J+7 |
+| 4 | 🏆 Maîtrisée | idem | J+14 (J+30 en mode entretien) |
+
+Intervalles : `INTERVAL_DAYS = [0, 1, 3, 7, 14]`, `MAINTENANCE_DAYS = 30`. Les échéances sont calées sur **minuit, heure de Paris**
+(`dayStart_`, fuseau `Europe/Paris` — à conserver).
+
+### 4.3 Règles de réponse (`answer`)
+Paramètres : leçon, question, `stage` (`qcm` ou `rappel`), `ok` (juste du premier essai), `conf` (`sur` | `doute` | ''), `sid`
+(identifiant de séance), `opId` (identifiant d'opération).
+- **Idempotence** : une opération déjà vue (`opId` parmi les 40 derniers) ne compte pas deux fois (réseau qui rejoue).
+- **Seule la première réponse d'une question dans une séance compte.** Un nouvel essai dans la même séance (après correction) ne fait
+  que passer une question **nouvelle** au niveau 1 si elle est enfin réussie.
+- Une question est **« à revoir »** si niveau > 0 et échéance ≤ maintenant + 5 min.
+- **Réussite** : réussites +1 ; niveau 0 → 1 ; si à revoir : en `rappel` sans doute → niveau +1 (max 4), en QCM ou « je crois savoir » →
+  niveau inchangé ; **si pas à revoir (révision en avance / séance bonus) : rien ne change** (le plan ne bouge pas).
+  Puis échéance = `dueFor_(niveau)`.
+- **Erreur** (ou « Je ne sais pas ») : erreurs +1 ; si l'enfant était **sûr**, erreursSûres +1 ; niveau → 1 (0 reste 0) ;
+  échéance = `dueFor_(1)` (au plus vite).
+- Si la date du contrôle est passée, le plan est vidé (retour au rythme normal).
+
+### 4.4 Date du contrôle et plan de séances (`makePlan_`)
+Fixée par l'enfant à la 1re ouverture de la leçon (Demain, Après-demain, Dans une semaine, Pas de contrôle, ou une date), ou par le
+parent (suivi, ou étape 3 de la création IA). Bornes : d'aujourd'hui à 1 an.
+- **Contrôle demain = mode express** : maintenant, **+1 h**, et le **matin du contrôle** (si +1 h dépasse minuit : maintenant et le matin).
+- 2 jours : aujourd'hui, demain, le matin du contrôle. 3 jours : aujourd'hui, demain, la veille.
+- Plus loin : aujourd'hui, demain, J+3, J+7, J+15… (`next = next × 2 + 1`) et **toujours la veille**.
+- Contrôle aujourd'hui : une séance maintenant.
+- Avec un contrôle actif, `dueFor_` place la question à la **prochaine séance du plan** (en express : au moins 59 min plus tard,
+  sinon un autre jour) ; une question **ancrée ou maîtrisée** saute à la **dernière** séance. S'il n'y a plus de séance : rythme normal.
+- Changer la date recalcule le plan et ramène les questions déjà travaillées à la prochaine séance.
+- Après le contrôle, la leçon demande : **🧠 garder en mémoire** (mode `entretien` : rappels espacés, maîtrisées à 30 jours) ou
+  **📦 archiver** (mode `archive` : hors révision du jour, réactivable). Mode normal : `actif`.
+
+### 4.5 Composition d'une séance (page élève, `buildTasks`)
+- Une séance vise ~15 questions (~10 min) : d'abord les questions **à revoir** (au plus 20, posées **sans choix**), puis des
+  **nouvelles** par **blocs de 5** : les 5 cartes « 📖 Je découvre » (question + réponse + explication), puis ces 5 en QCM « ✅ Je teste ».
+- **Avec un contrôle à venir** : toutes les nouvelles questions dès la 1re séance (jusqu'à 40), sinon elles n'auraient pas le temps de revenir.
+- **« Déjà travaillée en classe »** (`tf`) : pas de cartes, on commence directement par le QCM.
+- **Erreur** : bonne réponse affichée, puis « 🔁 Je corrige » : la question revient 4 écrans plus loin (même étape), jusqu'à réussite.
+- **Séance bonus** (rien à revoir ni à découvrir) : 10 questions, les moins avancées puis les plus ratées ; ses erreurs comptent,
+  ses réussites n'avancent pas le plan.
+- **Révision du jour** (accueil) : les questions à revoir de **toutes** les leçons actives, les plus anciennes d'abord, 30 au plus, **mélangées**.
+- Passage automatique à la question suivante après une bonne réponse du premier coup (1 s, 1,8 s s'il y a une explication).
+
+### 4.6 Les formes d'une question selon l'étape
+- **QCM d'origine** : choix mélangés ; la bonne réponse s'affiche toujours après le choix.
+- **Réponse écrite en étape QCM** : choix fabriqués avec la bonne réponse + jusqu'à 3 autres réponses de la leçon.
+- **Rappel d'un QCM** : s'il a des réponses courtes (`rappel`), l'enfant **écrit** ; sinon **« QCM masqué »** : il cherche dans sa tête,
+  dit « 😎 Je sais, je suis sûr(e) » / « 🤔 Je crois savoir » / « Je ne sais pas », puis choisit parmi 4-5 propositions (choix
+  d'origine + bonnes réponses d'autres questions ; Vrai/Faux : rien d'ajouté). « Je crois savoir » juste = pas de montée.
+- **Réponse écrite / champs** : une seule validation ; la bonne réponse s'affiche en cas d'erreur.
+
+### 4.7 Fin de séance (`endSession`)
+Historique `ses = [[début, durée(s), questions, réussiesPremierCoup, bonus]]` (30 dernières). Bilan affiché : « X / Y réussies du
+premier coup », questions qui ont progressé d'un niveau, prochaine séance, ou « Continuer » / « Découvrir 5 nouvelles questions ».
+
+### 4.8 Enregistrement fiable côté élève
+Les envois partent **un par un, dans l'ordre**, chacun avec un `opId` ; **3 essais** en cas de panne réseau (pas pour les erreurs
+définitives : PIN incorrect, leçon inaccessible…). Indicateur « ⏳ Sauvegarde en attente » / « ✅ Progression enregistrée » /
+« ⚠️ ». Le serveur fait foi : la page recopie ce qu'il renvoie.
+
+### 4.9 Indicateurs
+- **Avancement** (parent, par leçon et par enfant) = (Découverte×1 + Rappelée×2 + (Ancrée+Maîtrisée)×3) / (3 × nb questions).
+  Les leçons archivées ne comptent pas.
+- **« Prête pour le contrôle ? »** = part des questions au moins Rappelées : ≥ 90 % ✅ prête, ≥ 60 % 🟡 presque, sinon 🔴.
+- **Questions difficiles** : celles qui ont des erreurs (dont « en étant sûr·e »), les 5 pires.
+
+---
+
+## 5. La page élève
+- Connexion **Classe / Pseudo / PIN** (insensible à la casse et aux accents). 5 erreurs sur un couple classe/pseudo → blocage 5 min.
+  Classe et pseudo préremplis (jamais le PIN) ; connecté le temps de l'onglet. Lien discret « 👨‍👩‍👧 Espace parents ».
+- **Mes leçons** (accueil) : carte « 🎯 Ta révision du jour » (nb de questions, minutes estimées) ; leçons triées : contrôle le plus
+  proche, puis « contrôle passé », à réviser, nouvelle, à découvrir, en attente, ancrée ; archivées repliées.
+  Chaque carte : badge du contrôle (🔥 aujourd'hui / demain, 📅 date), barre des 5 niveaux, statut et **une seule action**
+  (Commencer, Réviser maintenant, Continuer, Séance bonus, Choisir, Réactiver).
+- **Écran d'une leçon** : contrôle (modifiable), plan en pastilles (✓ séances faites), niveaux, bouton principal, « 🃏 Voir les cartes ».
+- **1re ouverture** : « Quand est ton contrôle ? » + « As-tu déjà travaillé cette leçon en classe ? » (la date du parent est proposée).
+- **Mes progrès** : questions ancrées / total, niveaux, séances et minutes de la semaine, leçons.
+- **Flashcards** : un paquet par leçon + paquets en plus ; question → « Voir la réponse » → Oublié / Hésité / Trouvé ; Oublié et
+  Hésité reviennent jusqu'à Trouvé. **N'influence jamais la révision espacée.**
+- Téléphone : bandeau fin, barre d'onglets en bas (Mes leçons, Mes progrès, Flashcards, Se déconnecter).
+
+---
+
+## 6. L'espace parents
+- Connexion **pseudo + mot de passe** ; lien « 👪 Créer ma famille » (code d'invitation) ; 8 erreurs sur un pseudo → blocage 5 min.
+- Barre : **👨‍👧 Enfants** (accueil) · **📚 Leçons** · ↻ · menu **👤 pseudo ▾** (👪 Familles invitées pour l'administrateur,
+  🔑 Changer le mot de passe, 🔒 Se déconnecter). À la déconnexion, la page est vidée.
+- **Enfants** : une fiche par enfant en **accordéon** (initiale, nom, « N leçons · 🔥/📅 contrôle … », % d'avancement) ; repliée sur
+  téléphone, ouverte sur ordinateur, état retenu par appareil. Dépliée : une ligne par leçon (emoji, **titre court** = partie après
+  « : », badge du contrôle, %) ; toucher une leçon → titre complet, **date du contrôle**, état, niveaux, questions difficiles,
+  historique, archiver/réactiver, remise à zéro. Pied : **📚 Choisir ses leçons** (cases, enregistrées tout de suite) et
+  **⚙️ Compte** (activité, rappel de connexion, modifier classe/pseudo/PIN, tout remettre à zéro, supprimer). Guide « 🚀 Pour commencer ».
+- **Leçons** : ✏️ Mes leçons, 🏛️ Leçons fournies, 🃏 Cartes en plus ; « ⚙️ Gérer » : cases des enfants (immédiat), Modifier,
+  Supprimer / Rétablir. « ➕ Créer une leçon » → choix IA / à la main.
+- **Familles invitées** (administrateur) : code d'invitation (nouveau / fermer), adresse à donner, jauge de stockage, familles
+  (enfants, inscription, dernière connexion, nouveau mot de passe, supprimer).
+
+---
+
+## 7. Familles et sécurité
+- Inscription d'une famille : code d'invitation exact (insensible à la casse/tirets), pseudo unique (y compris celui de l'admin),
+  mot de passe ≥ 8 caractères ; 20 mauvais codes → blocage 5 min ; 15 familles max ; inscriptions refusées au-delà de 85 % du stockage.
+- Un parent ne peut lire ni modifier que sa famille (élèves, leçons, paquets, progression, attributions des leçons fournies : il ne
+  remplace que la part de ses enfants). Le couple **classe + pseudo** d'un élève est **unique entre toutes les familles** (connexion).
+- Supprimer une leçon ne touche jamais la progression d'une leçon fournie ni d'une autre famille.
+- Limites : 40 élèves pour l'admin, 12 par famille invitée, 150 au total.
+- Fonctions réservées à l'administrateur principal : modifier/rétablir une leçon fournie, code d'invitation, nouveau mot de passe ou
+  suppression d'une famille, sauvegarde complète (`backupData`, sans les mots de passe admin).
+
+---
+
+## 8. Créer une leçon avec une IA
+1. **La demande** : nombre de questions (10 à 60, 20 par défaut) + classe (CE2 → Terminale), retenus par appareil ; texte généré par
+   `buildPrompt(n, classe)` : contenu de la leçon uniquement, couverture complète, une idée par question, 4 réponses dont une seule
+   juste avec des pièges plausibles, difficultés mêlées, `rappel` pour les réponses courtes, explication, format **JSON**
+   `{ titre, matiere, emoji, description, questions:[{ question, options, bonne_reponse (texte), rappel, explication }] }`.
+   Téléphone : **📤 Envoyer à mon IA** (menu de partage) ; partout : **📋 Copier la demande**.
+2. **La réponse** : collée puis lue avec tolérance (texte autour, ```json, virgules en trop, guillemets typographiques, réponse en
+   lettre ou sans accents, liste seule) ; questions sans bonne réponse reconnaissable ignorées ; 4 réponses max ; 60 questions max.
+3. **Vérifier** : titre, pour qui (enfant unique coché d'office), date du contrôle facultative (plan calculé), aperçu → créer ;
+   ou « ✏️ Retoucher à la main » (formulaire prérempli).
+
+---
+
+## 9. Fonctions serveur (contrat à garder)
+Élève (identifiants classe, pseudo, PIN) : `getStudentData`, `answer`, `endSession`, `setLessonPlan`, `setLessonMode`.
+Parent (`{pseudo, password}`) : `adminData`, `saveStudent`, `deleteStudent`, `saveQuiz`, `saveDeck`, `deleteQuiz`, `deleteDeck`,
+`setBuiltinAssign`, `setAccess`, `setLessonPlanAdmin`, `setLessonModeAdmin`, `resetProgress`, `changePassword`.
+Administrateur principal : `getBuiltinForEdit`, `saveBuiltin`, `restoreBuiltin`, `setInviteCode`, `resetParentPassword`,
+`deleteFamily`, `backupData`. Public (avec code) : `createFamily`.
+Les fonctions finissant par `_` sont internes. Écritures sous **verrou** (une à la fois).
+
+---
+
+## 10. Invariants à ne jamais casser
+1. `qhash` (FNV-1a) identique serveur / page ; `id` des questions stables.
+2. Format des enregistrements `srs_…` et des clés (sinon la progression est perdue).
+3. Hachage `SHA-256(sel + ':' + secret)` en hexadécimal (PIN des élèves, mots de passe des parents) : une migration doit les reprendre tels quels.
+4. Idempotence par `opId`, première réponse de la séance seule comptée, révision en avance sans effet sur le plan.
+5. Jours calés sur Europe/Paris.
+6. Séparation stricte élèves / familles.
+7. 668 contrôles automatiques dans `tests/` (24 suites) : tous verts avant toute mise en ligne.
