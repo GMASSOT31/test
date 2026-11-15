@@ -14,10 +14,10 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
   const waitOk = async (id) => a.waitForSelector(`${id}.ok`, { timeout: 8000 });
   // navigation : 2 sections en haut (Enfants, Leçons) ; les formulaires s'ouvrent depuis leur section ; Familles depuis le menu du compte
   const PARENT = { 'eleve-ajout': 'programmes', 'quiz-ajout': 'quiz-liste', 'fc-ajout': 'quiz-liste' };
-  const OPENER = { 'eleve-ajout': '#tab-eleve-ajout', 'quiz-ajout': '#tab-quiz-ajout', 'fc-ajout': '#new-deck' };
+  const OPENER = { 'eleve-ajout': ['#tab-eleve-ajout'], 'quiz-ajout': ['#tab-quiz-ajout', '#mode-manual'], 'fc-ajout': ['#new-deck'] };
   const tab = async t => {
     if (t === 'parents') { await a.click('#acct-btn'); await a.click('#menu-parents'); return; }
-    if (PARENT[t]) { await a.click('#tab-' + PARENT[t]); await a.click(OPENER[t]); return; }
+    if (PARENT[t]) { await a.click('#tab-' + PARENT[t]); for (const sel of OPENER[t]) await a.click(sel); return; }
     await a.click('#tab-' + t);
   };
   const visiblePane = async () => (await a.locator('.pane:visible').evaluateAll(l => l.map(e => e.id))).join();
