@@ -127,6 +127,19 @@ parent (suivi, ou étape 3 de la création IA). Bornes : d'aujourd'hui à 1 an.
 - **Révision du jour** (accueil) : les questions à revoir de **toutes** les leçons actives, les plus anciennes d'abord, 30 au plus, **mélangées**.
 - Passage automatique à la question suivante après une bonne réponse du premier coup (1 s, 1,8 s s'il y a une explication).
 
+### 4.5 bis Questions de synthèse (QUIZy Cloudflare, depuis le 16/11/2026)
+- Type de question `{ id, question, synthese: true, modele, attendus:[2..5], explication? }` (10 au plus par leçon, en plus des
+  60 questions). Générées par l'IA à la création (15 % du nombre de questions, arrondi au-dessus), modifiables dans l'éditeur.
+- Proposées en fin de séance d'une leçon quand ≥ 50 % des questions « classiques » sont au moins Rappelées 🌳 (≥ 30 % à 7 jours
+  ou moins du contrôle) : 1 nouvelle par séance (2 près du contrôle, + 1 déjà vue en avance). Jamais en cartes « Je découvre ».
+  Une synthèse due revient comme les autres (révision du jour comprise). Aucun appel IA en séance.
+- Écran : la question, une zone de texte, « Valider » → réponse modèle + éléments attendus à cocher (la liste ne fait que
+  suggérer) → autoévaluation : ✅ J'ai réussi / 🟡 Partiellement / ❌ Je n'ai pas réussi. Pas de note automatique, pas de nouvel
+  essai dans la séance, pas de passage automatique. Flashcard : la réponse modèle au verso.
+- Serveur `answerSynthese(…, évaluation, texte, sid, opId)` → même moteur que `answer` : réussi = rappel réussi (niveau +1 si à
+  revoir, intervalle plus long) ; partiel = « juste mais je doutais » (niveau inchangé, revient plus vite) ; non = erreur
+  (niveau 1, J+1). Les 3 dernières réponses rédigées et autoévaluations sont gardées (`srs.syn`) et montrées au parent.
+
 ### 4.6 Les formes d'une question selon l'étape
 - **QCM d'origine** : choix mélangés ; la bonne réponse s'affiche toujours après le choix.
 - **Réponse écrite en étape QCM** : choix fabriqués avec la bonne réponse + jusqu'à 3 autres réponses de la leçon.
@@ -225,6 +238,8 @@ définitives : PIN incorrect, leçon inaccessible…). Indicateur « ⏳ Sauvega
    `buildPrompt(n, classe)` : contenu de la leçon uniquement, couverture complète, une idée par question, 4 réponses dont une seule
    juste avec des pièges plausibles, difficultés mêlées, `rappel` pour les réponses courtes, explication, format **JSON**
    `{ titre, matiere, emoji, description, questions:[{ question, options, bonne_reponse (texte), rappel, explication }] }`.
+   Depuis le 16/11/2026 : + `syntheses:[{ question, reponse_modele, elements_attendus:[3..5] }]` (15 % arrondi au-dessus,
+   plusieurs notions par question, moins voire aucune si la leçon est trop courte).
    Téléphone : **📤 Envoyer à mon IA** (menu de partage) ; partout : **📋 Copier la demande**.
 2. **La réponse** : collée puis lue avec tolérance (texte autour, ```json, virgules en trop, guillemets typographiques, réponse en
    lettre ou sans accents, liste seule) ; questions sans bonne réponse reconnaissable ignorées ; 4 réponses max ; 60 questions max.

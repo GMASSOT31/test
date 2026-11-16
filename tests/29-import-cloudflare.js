@@ -12,6 +12,9 @@ const clean = o => {
   delete c.partagees; delete c.leconsFamilles;
   (c.builtins || []).forEach(b => delete b.familles); (c.quizzes || []).forEach(q => delete q.familles);
   if (c.moi && !c.moi.owner && c.builtins) c.builtins = c.builtins.filter(b => b.pour.length);
+  // questions de synthèse (16/11/2026) : historique des synthèses de l'élève et résumé pour le parent
+  Object.values(c.srs || {}).forEach(r => delete r.syn);
+  Object.values(c.progress || {}).forEach(list => list.forEach(l => delete l.syntheses));
   return c;
 };
 const same = (a, b) => JSON.stringify(clean(a)) === JSON.stringify(clean(b));

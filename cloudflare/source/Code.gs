@@ -49,6 +49,8 @@ var PROGRESS_PREFIX = 'prog_';
 var DONE_PREFIX = 'done_';
 var PARCOURS_PREFIX = 'parcours_';
 var MAX_QUESTIONS = 60;
+var MAX_SYNTHESES = 10;    // questions de synthèse en plus (15 % de 60, arrondi au-dessus = 9)
+var MIN_ATTENDUS = 2, MAX_ATTENDUS = 5;   // éléments essentiels attendus d'une question de synthèse (3 à 5 demandés à l'IA)
 var MAX_CARDS = 150;
 var MAX_FIELDS = 12;       // champs maximum dans une question à plusieurs champs
 var MAX_STUDENTS = 40;          // élèves de la famille de l'administrateur principal
@@ -114,7 +116,7 @@ function defaultSrs_() { return { v: 3, it: {}, exam: '', plan: [], tf: false, m
 function readSrs_(raw) { var r = parseJson_(raw); return r && r.v === 3 ? r : defaultSrs_(); }
 // Version envoyée aux pages : sans la séance en cours ni les identifiants d'opérations
 function presentSrs_(r) {
-  return { it: r.it, exam: r.exam || '', plan: r.plan || [], tf: !!r.tf, cfg: !!r.cfg, mode: r.mode || 'actif', ses: (r.ses || []).slice(-MAX_SESSIONS_KEPT) };
+  return { it: r.it, exam: r.exam || '', plan: r.plan || [], tf: !!r.tf, cfg: !!r.cfg, mode: r.mode || 'actif', ses: (r.ses || []).slice(-MAX_SESSIONS_KEPT), syn: r.syn || {} };
 }
 
 // Passage au parcours v3 : une seule fois, on efface les anciennes progressions, parcours et compteurs (décision du 8/11/2026).
@@ -224,6 +226,31 @@ function withSrs_(classe, pseudo, pin, quizId, fn) {
 function answer(classe, pseudo, pin, quizId, qid, stage, ok, conf, sid, opId) {
   return withSrs_(classe, pseudo, pin, quizId, function (r, quiz, now) {
     if (!/^[0-9a-f]{8}$/.test(String(qid)) || !quiz.questions.some(function (q) { return qid_(q) === qid; })) throw new Error('Question inconnue.');
+    return answerCore_(r, now, qid, stage === 'synthese' ? 'qcm' : stage, ok, conf, sid, opId);   // la synthèse passe par answerSynthese
+  });
+}
+
+// Question de synthèse : l'enfant rédige, compare au corrigé, puis s'autoévalue (aucune note automatique).
+// evaluation 'reussi' = comme un rappel réussi (niveau +1 si elle était à revoir : intervalle plus long) ;
+// 'partiel' = comme « juste, mais je doutais » (niveau inchangé : elle revient plus vite) ;
+// 'non' = comme une erreur (niveau 1 : elle revient à court terme). Mêmes intervalles que le reste du parcours.
+// La réponse rédigée et l'autoévaluation sont gardées (3 dernières par question) pour suivre la progression.
+function answerSynthese(classe, pseudo, pin, quizId, qid, evaluation, texte, sid, opId) {
+  if (['reussi', 'partiel', 'non'].indexOf(evaluation) < 0) throw new Error('Autoévaluation invalide.');
+  return withSrs_(classe, pseudo, pin, quizId, function (r, quiz, now) {
+    var q = /^[0-9a-f]{8}$/.test(String(qid)) ? quiz.questions.filter(function (x) { return qid_(x) === qid; })[0] : null;
+    if (!q || !q.synthese) throw new Error('Question inconnue.');
+    var res = answerCore_(r, now, qid, 'synthese', evaluation !== 'non', evaluation === 'partiel' ? 'doute' : '', sid, opId);
+    if (!res.rejoue) {
+      r.syn = r.syn || {};
+      r.syn[qid] = (r.syn[qid] || []).concat([[now, evaluation, str_(texte, 1500)]]).slice(-3);
+    }
+    return res;
+  });
+}
+
+// Noyau commun : une réponse (première de la séance seule comptée, idempotence par opId, révision en avance sans effet)
+function answerCore_(r, now, qid, stage, ok, conf, sid, opId) {
     if (seenOpSrs_(r, opId)) return { qid: qid, item: r.it[qid] || [0, 0, 0, 0, 0], rejoue: true };
     rememberOpSrs_(r, opId);
     sid = String(sid || '').slice(0, 30);
@@ -243,7 +270,7 @@ function answer(classe, pseudo, pin, quizId, qid, stage, ok, conf, sid, opId) {
     if (ok === true) {
       it[3] += 1;
       if (lvl === 0) lvl = 1;
-      else if (due) lvl = stage === 'rappel' && conf !== 'doute' ? Math.min(LEVEL_MAX, lvl + 1) : lvl;
+      else if (due) lvl = (stage === 'rappel' || stage === 'synthese') && conf !== 'doute' ? Math.min(LEVEL_MAX, lvl + 1) : lvl;
       else { r.it[qid] = it; return { qid: qid, item: it, bonus: true }; }   // révision en avance : le plan ne change pas
       it[0] = lvl; it[1] = dueFor_(r, lvl, now);
     } else {
@@ -254,7 +281,6 @@ function answer(classe, pseudo, pin, quizId, qid, stage, ok, conf, sid, opId) {
     }
     r.it[qid] = it;
     return { qid: qid, item: it };
-  });
 }
 
 // Fin de séance : ajoutée à l'historique (affiché à l'élève et au parent)
@@ -946,6 +972,11 @@ function lessonSummary_(quiz, r) {
     // avancement de l'apprentissage : découverte 1/3, rappelée 2/3, ancrée ou maîtrisée 3/3
     avancement: total ? Math.round((niveaux[1] + 2 * niveaux[2] + 3 * (niveaux[3] + niveaux[4])) / (3 * total) * 100) : 0,
     difficiles: difficiles.slice(0, 5),
+    // questions de synthèse : dernière autoévaluation et réponse rédigée (suivi par le parent)
+    syntheses: quiz.questions.filter(function (q) { return q.synthese; }).map(function (q) {
+      var id = qid_(q), hist = (r.syn || {})[id] || [], last = hist[hist.length - 1], it = r.it[id];
+      return { question: q.question, niveau: it ? it[0] : 0, essais: hist.length, dernier: last ? { date: last[0], eval: last[1], texte: last[2] } : null };
+    }),
     exam: r.exam || '', plan: r.plan || [], mode: r.mode || 'actif',
     seances: (r.ses || []).slice(-10).reverse().map(function (x) { return { debut: x[0], duree: x[1], questions: x[2], reussies: x[3], bonus: !!x[4] }; }),
     nbSeances: (r.ses || []).length
@@ -1195,9 +1226,12 @@ function validateQuiz_(quiz, allowedIds) {
   if (!Array.isArray(quiz.questions) || quiz.questions.length < 1) {
     throw new Error('Il faut au moins une question.');
   }
-  if (quiz.questions.length > MAX_QUESTIONS) {
+  var nbSyntheses = quiz.questions.filter(function (q) { return q && q.synthese === true; }).length;
+  if (quiz.questions.length - nbSyntheses > MAX_QUESTIONS) {
     throw new Error('Maximum ' + MAX_QUESTIONS + ' questions par quiz.');
   }
+  if (nbSyntheses > MAX_SYNTHESES) throw new Error('Maximum ' + MAX_SYNTHESES + ' questions de synthèse par leçon.');
+  if (nbSyntheses === quiz.questions.length) throw new Error('Il faut au moins une question en plus des questions de synthèse.');
   var seen = {};
   var questions = quiz.questions.map(function (q, i) {
     var label = 'Question ' + (i + 1) + ' : ';
@@ -1207,8 +1241,18 @@ function validateQuiz_(quiz, allowedIds) {
     var qid = (typeof q.id === 'string' && /^[0-9a-f]{8}$/.test(q.id) && !seen[q.id]) ? q.id : newQid_(seen);
     seen[qid] = true;
     var out = { id: qid, question: question };
-
-    if (Array.isArray(q.champs)) {
+    if (q.synthese === true) {
+      // Question de synthèse : réponse rédigée, corrigée par l'enfant lui-même (réponse modèle + éléments essentiels attendus)
+      var modele = str_(q.modele, 1000);
+      if (!modele) throw new Error(label + 'la réponse modèle est vide.');
+      var attendus = (Array.isArray(q.attendus) ? q.attendus : []).map(function (a) { return str_(a, 200); }).filter(Boolean);
+      if (attendus.length < MIN_ATTENDUS || attendus.length > MAX_ATTENDUS) {
+        throw new Error(label + 'il faut entre ' + MIN_ATTENDUS + ' et ' + MAX_ATTENDUS + ' éléments attendus.');
+      }
+      out.synthese = true;
+      out.modele = modele;
+      out.attendus = attendus;
+    } else if (Array.isArray(q.champs)) {
       if (q.champs.length < 2 || q.champs.length > MAX_FIELDS) {
         throw new Error(label + 'il faut entre 2 et ' + MAX_FIELDS + ' champs.');
       }

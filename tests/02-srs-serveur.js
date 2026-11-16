@@ -16,7 +16,7 @@ const iso = ms => new Date(ms).toISOString().slice(0, 10);
 // ---- migration : effacement unique des anciennes données ----
 const d0 = get();
 ok(!Object.keys(w.props).some(k => /^(prog|done|parcours)_/.test(k)) && w.props.schema_version === '3' && w.props.student_vieux === 'x', 'RAZ : progressions, compteurs et parcours effacés une seule fois ; comptes conservés');
-ok(JSON.stringify(d0.srs.zootopia) === '{"it":{},"exam":"","plan":[],"tf":false,"cfg":false,"mode":"actif","ses":[]}' && typeof d0.now === 'number', 'leçon neuve : aucune question travaillée ; l\'heure du serveur est envoyée');
+ok(JSON.stringify(d0.srs.zootopia) === '{"it":{},"exam":"","plan":[],"tf":false,"cfg":false,"mode":"actif","ses":[],"syn":{}}' && typeof d0.now === 'number', 'leçon neuve : aucune question travaillée ; l\'heure du serveur est envoyée');
 w.props.prog_leo__zootopia = 'nouveau'; get();
 ok(w.props.prog_leo__zootopia === 'nouveau', 'la remise à zéro ne se refait pas (une seule fois par version)');
 delete w.props.prog_leo__zootopia;

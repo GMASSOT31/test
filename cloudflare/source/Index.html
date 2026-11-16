@@ -190,6 +190,25 @@
         .btn.secondary:hover:not(:disabled) { background: #fff9e8; }
 
         /* Questions à réponse écrite */
+        /* Question de synthèse : rédaction, corrigé, éléments attendus à cocher, autoévaluation */
+        .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+        .syn { text-align: left; }
+        .syn-texte { width: 100%; min-height: 140px; resize: vertical; font: inherit; line-height: 1.45; }
+        .syn-corrige, .syn-attendus { margin-top: 14px; padding: 12px 14px; border-radius: 14px; }
+        .syn-corrige { background: #eef3ff; border-left: 5px solid var(--blue); }
+        .syn-attendus { background: #fff9e8; border-left: 5px solid var(--gold); }
+        .syn-corrige h4, .syn-attendus h4 { margin: 0 0 6px; color: var(--navy); }
+        .syn-corrige p { margin: 0; line-height: 1.5; }
+        .syn-item { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding: 6px 0; font-weight: 700; cursor: pointer; }
+        .syn-item input { width: 24px; height: 24px; flex-shrink: 0; margin-top: 1px; accent-color: var(--blue); }
+        .syn-q { margin: 16px 0 8px; font-weight: 900; color: var(--navy); text-align: center; }
+        .syn-evals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .syn-eval { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; min-height: 64px; padding: 8px; text-align: center; }
+        .syn-eval span { font-size: .78rem; font-weight: 600; opacity: .9; }
+        .syn-eval.syn-reussi { background: #1f8a4c; } .syn-eval.syn-partiel { background: #b07a00; } .syn-eval.syn-non { background: #b4123f; }
+        .syn-eval.suggere { outline: 4px solid var(--gold); outline-offset: 2px; }
+        .syn-eval:disabled:not(.choisi) { opacity: .35; }
+        @media (max-width: 560px) { .syn-evals { grid-template-columns: 1fr; } .syn-eval { min-height: 56px; } }
         .saisie {
             width: 100%; padding: 14px 16px; font: inherit; font-size: 1.15rem;
             border: 3px solid var(--line); border-radius: 14px; background: #fff;
@@ -583,6 +602,10 @@
         const NEW_BLOCK = 5;          // nouvelles questions découvertes par bloc (cartes puis test)
         const SESSION_TARGET = 15;    // questions visées par séance (environ 10 minutes)
         const MAX_DUE = 20;           // révisions au plus par séance
+        // Questions de synthèse (réponse rédigée, autoévaluation) : elles arrivent quand les bases sont en place
+        const SYN_SEUIL = 0.5;        // part des questions « classiques » au moins Rappelées 🌳 pour proposer une synthèse
+        const SYN_SEUIL_PROCHE = 0.3; // seuil plus bas à l'approche du contrôle
+        const SYN_PROCHE_JOURS = 7;   // « approche du contrôle » : 7 jours ou moins
 
         // Identifiant stable d'une question (la progression s'y rattache : corriger l'énoncé ne la fait pas perdre).
         // Sans identifiant, c'est l'empreinte de l'énoncé : même calcul que le serveur (qhash_ dans Code.gs).
@@ -631,7 +654,7 @@
         function applyServer(method, quizId, v) {
             if (!v) return;
             const r = srsOf(quizId);
-            if (method === "answer" && v.item) r.it[v.qid] = v.item;
+            if ((method === "answer" || method === "answerSynthese") && v.item) r.it[v.qid] = v.item;
             else if (method === "endSession" && v.ses) r.ses = v.ses;
             else if ((method === "setLessonPlan" || method === "setLessonMode") && v.it) SRS[quizId] = v;
         }
@@ -680,6 +703,7 @@
         }
         function matches(value, accepted) { return accepted.some(r => sameAnswer(r, value)); }
         function answerOf(q) {
+            if (q.synthese) return q.modele;   // question de synthèse : la réponse modèle
             if (q.champs) return q.champs.map(c => (c.label ? c.label + " : " : "") + c.reponses[0]).join(" · ");
             return Array.isArray(q.reponses) ? q.reponses[0] : q.options[q.correct];
         }
@@ -714,7 +738,26 @@
         function levelOf(quiz, q) { return Math.min(LEVEL_MAX, itemOf(quiz, q)[0]); }
         function isDue(quiz, q) { const it = itemOf(quiz, q); return it[0] > 0 && it[1] <= now(); }
         function dueList(quiz) { return quiz.questions.filter(q => isDue(quiz, q)).sort((a, b) => itemOf(quiz, a)[1] - itemOf(quiz, b)[1]); }
-        function newList(quiz) { return quiz.questions.filter(q => itemOf(quiz, q)[0] === 0); }
+        // nouvelles questions à découvrir (cartes puis QCM) : les questions de synthèse arrivent à part (voir synthesesPourSeance)
+        function newList(quiz) { return quiz.questions.filter(q => !q.synthese && itemOf(quiz, q)[0] === 0); }
+        function synthesesOf(quiz) { return quiz.questions.filter(q => q.synthese); }
+        const procheControle = quiz => { const x = examInfo(quiz); return !!x && !x.passed && x.days <= SYN_PROCHE_JOURS; };
+        // Les connaissances de base sont-elles suffisamment maîtrisées pour une question de synthèse ?
+        function synthesePrete(quiz) {
+            const base = quiz.questions.filter(q => !q.synthese);
+            if (!base.length || !synthesesOf(quiz).length) return false;
+            const part = base.filter(q => levelOf(quiz, q) >= 2).length / base.length;
+            return part >= (procheControle(quiz) ? SYN_SEUIL_PROCHE : SYN_SEUIL);
+        }
+        // Synthèses à ajouter en fin de séance : 1 nouvelle (2 à l'approche du contrôle) ; à l'approche du contrôle, une de plus
+        // déjà vue même si elle n'est pas encore due (révision en avance : une réussite ne change pas le plan)
+        function synthesesPourSeance(quiz, deja) {
+            if (!synthesePrete(quiz)) return [];
+            const proche = procheControle(quiz), libres = synthesesOf(quiz).filter(q => !deja.has(qid(q)));
+            const out = libres.filter(q => levelOf(quiz, q) === 0).slice(0, proche ? 2 : 1);
+            if (proche) out.push(...libres.filter(q => levelOf(quiz, q) > 0 && !isDue(quiz, q)).sort((a, b) => levelOf(quiz, a) - levelOf(quiz, b)).slice(0, 1));
+            return out;
+        }
         function levelCounts(quiz) { const c = [0, 0, 0, 0, 0]; quiz.questions.forEach(q => c[levelOf(quiz, q)]++); return c; }
         // Contrôle : date (début du jour), jours restants, express (demain), passé
         function examInfo(quiz) {
@@ -971,7 +1014,11 @@
         // si l'élève « a déjà travaillé la leçon » / révision express). Une question à réviser : rappel (sans choix).
         // Une erreur : la bonne réponse s'affiche tout de suite, puis la question revient plus loin dans la séance jusqu'à être réussie.
         let S = null;   // séance en cours
+        // Une question de synthèse se pose toujours en « synthèse » (rédaction + autoévaluation), quelle que soit l'étape prévue
         function buildTasks(opts) {
+            return buildTasksBase(opts).map(t => (t.q.synthese ? Object.assign({}, t, { stage: "synthese" }) : t));
+        }
+        function buildTasksBase(opts) {
             const tasks = [];
             if (opts.mixed) {
                 const due = [];
@@ -997,6 +1044,9 @@
                 block.forEach(q => tasks.push({ quiz, q, stage: "carte" }));
                 shuffle(block).forEach(q => tasks.push({ quiz, q, stage: "qcm" }));
             }
+            // en fin de séance, quand les bases sont là : une question de synthèse (plus à l'approche du contrôle)
+            const deja = new Set(tasks.map(t => qid(t.q)));
+            synthesesPourSeance(quiz, deja).forEach(q => tasks.push({ quiz, q, stage: "synthese" }));
             return tasks;
         }
         function startSession(opts) {
@@ -1012,6 +1062,7 @@
         function stageLabel(t) {
             if (t.retest) return ["🔁", "Je corrige"];
             if (t.stage === "carte") return ["📖", "Je découvre"];
+            if (t.stage === "synthese") return ["🧩", "Synthèse"];
             return ["✅", t.bonus ? "Séance bonus" : "Je teste"];
         }
         function showTask() {
@@ -1043,7 +1094,7 @@
                 ? h("a", { class: "quiz-link", href: t.quiz.lien.url, target: "_blank", rel: "noopener noreferrer" }, (t.quiz.lien.icone || "🔗") + " " + (t.quiz.lien.texte || "Ouvrir le lien"))
                 : null;
             const panel = h("div", { class: "panel session" }, head, bar, lessonName, lien);
-            renderQuestion(panel, t, (ok, conf) => onAnswered(t, ok, conf));
+            renderQuestion(panel, t, (ok, conf, syn) => onAnswered(t, ok, conf, syn));
             content.replaceChildren(panel);
         }
         function quitSession() {
@@ -1051,8 +1102,17 @@
             S = null; renderList();
         }
         // Résultat d'une question : envoyé au serveur ; une erreur la fait revenir plus loin dans la séance
-        function onAnswered(t, ok, conf) {
+        function onAnswered(t, ok, conf, syn) {
             const k = key(t), first = !S.seen.has(k);
+            if (t.stage === "synthese") {
+                // autoévaluation : pas de nouvel essai dans la séance (le corrigé vient d'être lu) ; le calendrier la reprogramme
+                S.seen.add(k); S.done.add(k);
+                if (syn.eval === "reussi" && first) S.firstOk.add(k);
+                const it0 = itemOf(t.quiz, t.q);
+                if (first && ok && it0[0] === 0) srsOf(t.quiz.id).it[qid(t.q)] = [1, it0[1], it0[2], it0[3] + 1, it0[4]];
+                enqueue("answerSynthese", t.quiz.id, qid(t.q), syn.eval, syn.texte, S.sid);
+                return;
+            }
             S.seen.add(k);
             if (ok && first) S.firstOk.add(k);
             if (ok) S.done.add(k);
@@ -1122,12 +1182,16 @@
             const autoBar = h("div", { class: "auto-next", style: "display:none", "aria-hidden": "true" });
             let advanced = false, timer = null, settled = false;
             const go = () => { if (advanced) return; advanced = true; clearTimeout(timer); advance(); };
-            function settle(ok, conf) {
+            function settle(ok, conf, syn) {
                 if (settled) return;
                 settled = true;
-                done(ok, conf);
-                const firstTry = ok && !t.retest;
-                progressLine.textContent = !ok
+                done(ok, conf, syn);
+                const firstTry = ok && !t.retest && !syn;   // synthèse : pas de passage automatique (on relit le corrigé)
+                progressLine.textContent = syn
+                    ? (syn.eval === "reussi" ? "🎉 Bravo ! Elle reviendra plus tard pour bien l'ancrer."
+                        : syn.eval === "partiel" ? "🟡 Presque : elle reviendra bientôt pour compléter ta réponse."
+                            : "↩️ Pas grave : relis bien le corrigé, elle reviendra très vite.")
+                    : !ok
                     ? (conf === "sur" ? "⚠️ Tu étais sûr(e) de toi : retiens bien la bonne réponse, elle revient dans un instant." : "↩️ Pas grave : elle revient dans un instant.")
                     : t.retest ? "✅ Corrigée !"
                         : t.bonus ? "✅ Bien joué (séance bonus)."
@@ -1145,7 +1209,8 @@
             }
             const kind = q.champs ? "champs" : Array.isArray(q.reponses) ? "texte" : "choix";
             let body;
-            if (kind === "champs") body = fieldsBody(q, settle);
+            if (q.synthese) body = syntheseBody(q, settle);
+            else if (kind === "champs") body = fieldsBody(q, settle);
             else if (kind === "texte") {
                 const opts = t.stage === "qcm" ? generatedOptions(t.quiz, q) : null;
                 body = opts ? choiceBody(q, opts, settle) : typedBody(q, q.reponses, settle);
@@ -1153,6 +1218,48 @@
             else if (Array.isArray(q.rappel) && q.rappel.length) body = typedBody(q, q.rappel, settle, q.options[q.correct]);
             else body = maskedBody(q, harderOptions(t.quiz, q), settle);
             panel.append(...[h("h3", { class: "question" }, q.question), body, progressLine, explication, next, autoBar].filter(Boolean));
+        }
+
+        // Question de synthèse : l'enfant rédige, valide, découvre la réponse modèle et les éléments attendus (à cocher),
+        // puis s'autoévalue. Aucune note automatique : la liste cochée ne fait que suggérer un choix.
+        function syntheseBody(q, settle) {
+            const base = "syn-" + qid(q);
+            const area = h("textarea", { class: "saisie syn-texte", id: base, rows: "6", maxlength: "1500", placeholder: "Explique avec tes mots, en reliant ce que tu as appris…" });
+            const valider = h("button", { class: "btn", type: "button" }, "Valider");
+            const zone = h("div", { class: "syn" },
+                h("p", { class: "hint-small" }, "🧩 Question de synthèse : réponds en quelques phrases."),
+                h("label", { class: "sr-only", for: base }, "Ta réponse"), area,
+                h("div", { class: "actions" }, valider));
+            valider.addEventListener("click", () => {
+                area.readOnly = true; valider.parentNode.remove();
+                const checks = q.attendus.map((a, i) => {
+                    const cb = h("input", { type: "checkbox", id: base + "-" + i });
+                    return { cb, row: h("label", { class: "syn-item", for: base + "-" + i }, cb, h("span", {}, a)) };
+                });
+                const choix = [["reussi", "✅ J'ai réussi", "tous les éléments sont là et justes"], ["partiel", "🟡 Partiellement", "il en manque"], ["non", "❌ Je n'ai pas réussi", "réponse fausse ou je ne savais pas"]]
+                    .map(([v, txt, sous]) => h("button", { class: "btn syn-eval syn-" + v, type: "button", "data-eval": v }, h("strong", {}, txt), h("span", {}, sous)));
+                choix.forEach(b => b.addEventListener("click", () => {
+                    choix.forEach(x => { x.disabled = true; }); b.classList.add("choisi");
+                    checks.forEach(c => { c.cb.disabled = true; });
+                    const ev = b.dataset.eval;
+                    settle(ev !== "non", ev === "partiel" ? "doute" : "", { eval: ev, texte: area.value.trim() });
+                }));
+                // suggestion d'après les éléments cochés (c'est l'enfant qui décide)
+                const suggerer = () => {
+                    const n = checks.filter(c => c.cb.checked).length, v = n === checks.length ? "reussi" : n ? "partiel" : "";
+                    choix.forEach(b => b.classList.toggle("suggere", b.dataset.eval === v));
+                };
+                checks.forEach(c => c.cb.addEventListener("change", suggerer));
+                const corrige = h("div", { class: "syn-corrige" }, h("h4", {}, "📘 Réponse modèle"), h("p", {}, q.modele));
+                zone.append(corrige,
+                    h("div", { class: "syn-attendus" }, h("h4", {}, "☑️ Éléments essentiels attendus"), h("p", { class: "hint-small" }, "Coche ceux qui sont dans ta réponse :"), checks.map(c => c.row)),
+                    h("p", { class: "syn-q" }, "Compare avec ta réponse. Alors ?"),
+                    h("div", { class: "syn-evals", role: "group", "aria-label": "Mon autoévaluation" }, choix));
+                corrige.scrollIntoView({ block: "start", behavior: "smooth" });
+                checks[0].cb.focus({ preventScroll: true });
+            });
+            focusFirst(area);
+            return zone;
         }
 
         // QCM : un seul choix ; la bonne réponse s'affiche toujours
