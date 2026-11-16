@@ -72,6 +72,10 @@ Ancien mode d'emploi : `node tests/NN-nom.js` (un fichier par suite, tous verts)
   l'autre par sessionStorage `quizy-profil-choisi` (rien dans l'URL). Coupé dans les tests sauf `install(c, w, { profils: true })`
   (`window.QUIZY_PROFILS = false`). Suite 32.
 - **Partage des leçons entre familles** (16/11/2026) : voir `docs/LOGIQUE-APP.md` §5 ter. Suite 33.
+- **Installation comme une appli (PWA)** (16/11/2026) : voir `docs/LOGIQUE-APP.md` §5 quater. `cloudflare/static/installation.js`
+  (`window.QuizyInstallation.proposer()` appelé après la connexion dans `source/Index.html` et `source/admin.html`),
+  `static/sw.js`, `static/hors-ligne.html`, manifestes. Coupé dans les tests sauf `install(c, w, { installation: true })`
+  (`window.QUIZY_INSTALLATION = false`). Si `sw.js` change de liste de fichiers gardés, augmenter `VERSION`. Suite 36.
 - Tests : `node tests/run-all.cjs` = version Cloudflare (par défaut). Les suites décrivent QUIZy Cloudflare ; la cible
   `apps-script` (ancienne version figée) n'est plus lancée (dernier bilan vert au gel : 683 contrôles).
 

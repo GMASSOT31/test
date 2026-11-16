@@ -46,9 +46,11 @@ const bridge = `(() => { const make = (ok, ko) => new Proxy({}, { get: (_, n) =>
   return (...a) => window.__srv(n, a).then(r => r.err ? ko && ko({ message: 'Error: ' + r.err }) : ok && ok(r.ok)); }});
   window.google = { script: { run: make() } }; })();`;
 
-async function install(context, world, { auto = false, profils = false } = {}) {
+async function install(context, world, { auto = false, profils = false, installation = false } = {}) {
   // écran « Qui es-tu ? » (profils mémorisés) : coupé pour les suites qui ne le testent pas, sauf demande explicite
   if (!profils) await context.addInitScript('window.QUIZY_PROFILS = false;');
+  // invitation « Installer QUIZy » coupée par défaut (testée à part dans 36-installation.js)
+  if (!installation) await context.addInitScript('window.QUIZY_INSTALLATION = false;');
   // Apps Script : faux google.script.run ; Cloudflare : la page a son vrai pont (run.js → /api/…)
   if (TARGET !== 'cloudflare') { await context.exposeFunction('__srv', world.call); await context.addInitScript(bridge); }
   // les tests existants cliquent eux-mêmes sur « Question suivante » : on coupe le passage automatique, sauf demande explicite

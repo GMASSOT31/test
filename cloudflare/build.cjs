@@ -61,8 +61,10 @@ function head(manifest, title) {
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="QUIZy">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="/run.js"></script>
-    <script src="/profils.js"></script>`;
+    <script src="/profils.js"></script>
+    <script src="/installation.js"></script>`;
 }
 let eleve = applyTheme(read('Index.html'), 'eleve');
 eleve = replaceOnce(eleve, '<title>QUIZy</title>', head('manifest.webmanifest', 'QUIZy'), 'titre de la page élève');
