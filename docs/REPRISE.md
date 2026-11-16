@@ -71,6 +71,9 @@ Ancien mode d'emploi : `node tests/NN-nom.js` (un fichier par suite, tous verts)
   doublon ; rôle, id, nom, pseudo, classe, couleur, admin, maj — jamais de PIN, mot de passe ni jeton). Passage d'une page à
   l'autre par sessionStorage `quizy-profil-choisi` (rien dans l'URL). Coupé dans les tests sauf `install(c, w, { profils: true })`
   (`window.QUIZY_PROFILS = false`). Suite 32.
+- **Partage des leçons entre familles** (16/11/2026) : voir `docs/LOGIQUE-APP.md` §5 ter. Suite 33.
+- Tests : `node tests/run-all.cjs` = version Cloudflare (par défaut). Les suites décrivent QUIZy Cloudflare ; la cible
+  `apps-script` (ancienne version figée) n'est plus lancée (dernier bilan vert au gel : 683 contrôles).
 
 ## 5 bis. QUIZy sur Cloudflare (`cloudflare/`, voir `docs/MIGRATION-CLOUDFLARE.md`)
 - **Source** : `cloudflare/source/` (voir §5 ter). `cloudflare/build.cjs` emballe `Contenu.gs` + `Code.gs` **sans les modifier**

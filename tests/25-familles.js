@@ -31,6 +31,12 @@ w.run('saveStudent', DUP, { classe: 'Dupont', pseudo: 'Lou', pin: '2222' });
 ok(err('saveStudent', DUP, { classe: 'gaby', pseudo: 'JUL', pin: '3333' }).includes('Un autre élève utilise déjà ce pseudo'), 'même classe + pseudo qu\'un élève d\'une autre famille : refusé (connexion élève unique)');
 ok(err('saveStudent', DUP, { id: 'jul', classe: 'Gaby', pseudo: 'Jules', pin: '' }) === 'Élève inconnu.', 'modifier l\'élève d\'une autre famille : refusé');
 ok(err('deleteStudent', DUP, 'jul') === 'Élève inconnu.' && !!w.props.student_jul, 'supprimer l\'élève d\'une autre famille : refusé');
+// ---- partage (16/11/2026) : une famille n'a aucune leçon fournie tant que l'administrateur ne lui en partage pas ----
+ok(d.builtins.length === 0 && d.partagees.length === 0 && !('leconsFamilles' in d), 'nouvelle famille : aucune leçon fournie, rien de partagé, pas de 3e partie');
+ok(err('setBuiltinAssign', DUP, 'zootopia', ['lou']) === "Cette leçon ne t'a pas été partagée." && err('setShare', DUP, 'builtin', 'zootopia', ['dupont']) === "Réservé à l'administrateur principal.", 'avant partage : la famille ne peut pas la donner, ni se la partager elle-même');
+ok(JSON.stringify(w.run('setShare', ADM, 'builtin', 'zootopia', ['dupont', 'inconnue'])) === '{"familles":["dupont"]}' && JSON.stringify(w.run('setShare', ADM, 'builtin', 'musique-carnaval', ['dupont'])) === '{"familles":["dupont"]}', 'l\'administrateur partage Zootopia et Musique avec la famille Dupont (famille inconnue ignorée)');
+d = w.run('adminData', DUP);
+ok(d.builtins.map(b => b.id).sort().join() === 'musique-carnaval,zootopia' && d.builtins.every(b => !('familles' in b)), 'la famille voit ces 2 leçons dans « Leçons fournies » (sans savoir avec qui d\'autre elles sont partagées)');
 w.run('setBuiltinAssign', DUP, 'zootopia', ['lou', 'jul']);
 ok(JSON.stringify(JSON.parse(w.props.builtin_assign).zootopia.sort()) === '["jul","lou"]', 'leçon fournie donnée à Lou : Jul la garde, l\'id d\'un autre enfant est ignoré');
 w.run('setBuiltinAssign', DUP, 'zootopia', []);
