@@ -353,6 +353,22 @@
         /* Onglet Parents */
         .invite-code { display: inline-block; font-size: 1.5rem; font-weight: 900; letter-spacing: 2px; color: var(--navy); background: #fff6dc; padding: 4px 14px; border-radius: 12px; }
         .invite-btn { min-height: 52px; font-size: 1.05rem; }
+        /* Parcours UX */
+        .ux-choix { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 12px; }
+        .ux-btn { flex: 1 1 220px; min-height: 52px; }
+        .ux-btn[aria-pressed="false"] { background: #fff; color: var(--navy); box-shadow: 0 3px 0 rgba(16,43,82,.25); border: 2px solid var(--line); }
+        .ux-barre { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; color: var(--navy); }
+        .ux-zoom .btn { min-width: 48px; min-height: 48px; }
+        .ux-legende { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; font-size: .78rem; font-weight: 800; }
+        .lg { padding: 3px 9px; border-radius: 8px; border: 2px solid; }
+        .lg-debut { background: #102B52; color: #fff; border-color: #FFD078; } .lg-ecran { background: #E8ECFA; color: #102B52; border-color: #414E98; }
+        .lg-action { background: #FFF3D6; color: #102B52; border-color: #E0B040; } .lg-etape { background: #EFE7FA; color: #102B52; border-color: #9872C6; }
+        .lg-succes { background: #DDF5E8; color: #0B3D24; border-color: #2C9A63; } .lg-alerte { background: #FFE6EE; color: #5A0A2A; border-color: #C0264B; }
+        .lg-admin { background: #FFE9B8; color: #4A3200; border-color: #C98A00; }
+        .ux-diagramme { overflow: auto; max-height: 80vh; padding: 12px; border-radius: 16px; background: #F7F8FD; border: 2px solid var(--line); -webkit-overflow-scrolling: touch; }
+        .ux-diagramme svg { display: block; margin: 0 auto; height: auto; }
+        .ux-diagramme:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
+        .ux-source { white-space: pre-wrap; font-size: .75rem; }
         .hint .invite-code { font-size: 1rem; letter-spacing: 1px; padding: 1px 8px; border-radius: 8px; }
         .invite-text { width: 100%; margin-top: 8px; font: inherit; font-size: .9rem; }
         .stockage { margin: 0 0 12px; font-size: .9rem; font-weight: 700; color: var(--navy); }
@@ -517,6 +533,7 @@
                 <button class="menu-item" id="menu-parents" type="button" hidden>👪 Familles invitées</button>
                 <button class="menu-item" id="menu-export" type="button" hidden>💾 Exporter toutes les données</button>
                 <button class="menu-item" id="change-pw" type="button">🔑 Changer le mot de passe</button>
+                <button class="menu-item" id="menu-ux" type="button" hidden>🧭 Parcours UX</button>
                 <button class="menu-item" id="lock" type="button">🔒 Se déconnecter</button>
             </div>
         </div>
@@ -597,6 +614,31 @@
                 <button class="btn secondary" id="export-copy" type="button">📋 Copier le contenu</button>
             </div>
             <div class="status" id="export-status" role="status"></div>
+        </section>
+        <!-- Parcours UX (administrateur principal) : diagrammes Mermaid du parcours de l'enfant et du parent -->
+        <section class="pw-panel ux-panel" id="ux-panel" hidden>
+            <button class="back-link" type="button" id="ux-close">✕ Fermer</button>
+            <h2>🧭 Parcours UX</h2>
+            <p class="hint">Le chemin de chaque utilisateur dans QUIZy, écran par écran. Touche un parcours ; ➖ ➕ pour zoomer, fais glisser pour te déplacer.</p>
+            <div class="ux-choix" role="group" aria-label="Choisir un parcours">
+                <button class="btn ux-btn" id="ux-enfant" type="button" aria-pressed="false">🎒 Parcours UX de l'enfant</button>
+                <button class="btn ux-btn" id="ux-parent" type="button" aria-pressed="false">👨‍👩‍👧 Parcours UX du parent</button>
+            </div>
+            <div class="ux-zone" id="ux-zone" hidden>
+                <div class="ux-barre">
+                    <strong id="ux-titre"></strong>
+                    <span class="ux-zoom">
+                        <button class="btn secondary small" id="ux-moins" type="button" aria-label="Dézoomer">➖</button>
+                        <button class="btn secondary small" id="ux-plus" type="button" aria-label="Zoomer">➕</button>
+                    </span>
+                </div>
+                <div class="ux-legende" aria-hidden="true">
+                    <span class="lg lg-debut">Début / fin</span><span class="lg lg-ecran">Écran</span><span class="lg lg-action">Action</span>
+                    <span class="lg lg-etape">Étape de séance</span><span class="lg lg-succes">Réussite</span><span class="lg lg-alerte">Erreur / aide</span><span class="lg lg-admin">Administrateur</span>
+                </div>
+                <div class="ux-diagramme" id="ux-diagramme" tabindex="0" aria-live="polite"></div>
+            </div>
+            <div class="status" id="ux-status" role="status"></div>
         </section>
 
         <main class="content">
@@ -1009,6 +1051,7 @@
             $("password").value = "";
             showPwPanel(false);
             showExportPanel(false);
+            showUxPanel(false);
             // rien de la session précédente ne doit rester visible (un autre parent peut se connecter sur cet appareil)
             document.querySelectorAll("#admin-area .status").forEach(el => { el.className = "status"; el.textContent = ""; });
             [openDetails, openLessons, openArchived, openPickers, openBuiltins].forEach(set => set.clear());
@@ -1047,6 +1090,7 @@
             $("acct-who").textContent = owner ? "👤 " + DATA.moi.pseudo + " · administrateur" : "👤 " + DATA.moi.pseudo + " · " + DATA.moi.famille;
             $("menu-parents").hidden = !owner;
             $("menu-export").hidden = !owner;
+            $("menu-ux").hidden = !owner;
             if (!owner && !$("pane-parents").hidden) go("programmes");
             $("count-eleves").textContent = DATA.students.length || "";
             // les cases « Pour quels élèves ? » gardent la sélection en cours quand la liste des élèves change
@@ -2134,7 +2178,7 @@
         }
         const exportFile = () => new File([EXPORT.text], EXPORT.name, { type: "application/json" });
         async function openExport() {
-            showPwPanel(false);
+            showPwPanel(false); showUxPanel(false);
             showExportPanel(true);
             $("export-panel").scrollIntoView({ block: "start" });
             showStatus($("export-status"), "info", "⏳ Préparation du fichier…");
@@ -2181,7 +2225,7 @@
             if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(EXPORT.text).then(done, fallback); else fallback();
         }
         function showPwPanel(open) {
-            if (open) showExportPanel(false);
+            if (open) { showExportPanel(false); showUxPanel(false); }
             $("pw-panel").hidden = !open;
             ["pw-old", "pw-new", "pw-new2"].forEach(id => { $(id).value = ""; });
             $("pw-status").className = "status";
@@ -2233,6 +2277,165 @@
         // ================= PARENTS (administrateur principal) =================
         const adminUrl = () => $("to-student").getAttribute("href") + "?p=admin";
         const ko = n => Math.round(n / 1000);
+        // ---------- Parcours UX (administrateur principal) : diagrammes Mermaid ----------
+        // Mermaid est chargé à la demande depuis le CDN (version fixée) ; sans réseau, le texte du diagramme est affiché.
+        const MERMAID_URL = "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js";
+        const UX_STYLES = `
+  classDef debut fill:#102B52,color:#fff,stroke:#FFD078,stroke-width:3px
+  classDef ecran fill:#E8ECFA,stroke:#414E98,stroke-width:2px,color:#102B52
+  classDef action fill:#FFF3D6,stroke:#E0B040,stroke-width:2px,color:#102B52
+  classDef etape fill:#EFE7FA,stroke:#9872C6,stroke-width:2px,color:#102B52
+  classDef succes fill:#DDF5E8,stroke:#2C9A63,stroke-width:2px,color:#0B3D24
+  classDef alerte fill:#FFE6EE,stroke:#C0264B,stroke-width:2px,color:#5A0A2A
+  classDef admin fill:#FFE9B8,stroke:#C98A00,stroke-width:2px,color:#4A3200
+  classDef choix fill:#fff,stroke:#414E98,stroke-width:2px,color:#102B52
+  classDef niveau fill:#fff,stroke:#2C9A63,stroke-width:2px,color:#0B3D24
+  style P1 fill:#FFFFFF,stroke:#414E98,stroke-width:2px,color:#102B52
+  style P2 fill:#FFFFFF,stroke:#414E98,stroke-width:2px,color:#102B52
+  style P3 fill:#FBF8FF,stroke:#9872C6,stroke-width:2px,color:#102B52
+  style P4 fill:#FFFFFF,stroke:#414E98,stroke-width:2px,color:#102B52
+  style P5 fill:#FFFCF2,stroke:#E0B040,stroke-width:2px,stroke-dasharray:6 4,color:#102B52`;
+        // Chaque parcours = des étapes numérotées (sous-graphes), en ligne sur ordinateur (LR), en colonne sur téléphone (TB)
+        const UX = {
+            enfant: { titre: "🎒 Parcours de l'enfant", code: D => `flowchart TB
+  subgraph P1["① Se connecter"]
+    direction ${D}
+    a1(["📱 J'ouvre QUIZy"]):::debut --> a2["👤 Qui es-tu ?<br/>je touche ma pastille"]:::ecran --> a3["🔢 Je tape mon PIN<br/>classe et pseudo déjà remplis"]:::ecran --> a4["✅ Connecté·e<br/>🔥 ma série de jours"]:::succes
+    a1 -. "1re fois" .-> a5["🎒 Classe · Pseudo · PIN"]:::ecran --> a4
+    a3 -. "PIN refusé" .-> a6["⚠️ Message clair<br/>réessayer ou retirer le profil"]:::alerte
+  end
+  subgraph P2["② Choisir quoi réviser"]
+    direction ${D}
+    b1["🎓 Mes leçons<br/>le contrôle le plus proche d'abord"]:::ecran --> b2["🎯 Ta révision du jour<br/>questions dues de toutes les leçons"]:::action
+    b1 --> b3["📘 Une leçon<br/>1re fois : date du contrôle<br/>et « déjà vue en classe ? »"]:::action
+  end
+  subgraph P3["③ La séance · ~15 questions · ~10 min"]
+    direction ${D}
+    c1["📖 Je découvre<br/>5 cartes question + réponse"]:::etape --> c2["✅ Je teste<br/>les 5 en QCM"]:::etape --> c3["✍️ Je me souviens<br/>sans choix"]:::etape --> c4{"Juste du<br/>premier coup ?"}:::choix
+    c4 -- "Oui" --> c5["🎉 Bravo<br/>question suivante"]:::succes
+    c4 -- "Non" --> c6["🔁 Je corrige<br/>elle revient 4 écrans plus loin"]:::alerte
+  end
+  subgraph P4["④ Le bilan"]
+    direction ${D}
+    d1["🏆 X / Y du premier coup<br/>niveaux gagnés"]:::succes --> d2["📅 Prochaine séance au bon moment<br/>on revient à l'étape ②"]:::action --> d3{"Contrôle<br/>passé ?"}:::choix
+    d3 -- "Oui" --> d4["🧠 Garder en mémoire<br/>ou 📦 Archiver"]:::action
+  end
+  subgraph NIV["🪜 Les 5 niveaux d'une question"]
+    direction ${D}
+    n0["🌱 Nouvelle"]:::niveau --> n1["🌿 Découverte<br/>revient J+1"]:::niveau --> n2["🌳 Rappelée<br/>J+3"]:::niveau --> n3["⭐ Ancrée<br/>J+7"]:::niveau --> n4["🏆 Maîtrisée<br/>J+14"]:::niveau
+  end
+  subgraph P5["Et aussi"]
+    direction ${D}
+    e1["🃏 Flashcards<br/>Oublié · Hésité · Trouvé"]:::action
+    e2["📈 Mes progrès<br/>questions ancrées · temps"]:::action
+    e3(["🚪 Se déconnecter"]):::debut
+    e1 ~~~ e2 ~~~ e3
+  end
+  P1 ==> P2 ==> P3 ==> P4
+  P3 -. "une bonne réponse sans choix fait monter d'un niveau, une erreur fait redescendre" .-> NIV
+  P4 --> P5
+${UX_STYLES}` },
+            parent: { titre: "👨‍👩‍👧 Parcours du parent", code: D => `flowchart TB
+  subgraph P1["① Entrer"]
+    direction ${D}
+    a1(["💻 J'ouvre l'espace parents"]):::debut --> a2["👤 Qui es-tu ?<br/>je touche mon profil"]:::ecran --> a3["🔑 Mon mot de passe"]:::ecran --> a4["✅ Connecté"]:::succes
+    a1 -. "nouvelle famille" .-> a5["✉️ Lien d'invitation<br/>👪 Créer ma famille, code déjà rempli"]:::ecran --> a4
+  end
+  subgraph P2["② Ajouter mes enfants"]
+    direction ${D}
+    b1["➕ Ajouter un enfant<br/>classe · pseudo · PIN"]:::action --> b2["📚 Choisir ses leçons<br/>case cochée = enregistré"]:::action --> b3["📤 Donner à l'enfant<br/>sa classe, son pseudo, son PIN"]:::action
+  end
+  subgraph P3["③ Les leçons"]
+    direction ${D}
+    c1{"➕ Créer<br/>une leçon"}:::choix -- "le plus rapide" --> c2["🤖 Avec une IA<br/>demande · réponse collée · vérifier"]:::etape --> c4["✅ Leçon créée<br/>pour qui · date du contrôle"]:::succes
+    c1 -- "ou" --> c3["✍️ À la main"]:::etape --> c4
+    c5["🏛️ Leçons fournies<br/>partagées par l'administrateur"]:::action --> c6["⚙️ Gérer<br/>cocher mes enfants"]:::action
+  end
+  subgraph P4["④ Suivre les révisions"]
+    direction ${D}
+    d1["👨‍👧 Fiche de l'enfant<br/>avancement · prochain contrôle"]:::ecran --> d2["🔎 Détail d'une leçon<br/>niveaux · questions difficiles"]:::ecran --> d3{"Prêt pour<br/>le contrôle ?"}:::choix
+    d3 -- "90 % et plus" --> d4["✅ Prêt"]:::succes
+    d3 -- "pas encore" --> d5["🟡 / 🔴 Encore à revoir<br/>une séance de plus, ou décaler le contrôle"]:::alerte
+  end
+  subgraph P5["⑤ Administrateur seulement"]
+    direction ${D}
+    e1["✉️ Inviter une famille<br/>message prêt à partager"]:::admin --> e2["👪 Leçons des familles<br/>donner · partager"]:::admin
+    e3["💾 Exporter les données"]:::admin
+    e4["🧭 Parcours UX"]:::admin
+    e2 ~~~ e3 ~~~ e4
+  end
+  P1 ==> P2 ==> P3 ==> P4
+  P4 --> P5
+${UX_STYLES}` }
+        };
+        let uxZoom = 1, uxCourant = "", mermaidPret = null, uxRendus = 0;
+        function chargerMermaid() {
+            if (window.mermaid) return Promise.resolve(window.mermaid);
+            if (!mermaidPret) mermaidPret = new Promise((ok, ko) => {
+                const sc = document.createElement("script");
+                sc.src = MERMAID_URL; sc.async = true; sc.crossOrigin = "anonymous";
+                sc.onload = () => {
+                    window.mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "base",
+                        themeVariables: { fontFamily: "Nunito, -apple-system, sans-serif", fontSize: "15px", lineColor: "#414E98", primaryTextColor: "#102B52",
+                            clusterBkg: "#FFFFFF", clusterBorder: "#C9D4F5", edgeLabelBackground: "#FFFFFF", titleColor: "#102B52" },
+                        flowchart: { curve: "basis", useMaxWidth: false, htmlLabels: true, padding: 14, nodeSpacing: 34, rankSpacing: 46 } });
+                    ok(window.mermaid);
+                };
+                sc.onerror = () => { mermaidPret = null; ko(new Error("Mermaid n'a pas pu être chargé.")); };
+                document.head.append(sc);
+            });
+            return mermaidPret;
+        }
+        function showUxPanel(open) {
+            $("ux-panel").hidden = !open;
+            if (!open) { $("ux-zone").hidden = true; $("ux-diagramme").replaceChildren(); uxCourant = ""; $("ux-status").className = "status";
+                ["ux-enfant", "ux-parent"].forEach(id => $(id).setAttribute("aria-pressed", "false")); }
+        }
+        function openUx() {
+            showPwPanel(false); showExportPanel(false);
+            showUxPanel(true);
+            $("ux-panel").scrollIntoView({ block: "start" });
+        }
+        function appliquerZoom() {
+            const svg = $("ux-diagramme").querySelector("svg");
+            if (!svg) return;
+            const base = Number(svg.dataset.largeur) || svg.getBoundingClientRect().width;
+            svg.dataset.largeur = base;
+            svg.style.width = Math.round(base * uxZoom) + "px";
+            svg.style.maxWidth = "none";
+        }
+        async function montrerParcours(qui) {
+            uxCourant = qui;
+            ["enfant", "parent"].forEach(k => $("ux-" + k).setAttribute("aria-pressed", String(k === qui)));
+            $("ux-zone").hidden = false;
+            $("ux-titre").textContent = UX[qui].titre;
+            const zone = $("ux-diagramme");
+            showStatus($("ux-status"), "info", "⏳ Dessin du parcours…");
+            try {
+                const m = await chargerMermaid();
+                const dir = zone.clientWidth < 700 ? "TB" : "LR";   // téléphone : en colonne ; ordinateur : chaque étape en ligne
+                const { svg } = await m.render("ux-svg-" + (++uxRendus), UX[qui].code(dir));
+                if (uxCourant !== qui) return;   // un autre parcours a été demandé entre-temps
+                zone.innerHTML = svg;   // SVG produit par Mermaid (securityLevel strict) à partir de notre propre texte
+                const el = zone.querySelector("svg");
+                el.setAttribute("role", "img"); el.setAttribute("aria-label", UX[qui].titre);
+                // ajusté à la largeur de l'écran au départ (le zoom repart de là)
+                const vb = el.viewBox && el.viewBox.baseVal;
+                const naturel = vb && vb.width ? vb.width : el.getBoundingClientRect().width;
+                const dispo = zone.clientWidth - 24;
+                // ordinateur : tout le parcours d'un coup d'œil ; téléphone : un peu plus grand, on fait glisser
+                const cible = dir === "TB" ? Math.max(dispo, Math.min(naturel, dispo * 1.5)) : Math.min(naturel, dispo);
+                uxZoom = 1; el.dataset.largeur = Math.max(cible, 300);
+                appliquerZoom();
+                zone.scrollLeft = Math.max(0, (zone.scrollWidth - zone.clientWidth) / 2); zone.scrollTop = 0;   // départ centré
+                $("ux-status").className = "status"; $("ux-status").textContent = "";
+            } catch (e) {
+                const pre = h("pre", { class: "ux-source" }); pre.textContent = UX[qui].code("TB");
+                zone.replaceChildren(pre);
+                showStatus($("ux-status"), "err", "Le dessin n'a pas pu être affiché (" + e.message + ") : voici le texte du diagramme (format Mermaid).");
+            }
+        }
+
         // ---------- Invitation d'une famille : un message prêt à coller ou à partager ----------
         // Le lien ouvre directement « Créer ma famille » avec le code déjà rempli (#invitation=…, jamais envoyé au serveur).
         function invitationLink() { return adminUrl() + "#invitation=" + encodeURIComponent(DATA.invitation); }
@@ -2398,6 +2601,12 @@
         $("save-deck").addEventListener("click", () => saveItem("deck"));
         $("menu-parents").addEventListener("click", () => { closeMenu(); go("parents"); });
         $("menu-export").addEventListener("click", () => { closeMenu(); openExport(); });
+        $("menu-ux").addEventListener("click", () => { closeMenu(); openUx(); });
+        $("ux-close").addEventListener("click", () => showUxPanel(false));
+        $("ux-enfant").addEventListener("click", () => montrerParcours("enfant"));
+        $("ux-parent").addEventListener("click", () => montrerParcours("parent"));
+        $("ux-plus").addEventListener("click", () => { uxZoom = Math.min(3, uxZoom * 1.25); appliquerZoom(); });
+        $("ux-moins").addEventListener("click", () => { uxZoom = Math.max(0.4, uxZoom / 1.25); appliquerZoom(); });
         $("export-close").addEventListener("click", () => showExportPanel(false));
         $("export-download").addEventListener("click", downloadExport);
         $("export-share").addEventListener("click", shareExport);
