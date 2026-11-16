@@ -5,7 +5,15 @@
 const { chromium } = require('playwright');
 const { makeWorldAs, makeWorldCf, ok, summary, page } = require('./harness');
 const DAY = 86400000;
-const clean = o => { const c = JSON.parse(JSON.stringify(o)); delete c.now; if (c.stockage) delete c.stockage.octets; return c; };
+// Différences voulues de la version Cloudflare (partage des leçons, 16/11/2026) : champs de partage en plus, et une famille ne
+// voit que les leçons fournies partagées (au départ : celles déjà données à ses enfants)
+const clean = o => {
+  const c = JSON.parse(JSON.stringify(o)); delete c.now; if (c.stockage) delete c.stockage.octets;
+  delete c.partagees; delete c.leconsFamilles;
+  (c.builtins || []).forEach(b => delete b.familles); (c.quizzes || []).forEach(q => delete q.familles);
+  if (c.moi && !c.moi.owner && c.builtins) c.builtins = c.builtins.filter(b => b.pour.length);
+  return c;
+};
 const same = (a, b) => JSON.stringify(clean(a)) === JSON.stringify(clean(b));
 
 (async () => {

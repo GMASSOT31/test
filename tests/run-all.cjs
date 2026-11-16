@@ -1,6 +1,8 @@
-// Lance toutes les suites (node tests/run-all.cjs [apps-script|cloudflare|tout]) et affiche le bilan.
+// Lance toutes les suites (node tests/run-all.cjs [cloudflare|apps-script|tout]) et affiche le bilan.
+// Par défaut : cloudflare (seule version maintenue depuis le 16/11/2026). L'ancienne version Apps Script est figée : les suites
+// décrivent désormais QUIZy Cloudflare (partage des leçons…) et ne s'appliquent plus toutes à elle.
 const { execFileSync } = require('child_process'), fs = require('fs'), path = require('path');
-const arg = process.argv[2] || 'tout';
+const arg = process.argv[2] || 'cloudflare';
 const targets = arg === 'tout' ? ['apps-script', 'cloudflare'] : [arg];
 const files = fs.readdirSync(__dirname).filter(f => /^\d+-.*\.js$/.test(f)).sort();
 let bad = 0;

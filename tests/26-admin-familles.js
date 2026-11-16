@@ -53,6 +53,12 @@ const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testé
   await a.fill('#st-classe', 'Dupont'); await a.fill('#st-pseudo', 'Lou'); await a.fill('#st-pin', '2222'); await a.click('#save-student'); await a.waitForSelector('#prog-status.ok');
   ok(JSON.parse(w.props.student_lou).fam === 'dupont', 'le parent crée le compte de son enfant (rangé dans sa famille)');
   await a.click('#tab-quiz-liste');
+  // partage (16/11/2026) : rien tant que l'administrateur n'a rien partagé
+  ok((await a.locator('#builtin-list .builtin').count()) === 0 && (await a.locator('#nb-fournies').innerText()) === '0' && (await a.locator('#builtin-hint').innerText()).includes('aucune leçon') && await a.locator('#family-lessons').isHidden(),
+    'nouvelle famille : « Leçons fournies » vide (0), message clair, pas de partie « Leçons créées par les familles »');
+  w.run('setShare', { pseudo: 'Papa', password: 'secret' }, 'builtin', 'zootopia', ['dupont']);
+  await a.click('#unlock'); await a.waitForSelector('#builtin-list .builtin[data-id="zootopia"]');
+  ok((await a.locator('#nb-fournies').innerText()) === '1', 'l\'administrateur partage Zootopia : elle apparaît (1)');
   ok((await a.locator('#builtin-list .builtin button', { hasText: 'Modifier' }).count()) === 0, 'leçons fournies : il coche ses enfants, mais ne peut pas les modifier');
   const zoo = a.locator('#builtin-list .builtin[data-id="zootopia"]');
   ok((await zoo.innerText()).includes('Donnée à personne'), 'Zootopia : donnée à personne de SA famille (Jul n\'apparaît pas)');

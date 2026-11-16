@@ -44,6 +44,7 @@ var DECK_PREFIX = 'deck_';
 var STUDENT_PREFIX = 'student_';
 var OVERRIDE_PREFIX = 'override_';   // version modifiée d'un quiz intégré (l'original reste dans Contenu.gs)
 var BUILTIN_ASSIGN_KEY = 'builtin_assign';
+var SHARES_KEY = 'shares';   // leçons partagées par l'administrateur avec les familles (voir shares_)
 var PROGRESS_PREFIX = 'prog_';
 var DONE_PREFIX = 'done_';
 var PARCOURS_PREFIX = 'parcours_';
@@ -318,11 +319,16 @@ function adminData(cred) {
   var assigned = builtinAssign_();
   var students = familyStudents_(me);
   var ids = students.map(function (s) { return s.id; });
-  var customQuizzes = list_(QUIZ_PREFIX).filter(ownedBy_(me)).map(withQids_);
-  var builtins = builtins_();
+  var sh = shares_();
+  // ce que voit ce parent : leçons fournies partagées avec sa famille (toutes pour l'administrateur), ses leçons créées,
+  // et les leçons créées par d'autres que l'administrateur lui a partagées (administrateur : toutes celles des familles)
+  var visibles = list_(QUIZ_PREFIX).filter(function (q) { return visibleQuiz_(sh, q, me.fam); }).map(withQids_);
+  var customQuizzes = visibles.filter(ownedBy_(me));
+  var autres = visibles.filter(function (q) { return !ownedBy_(me)(q); });
+  var builtins = builtins_().filter(function (q) { return visibleBuiltin_(sh, q.id, me.fam); });
   var modifies = {};
   list_(OVERRIDE_PREFIX).forEach(function (o) { modifies[o.id] = true; });
-  var allQuizzes = builtins.concat(customQuizzes);
+  var allQuizzes = builtins.concat(visibles);
   var progress = {};
   students.forEach(function (st) {
     progress[st.id] = allQuizzes
@@ -332,11 +338,20 @@ function adminData(cred) {
   var res = {
     moi: { pseudo: me.pseudo, owner: me.owner, famille: me.famille || '' },
     students: students.map(publicStudent_),
-    quizzes: customQuizzes,
+    // destinataires limités aux enfants de la famille : jamais ceux d'une autre famille
+    quizzes: customQuizzes.map(function (q) {
+      var c = withPourOf_(q, ids);
+      if (me.owner) c.familles = sh['q:' + q.id] || [];
+      return c;
+    }),
     decks: list_(DECK_PREFIX).filter(ownedBy_(me)),
     builtins: builtins.map(function (q) {
-      return { id: q.id, titre: q.titre, emoji: q.emoji, matiere: q.matiere, questions: q.questions.length, pour: onlyIds_(assigned[q.id], ids), modifie: me.owner && !!modifies[q.id] };
+      var b = { id: q.id, titre: q.titre, emoji: q.emoji, matiere: q.matiere, questions: q.questions.length, pour: onlyIds_(assigned[q.id], ids), modifie: me.owner && !!modifies[q.id] };
+      if (me.owner) b.familles = sh['b:' + q.id] || [];
+      return b;
     }),
+    // famille : leçons créées par d'autres, partagées par l'administrateur (sans dire par qui ni avec qui d'autre)
+    partagees: me.owner ? [] : autres.map(function (q) { return lessonCard_(q, ids); }),
     progress: progress,
     now: Date.now()
   };
@@ -345,6 +360,14 @@ function adminData(cred) {
     res.parents = parents_().map(function (p) {
       return { id: p.id, pseudo: p.pseudo, famille: p.famille, ajoute: p.ajoute, vu: p.vu || 0,
         enfants: all.filter(function (s) { return s.fam === p.id; }).length };
+    });
+    // 3e partie : leçons créées par les familles, avec la famille auteure et les familles à qui elles sont partagées
+    var noms = {};
+    parents_().forEach(function (p) { noms[p.id] = p.famille; });
+    res.leconsFamilles = autres.map(function (q) {
+      var c = lessonCard_(q, ids);
+      c.auteur = q.fam; c.famille = noms[q.fam] || '?'; c.familles = sh['q:' + q.id] || [];
+      return c;
     });
     res.invitation = store.getProperty(INVITE_KEY) || '';
     res.stockage = { octets: storageBytes_(props), max: STORAGE_MAX };
@@ -414,20 +437,34 @@ function deleteStudent(cred, id) {
 
 function saveQuiz(cred, quiz) {
   var me = checkAdmin_(cred);
-  return save_(QUIZ_PREFIX, validateQuiz_(quiz, familyIds_(me)), quiz.id, me.fam);
+  var ids = familyIds_(me);
+  return save_(QUIZ_PREFIX, validateQuiz_(quiz, ids), quiz.id, me.fam, ids);
 }
 
 function saveDeck(cred, deck) {
   var me = checkAdmin_(cred);
-  return save_(DECK_PREFIX, validateDeck_(deck, familyIds_(me)), deck.id, me.fam);
+  var ids = familyIds_(me);
+  return save_(DECK_PREFIX, validateDeck_(deck, ids), deck.id, me.fam, ids);
 }
 
 function deleteQuiz(cred, id) {
   var me = checkAdmin_(cred);
-  // seulement une leçon créée de la famille : jamais la progression d'une leçon fournie ou d'une autre famille
-  if (!checkOwned_(QUIZ_PREFIX, id, me)) return true;
+  if (!/^[a-z0-9-]{1,60}$/.test(String(id))) throw new Error('Identifiant invalide.');
+  var item = getItem_(PropertiesService.getScriptProperties(), QUIZ_PREFIX, id);
+  if (!item) return true;
+  var own = (item.fam || '') === me.fam;
+  // une famille ne supprime que ses leçons ; l'administrateur peut aussi supprimer celles des familles
+  if (!own && !me.owner) throw new Error('Élément introuvable.');
+  var sh = shares_();
+  if (own && !me.owner) {
+    // leçon partagée par l'administrateur (ou donnée à d'autres enfants) : suppression bloquée pour la famille auteure
+    var ids = familyIds_(me);
+    var ailleurs = (sh['q:' + id] || []).length > 0 || (item.pour || []).some(function (sid) { return ids.indexOf(sid) < 0; });
+    if (ailleurs) throw new Error("Cette leçon est partagée avec d'autres familles : demande à l'administrateur de la supprimer.");
+  }
   remove_(QUIZ_PREFIX, id);
   deleteProgress_('all', id);
+  if (sh['q:' + id]) { delete sh['q:' + id]; saveShares_(sh); }
   return true;
 }
 
@@ -452,11 +489,20 @@ function setAccess(cred, kind, id, pour) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var item = checkOwned_(prefix, id, me);
-    if (!item) throw new Error('Élément introuvable.');
-    item.pour = cleanPour_(pour, familyIds_(me));
+    var item;
+    if (prefix === QUIZ_PREFIX) {
+      // leçon créée : celle de la famille, ou une leçon qui lui est partagée (administrateur : toutes)
+      if (!/^[a-z0-9-]{1,60}$/.test(String(id))) throw new Error('Identifiant invalide.');
+      item = getItem_(PropertiesService.getScriptProperties(), prefix, id);
+      if (!item || !visibleQuiz_(shares_(), item, me.fam)) throw new Error('Élément introuvable.');
+    } else {
+      item = checkOwned_(prefix, id, me);
+      if (!item) throw new Error('Élément introuvable.');
+    }
+    var ids = familyIds_(me);
+    item.pour = mergePour_(item.pour, ids, cleanPour_(pour, ids));
     putItem_(PropertiesService.getScriptProperties(), prefix, item.id, item);
-    return { pour: item.pour };
+    return { pour: onlyIds_(item.pour, ids) };
   } finally {
     lock.releaseLock();
   }
@@ -464,6 +510,7 @@ function setAccess(cred, kind, id, pour) {
 
 function assignBuiltin_(me, quizId, pour) {
   if (!isBuiltin_(quizId)) throw new Error('Quiz intégré inconnu.');
+  if (!visibleBuiltin_(shares_(), quizId, me.fam)) throw new Error("Cette leçon ne t'a pas été partagée.");
   var ids = familyIds_(me);
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -472,6 +519,52 @@ function assignBuiltin_(me, quizId, pour) {
     assigned[quizId] = mergePour_(assigned[quizId], ids, cleanPour_(pour, ids));
     PropertiesService.getScriptProperties().setProperty(BUILTIN_ASSIGN_KEY, JSON.stringify(assigned));
     return { pour: onlyIds_(assigned[quizId], ids) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ---------------- Partage des leçons avec les familles (administrateur principal) ----------------
+// kind 'builtin' (leçon fournie) ou 'quiz' (leçon créée : la sienne ou celle d'une famille) ; familles = ids des familles qui
+// la voient dans « Leçons fournies ». Une famille retirée : ses enfants n'ont plus la leçon (leur progression est gardée).
+function setShare(cred, kind, id, familles) {
+  ownerOnly_(cred);
+  var store = PropertiesService.getScriptProperties();
+  var key, quiz = null;
+  if (kind === 'builtin') {
+    if (!isBuiltin_(id)) throw new Error('Quiz intégré inconnu.');
+    key = 'b:' + id;
+  } else if (kind === 'quiz') {
+    if (!/^[a-z0-9-]{1,60}$/.test(String(id))) throw new Error('Identifiant invalide.');
+    quiz = getItem_(store, QUIZ_PREFIX, id);
+    if (!quiz) throw new Error('Leçon introuvable.');
+    key = 'q:' + id;
+  } else {
+    throw new Error('Type inconnu.');
+  }
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var auteur = quiz ? (quiz.fam || '') : '';
+    var chosen = cleanPour_(familles, parents_().map(function (p) { return p.id; })).filter(function (f) { return f !== auteur; });
+    var sh = shares_();
+    var before = sh[key] || [];
+    if (chosen.length) sh[key] = chosen; else delete sh[key];
+    saveShares_(sh);
+    var removed = before.filter(function (f) { return chosen.indexOf(f) < 0; });
+    if (removed.length) {
+      var kids = students_().filter(function (s) { return removed.indexOf(s.fam || '') >= 0; }).map(function (s) { return s.id; });
+      var drop = function (list) { return (list || []).filter(function (x) { return kids.indexOf(x) < 0; }); };
+      if (quiz) {
+        quiz.pour = drop(quiz.pour);
+        putItem_(store, QUIZ_PREFIX, quiz.id, quiz);
+      } else {
+        var assigned = builtinAssign_();
+        assigned[id] = drop(assigned[id]);
+        store.setProperty(BUILTIN_ASSIGN_KEY, JSON.stringify(assigned));
+      }
+    }
+    return { familles: chosen };
   } finally {
     lock.releaseLock();
   }
@@ -656,6 +749,13 @@ function deleteFamily(cred, parentId) {
   students_().filter(function (s) { return s.fam === p.id; }).forEach(function (s) { deleteStudentCore_(s.id); });
   list_(QUIZ_PREFIX).filter(function (q) { return q.fam === p.id; }).forEach(function (q) { delItem_(store, QUIZ_PREFIX, q.id); deleteProgress_('all', q.id); });
   list_(DECK_PREFIX).filter(function (d) { return d.fam === p.id; }).forEach(function (d) { delItem_(store, DECK_PREFIX, d.id); });
+  var sh = shares_();
+  Object.keys(sh).forEach(function (k) {
+    if (k.indexOf('q:') === 0 && !getItem_(store, QUIZ_PREFIX, k.slice(2))) { delete sh[k]; return; }   // leçon supprimée
+    sh[k] = sh[k].filter(function (f) { return f !== p.id; });
+    if (!sh[k].length) delete sh[k];
+  });
+  saveShares_(sh);
   store.deleteProperty(PARENT_PREFIX + p.id);
   return true;
 }
@@ -782,8 +882,46 @@ function quizFor_(quiz, studentId, assigned) {
 }
 
 function quizzesOf_(studentId) {
-  var assigned = builtinAssign_();
-  return builtins_().concat(list_(QUIZ_PREFIX).map(withQids_)).filter(function (q) { return quizFor_(q, studentId, assigned); });
+  var assigned = builtinAssign_(), sh = shares_();
+  var st = getItem_(PropertiesService.getScriptProperties(), STUDENT_PREFIX, studentId);
+  var fam = st && st.fam ? st.fam : '';
+  return builtins_().filter(function (q) { return visibleBuiltin_(sh, q.id, fam); })
+    .concat(list_(QUIZ_PREFIX).filter(function (q) { return visibleQuiz_(sh, q, fam); }).map(withQids_))
+    .filter(function (q) { return quizFor_(q, studentId, assigned); });
+}
+
+// ---- Partages : clé shares = { 'b:<idLeçonFournie>' | 'q:<idLeçonCréée>' : [idFamille…] } ----
+// Absente (avant cette fonction) : chaque famille garde les leçons fournies déjà données à ses enfants. Ce calcul ne
+// modifie rien (une simple lecture reste une lecture) : la clé n'est écrite qu'au premier changement de partage.
+function shares_() {
+  var store = PropertiesService.getScriptProperties();
+  var raw = store.getProperty(SHARES_KEY);
+  if (raw) {
+    var s = parseJson_(raw);
+    if (s && typeof s === 'object' && !Array.isArray(s)) return s;
+  }
+  var sh = {}, famOf = {}, assigned = builtinAssign_();
+  students_().forEach(function (st) { famOf[st.id] = st.fam || ''; });
+  Object.keys(assigned).forEach(function (qid) {
+    if (!isBuiltin_(qid)) return;
+    (assigned[qid] || []).forEach(function (sid) {
+      var f = famOf[sid];
+      if (!f) return;
+      sh['b:' + qid] = sh['b:' + qid] || [];
+      if (sh['b:' + qid].indexOf(f) < 0) sh['b:' + qid].push(f);
+    });
+  });
+  return sh;
+}
+function saveShares_(sh) { PropertiesService.getScriptProperties().setProperty(SHARES_KEY, JSON.stringify(sh)); }
+// fam = '' : administrateur principal (voit tout)
+function visibleBuiltin_(sh, quizId, fam) { return !fam || (sh['b:' + quizId] || []).indexOf(fam) >= 0; }
+function visibleQuiz_(sh, quiz, fam) { return !fam || (quiz.fam || '') === fam || (sh['q:' + quiz.id] || []).indexOf(fam) >= 0; }
+// Copie d'une leçon créée avec seulement les destinataires de la famille
+function withPourOf_(q, ids) { var c = {}; Object.keys(q).forEach(function (k) { c[k] = q[k]; }); c.pour = onlyIds_(q.pour, ids); return c; }
+// Fiche courte d'une leçon créée par d'autres (sans son contenu)
+function lessonCard_(q, ids) {
+  return { id: q.id, titre: q.titre, emoji: q.emoji, matiere: q.matiere, questions: q.questions.length, pour: onlyIds_(q.pour, ids) };
 }
 
 // Résumé d'une leçon pour le suivi parent : questions par niveau, à réviser maintenant, prête pour le contrôle,
@@ -963,7 +1101,7 @@ function delItem_(store, prefix, id) {
   store.deleteProperty(key);
 }
 
-function save_(prefix, clean, requestedId, fam) {
+function save_(prefix, clean, requestedId, fam, famIds) {
   var store = PropertiesService.getScriptProperties();
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -975,6 +1113,8 @@ function save_(prefix, clean, requestedId, fam) {
     if (existing) {
       clean.id = existing.id;
       clean.ajoute = existing.ajoute;
+      // leçon partagée : la modifier ne la retire pas aux enfants des autres familles
+      if (famIds && Array.isArray(clean.pour)) clean.pour = mergePour_(existing.pour, famIds, clean.pour);
     } else {
       var base = slugify_(clean.titre) || 'element';
       var id = base;
