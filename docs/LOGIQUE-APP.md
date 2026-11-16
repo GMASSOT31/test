@@ -1,4 +1,4 @@
-# Logique complète de l'application de révision
+# QUIZy — logique complète de l'application de révision
 
 Document de référence : **tout ce que l'application fait, et pourquoi**, indépendamment de la plateforme (Google Apps Script aujourd'hui).
 À lire avant toute réécriture ou migration : une nouvelle version doit respecter chaque règle ci-dessous (les suites `tests/` les vérifient).

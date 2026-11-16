@@ -3,15 +3,16 @@ function doGet(e) {
   // Si aucun paramètre n'est spécifié, le script charge le fichier 'Index' par défaut.
   var page = (e && e.parameter && e.parameter.p) ? e.parameter.p : 'Index';
 
+  // Nom de l'application : QUIZy (titre de l'onglet du navigateur)
   try {
     return HtmlService.createHtmlOutputFromFile(page)
-      .setTitle('Portail de Révisions')
+      .setTitle(page === 'admin' ? 'QUIZy · Parents' : 'QUIZy')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   } catch (err) {
     // Si le fichier HTML demandé n'existe pas, retour automatique sur 'Index'
     return HtmlService.createHtmlOutputFromFile('Index')
-      .setTitle('Portail de Révisions')
+      .setTitle('QUIZy')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
