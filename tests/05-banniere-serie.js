@@ -10,8 +10,8 @@ const day = n => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
 
   // bannière sur les 2 pages, ancienne retirée, page Byzance supprimée
   for (const f of ['Index.html', 'admin.html']) { const p = await open(c, f); ok((await p.locator('.rv-banner').count()) === 1 && (await p.locator('.rv-float').count()) === 4 && (await p.locator('.rv-chip').count()) === 4, f + ' : bannière fournie présente (4 emojis, bandeau, 4 pastilles)');
-    ok((await p.locator('h1.rv-title img.rv-logo[alt="QUIZy"]').count()) === 1 && (await p.locator('.rv-float img').count()) === 4 && await p.evaluate(() => document.querySelector('.rv-logo').naturalWidth > 0),
-      f + ' : identité QUIZy (pack) : logo dans le titre (texte de remplacement « QUIZy »), 4 pictogrammes décoratifs');
+    if (TARGET === 'cloudflare') ok((await p.locator('h1.rv-title img.rv-logo[alt="QUIZy"]').count()) === 1 && (await p.locator('.rv-float img').count()) === 4 && await p.evaluate(() => document.querySelector('.rv-logo').naturalWidth > 0),
+      f + ' : identité QUIZy (pack, version Cloudflare) : logo dans le titre (texte de remplacement « QUIZy »), 4 pictogrammes décoratifs');
     await p.close(); }
   ok(!require('fs').existsSync(SRC + 'byzance.html'), 'byzance.html supprimée (elle contenait un quiz accessible sans connexion)');
 
