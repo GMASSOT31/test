@@ -11,6 +11,7 @@ Attends ma prochaine consigne.
 ```
 
 ## 1. État
+- **Nom de l'application : QUIZy** (décision de l'utilisateur, 16/11/2026).
 - `main` est déployé : parcours v3 (révision espacée, voir `docs/PARCOURS-V3.md`). Les anciennes progressions ont été effacées une fois (décision de l'utilisateur, 8/11/2026).
 - URL publique (à ne jamais changer) : `https://script.google.com/macros/s/AKfycbzzqlCAUDZAoHOmhxufvj4CAAHWX8JtU8vBsTB0ZsoEK_mLu2tW4BoESRUdrg4b7bkF/exec` ; admin : `?p=admin`.
 - Déploiement à mettre à jour : `AKfycbzzqlCAUDZAoHOmhxufvj4CAAHWX8JtU8vBsTB0ZsoEK_mLu2tW4BoESRUdrg4b7bkF` (ne jamais en créer un autre).

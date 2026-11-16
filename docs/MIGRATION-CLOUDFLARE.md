@@ -1,8 +1,14 @@
-# Migrer l'application de Google Apps Script vers Cloudflare
+# Migrer QUIZy de Google Apps Script vers Cloudflare
+
+**Nom de l'application : QUIZy** (décision de l'utilisateur, 16/11/2026). Partout : titre des pages et des onglets, nom de
+l'appli installée sur l'écran d'accueil (manifest : `name` et `short_name` « QUIZy »), Worker `quizy`, adresse
+`https://quizy.<compte>.workers.dev` (ou un nom de domaine plus tard).
 
 But : la même application, **qui marche exactement pareil** (toute la logique de `docs/LOGIQUE-APP.md`), mais hébergée sur
 Cloudflare : plus rapide, sans cadre Google, sans limite de 500 Ko, installable sur l'écran d'accueil du téléphone, gratuite.
-Tout se pilote depuis un téléphone. L'application actuelle continue de tourner tant que la nouvelle n'est pas validée.
+Tout se pilote depuis un téléphone. **Règle de l'utilisateur (16/11/2026) : le site actuel (Apps Script) n'est jamais désactivé** :
+il reste en ligne et utilisable pendant et après la migration ; rien ne le bloque, ne le redirige ni ne le met en lecture seule
+sans son accord explicite.
 
 ---
 
@@ -10,12 +16,12 @@ Tout se pilote depuis un téléphone. L'application actuelle continue de tourner
 
 ```
 Téléphone / ordinateur
-   │  https://revision.<compte>.workers.dev   (ou un nom de domaine plus tard)
+   │  https://quizy.<compte>.workers.dev   (ou un nom de domaine plus tard)
    ▼
-Worker « revision »
+Worker « quizy »
    ├─ fichiers statiques : /            → page élève (Index.html)
    │                       /parents     → espace parents (admin.html)
-   │                       manifest + icône (appli installable)
+   │                       manifest + icône (appli « QUIZy » installable)
    └─ API : POST /api/<fonction>  corps = [arguments]  → { ok, value } | { error }
           │
           ▼
@@ -51,9 +57,10 @@ Le harnais de tests (`tests/harness.js`) fournit déjà de faux services : les *
    import des clés telles quelles (les morceaux `~0, ~1…` sont recollés).
 3. Vérification côte à côte : mêmes enfants, leçons, attributions, progressions, familles. Les **PIN des enfants et les mots de passe
    des familles marchent tels quels** (même hachage).
-4. **Bascule** : à un moment calme (le soir), exporter, importer, puis l'ancienne adresse affiche « L'appli a déménagé ➔ » avec le
-   lien (et refuse les nouvelles réponses pour qu'aucune progression ne se perde). Les enfants ajoutent la nouvelle adresse sur
-   l'écran d'accueil.
+4. **Passage à QUIZy sur Cloudflare** : à un moment calme (le soir), exporter puis installer, et les enfants ajoutent la nouvelle
+   adresse sur l'écran d'accueil. **L'ancien site reste actif** : pas de blocage, pas de redirection, pas de lecture seule. Comme
+   les deux sites ne partagent pas leurs données, refaire un export / import si les enfants ont révisé sur l'ancien entre-temps
+   (l'import remplace les données de la nouvelle version).
 
 ---
 
@@ -82,26 +89,26 @@ Branche, code (`cloudflare/` : `wrangler.toml`, `src/worker.js`, `src/store.js`,
 ## 6. Risques et parades
 | Risque | Parade |
 |---|---|
-| Progression faite pendant la bascule | export juste avant ; l'ancienne appli refuse ensuite les écritures avec un message clair |
+| Progression faite sur l'ancien site après l'export | nouvel export / import ; l'ancien site n'est jamais bloqué |
 | Décalage d'un jour (fuseau) | test dédié Europe/Paris, été / hiver |
 | Mot de passe administrateur | choisi à l'installation (non exporté) |
 | Quotas | offre gratuite : 100 000 requêtes/jour, bien au-delà du besoin ; sinon 5 $/mois |
-| Retour en arrière | l'ancienne appli reste intacte et peut être réouverte tant que tout n'est pas validé |
+| Retour en arrière | l'ancien site reste intact et en ligne : il suffit de continuer à l'utiliser |
 
 ---
 
 ## 7. Message à donner à la nouvelle session
 
 ```
-Je veux migrer mon application de révision (dépôt GMASSOT31/test, dossier apps-script/) de Google Apps Script vers
-Cloudflare Workers, sans rien changer à son fonctionnement. Lis d'abord, en entier : docs/LOGIQUE-APP.md (toute la logique,
+Je veux migrer mon application de révision QUIZy (dépôt GMASSOT31/test, dossier apps-script/) de Google Apps Script vers
+Cloudflare Workers, sans rien changer à son fonctionnement. L'appli s'appelle QUIZy (titres, appli installable, Worker « quizy »). Lis d'abord, en entier : docs/LOGIQUE-APP.md (toute la logique,
 à respecter à la lettre), docs/MIGRATION-CLOUDFLARE.md (le plan à suivre) et docs/REPRISE.md (règles et procédures).
 
 Règles : réponds en français ; sois autonome (branche, code, tests, commit, push, déploiement, vérification en ligne, PR et
 fusion) ; quand tu dois me demander quelque chose, utilise AskUserQuestion avec au moins 2 choix ; je travaille depuis mon
 téléphone ; ne me demande jamais de jeton ni de mot de passe dans le chat (utilise le formulaire sécurisé request_credential
 pour le jeton Cloudflare) ; ne supprime ni ne modifie aucune donnée réelle sans mon accord explicite ; l'application Apps Script
-actuelle doit continuer de marcher jusqu'à ce que je valide la bascule.
+actuelle (Apps Script) ne doit JAMAIS être désactivée, bloquée ni redirigée : elle reste en ligne et utilisable.
 
 Commence par construire et tester la version Cloudflare en local (les 24 suites de tests doivent passer), puis demande-moi
 le jeton Cloudflare pour la mettre en ligne.
