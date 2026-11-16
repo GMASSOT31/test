@@ -18,7 +18,8 @@ sans son accord explicite.
   Europe de l'Ouest). Base vide : toutes les pages mènent à `/installer`. Code d'installation = secret `INSTALL_CODE` du Worker.
 - Pages et icônes sont **intégrées au Worker** (`src/files.gen.js`, servies par `src/assets.js`) au lieu des « Workers Assets » :
   l'envoi des assets utilise un jeton temporaire que le proxy de la session remplacerait par le jeton d'API.
-- ⏳ Publication du bouton d'export sur l'appli Apps Script, puis transfert des données (export → installer).
+- ✅ Bouton d'export publié sur l'appli Apps Script (même déploiement, version @40, 16/11/2026) ; l'appli reste en ligne et inchangée par ailleurs.
+- ⏳ Transfert des données par l'utilisateur : export (ancienne appli) → `/installer` (lien avec le code d'installation donné dans la session).
 
 ---
 
