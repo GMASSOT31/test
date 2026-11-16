@@ -1,6 +1,7 @@
 // Suivi parent (admin) : niveaux par leçon, prête pour le contrôle, questions difficiles, historique, date du contrôle, archivage, remises à zéro
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, login, LEO, PW, ADM, SRC, startLesson, answerCurrent } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 const DAY = 86400000;
 
 (async () => {
@@ -22,7 +23,7 @@ const DAY = 86400000;
   const c = await b.newContext({ viewport: { width: 1200, height: 1000 } }); await install(c, w);
   const errs = [];
   const a = await c.newPage(); a.on('pageerror', e => errs.push(e.message)); a.on('dialog', d => d.accept());
-  await a.goto('file://' + SRC + 'admin.html'); await a.fill('#admin-pseudo', 'Papa'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])');
+  await a.goto(page('admin.html')); await a.fill('#admin-pseudo', 'Papa'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])');
   await a.click('#tab-programmes');
   const card = id => a.locator(`.prog-card[data-student="${id}"]`);
   const lesson = (sid, qid) => card(sid).locator(`.lesson[data-quiz="${qid}"]`);
@@ -67,7 +68,7 @@ const DAY = 86400000;
   await lz.locator('text=Enregistrer la date').click(); await a.waitForSelector('#prog-status.ok');
   ok((await lesson('leo', 'zootopia').locator('.exam-txt').innerText()).includes('Contrôle demain (révision express)') && (await lesson('leo', 'zootopia').locator('.plan-txt').innerText()).includes('séances faites'), 'date fixée : « ' + await lesson('leo', 'zootopia').locator('.exam-txt').innerText() + ' » · ' + await lesson('leo', 'zootopia').locator('.plan-txt').innerText());
   ok(JSON.parse(w.props['srs_leo__zootopia']).exam === tomorrow && JSON.parse(w.props['srs_leo__zootopia']).plan.length >= 2, 'serveur : date et plan enregistrés');
-  const sp = await c.newPage(); sp.on('pageerror', e => errs.push(e.message)); await sp.goto('file://' + SRC + 'Index.html'); await login(sp, LEO);
+  const sp = await c.newPage(); sp.on('pageerror', e => errs.push(e.message)); await sp.goto(page('Index.html')); await login(sp, LEO);
   ok((await sp.locator('.card.lecon', { hasText: 'Zootopia' }).locator('.exam-badge').innerText()) === '🔥 Contrôle demain', 'l\'élève voit « 🔥 Contrôle demain » sur la leçon');
   await lesson('leo', 'zootopia').locator('text=Pas de contrôle').click(); await a.waitForFunction(() => document.querySelector('#prog-status').textContent.includes('Plus de contrôle'));
   ok((await lesson('leo', 'zootopia').locator('.exam-txt').innerText()) === 'Pas de contrôle prévu', '« Pas de contrôle » : la date est retirée');

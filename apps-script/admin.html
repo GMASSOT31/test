@@ -492,6 +492,7 @@
             <div class="acct-menu" id="acct-menu" hidden>
                 <div class="menu-who" id="acct-who"></div>
                 <button class="menu-item" id="menu-parents" type="button" hidden>👪 Familles invitées</button>
+                <button class="menu-item" id="menu-export" type="button" hidden>💾 Exporter toutes les données</button>
                 <button class="menu-item" id="change-pw" type="button">🔑 Changer le mot de passe</button>
                 <button class="menu-item" id="lock" type="button">🔒 Se déconnecter</button>
             </div>
@@ -558,6 +559,18 @@
                 <button class="btn" id="pw-save" type="button">💾 Enregistrer le nouveau mot de passe</button>
             </div>
             <div class="status" id="pw-status" role="status"></div>
+        </section>
+        <!-- Export complet (administrateur principal) : sauvegarde, et transfert vers une autre installation de QUIZy -->
+        <section class="pw-panel" id="export-panel" hidden>
+            <button class="back-link" type="button" id="export-close">✕ Fermer</button>
+            <h2>💾 Exporter toutes les données</h2>
+            <p class="hint">Un fichier avec tous les enfants (PIN protégés), les leçons, les progressions et les familles invitées : il sert de sauvegarde et à installer QUIZy ailleurs. Les mots de passe administrateur n'y sont pas. Garde-le pour toi.</p>
+            <div class="actions" id="export-actions" hidden>
+                <button class="btn" id="export-download" type="button">💾 Télécharger le fichier</button>
+                <button class="btn secondary" id="export-share" type="button" hidden>📤 Partager / Enregistrer</button>
+                <button class="btn secondary" id="export-copy" type="button">📋 Copier le contenu</button>
+            </div>
+            <div class="status" id="export-status" role="status"></div>
         </section>
 
         <main class="content">
@@ -952,6 +965,7 @@
         function lockAgain() {
             $("password").value = "";
             showPwPanel(false);
+            showExportPanel(false);
             // rien de la session précédente ne doit rester visible (un autre parent peut se connecter sur cet appareil)
             document.querySelectorAll("#admin-area .status").forEach(el => { el.className = "status"; el.textContent = ""; });
             [openDetails, openLessons, openArchived, openPickers, openBuiltins].forEach(set => set.clear());
@@ -987,6 +1001,7 @@
             $("acct-name").textContent = DATA.moi.pseudo || "Mon compte";
             $("acct-who").textContent = owner ? "👤 " + DATA.moi.pseudo + " · administrateur" : "👤 " + DATA.moi.pseudo + " · " + DATA.moi.famille;
             $("menu-parents").hidden = !owner;
+            $("menu-export").hidden = !owner;
             if (!owner && !$("pane-parents").hidden) go("programmes");
             $("count-eleves").textContent = DATA.students.length || "";
             // les cases « Pour quels élèves ? » gardent la sélection en cours quand la liste des élèves change
@@ -1986,7 +2001,64 @@
             $("acct-menu").hidden = !open;
             $("acct-btn").setAttribute("aria-expanded", String(open));
         }
+        // ---------- export de toutes les données (administrateur principal) ----------
+        let EXPORT = null;   // { name, text } : fichier prêt à enregistrer
+        function showExportPanel(open) {
+            $("export-panel").hidden = !open;
+            $("export-actions").hidden = true;
+            $("export-status").className = "status"; $("export-status").textContent = "";
+            if (!open) EXPORT = null;
+        }
+        const exportFile = () => new File([EXPORT.text], EXPORT.name, { type: "application/json" });
+        async function openExport() {
+            showPwPanel(false);
+            showExportPanel(true);
+            $("export-panel").scrollIntoView({ block: "start" });
+            showStatus($("export-status"), "info", "⏳ Préparation du fichier…");
+            try {
+                const data = await server("backupData", pw());
+                const d = new Date(data.date), two = n => String(n).padStart(2, "0");
+                const text = JSON.stringify(data);
+                EXPORT = { name: "quizy-export-" + d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate()) + "-" + two(d.getHours()) + "h" + two(d.getMinutes()) + ".json", text };
+                const keys = Object.keys(data.proprietes).filter(k => !/~\d+$/.test(k)), n = p => keys.filter(k => k.startsWith(p)).length;
+                const pl = (k, one, many) => k + " " + (k > 1 ? many : one);
+                showStatus($("export-status"), "ok", "✅ Fichier prêt (" + Math.max(1, Math.round(text.length / 1000)) + " Ko) : " + pl(n("student_"), "enfant", "enfants") + ", " +
+                    pl(n("parent_"), "famille invitée", "familles invitées") + ", " + pl(n("quiz_"), "leçon créée", "leçons créées") + ", " + pl(n("srs_"), "progression", "progressions") + ". Choisis comment l'enregistrer.");
+                $("export-actions").hidden = false;
+                let canShare = false;
+                try { canShare = !!(navigator.canShare && navigator.share && matchMedia("(pointer: coarse)").matches && navigator.canShare({ files: [exportFile()] })); } catch (e) { /* non pris en charge */ }
+                $("export-share").hidden = !canShare;
+            } catch (e) {
+                showStatus($("export-status"), "err", e.message);
+            }
+        }
+        function downloadExport() {
+            if (!EXPORT) return;
+            const url = URL.createObjectURL(new Blob([EXPORT.text], { type: "application/json" }));
+            const a = h("a", { href: url, download: EXPORT.name, hidden: "" });
+            document.body.append(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+            showStatus($("export-status"), "ok", "💾 Téléchargement lancé : « " + EXPORT.name + " » (dans le dossier Téléchargements). Rien ne s'est passé ? Essaie « 📋 Copier le contenu ».");
+        }
+        function shareExport() {
+            if (!EXPORT) return;
+            navigator.share({ files: [exportFile()], title: "Export QUIZy" })
+                .then(() => showStatus($("export-status"), "ok", "📤 Fichier « " + EXPORT.name + " » envoyé."))
+                .catch(e => { if (!e || e.name !== "AbortError") downloadExport(); });
+        }
+        function copyExport() {
+            if (!EXPORT) return;
+            const done = () => showStatus($("export-status"), "ok", "📋 Contenu copié : colle-le dans l'écran « Installer » de QUIZy (« ou coller le contenu du fichier »).");
+            const fallback = () => {
+                const t = h("textarea", { readonly: "", "aria-label": "Contenu du fichier exporté" }); t.value = EXPORT.text;
+                $("export-status").after(t); t.select();
+                let okCopy = false; try { okCopy = document.execCommand("copy"); } catch (e) { /* refusé */ }
+                if (okCopy) { t.remove(); done(); } else showStatus($("export-status"), "info", "Sélectionne tout le texte ci-dessous et copie-le.");
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(EXPORT.text).then(done, fallback); else fallback();
+        }
         function showPwPanel(open) {
+            if (open) showExportPanel(false);
             $("pw-panel").hidden = !open;
             ["pw-old", "pw-new", "pw-new2"].forEach(id => { $(id).value = ""; });
             $("pw-status").className = "status";
@@ -2151,6 +2223,11 @@
         $("reset-deck").addEventListener("click", () => { resetDeckForm(); $("deck-status").className = "status"; });
         $("save-deck").addEventListener("click", () => saveItem("deck"));
         $("menu-parents").addEventListener("click", () => { closeMenu(); go("parents"); });
+        $("menu-export").addEventListener("click", () => { closeMenu(); openExport(); });
+        $("export-close").addEventListener("click", () => showExportPanel(false));
+        $("export-download").addEventListener("click", downloadExport);
+        $("export-share").addEventListener("click", shareExport);
+        $("export-copy").addEventListener("click", copyExport);
         // retour sur l'appli (téléphone) : les données se mettent à jour toutes seules
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible" && !$("admin-area").hidden && Date.now() - lastLoad > 60000) reload().catch(() => {});

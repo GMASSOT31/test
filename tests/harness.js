@@ -1,8 +1,15 @@
 // Faux environnement Apps Script autour du VRAI Code.gs + Contenu.gs
 const vm = require('vm'), fs = require('fs'), crypto = require('crypto');
 const SRC = require('path').join(__dirname, '..', 'apps-script') + '/';
+// Version testée : Apps Script (par défaut) ou Cloudflare (QUIZY_TARGET=cloudflare) — mêmes suites, même juge de paix
+const TARGET = process.env.QUIZY_TARGET === 'cloudflare' ? 'cloudflare' : 'apps-script';
+const CF = require('path').join(__dirname, '..', 'cloudflare') + '/';
 
 function makeWorld(initial = { ADMIN_PASSWORD: 'secret' }) {
+  return TARGET === 'cloudflare' ? makeWorldCf(initial) : makeWorldAs(initial);
+}
+// Version Apps Script : le vrai Code.gs dans vm, services Google simulés
+function makeWorldAs(initial = { ADMIN_PASSWORD: 'secret' }) {
   const props = { ...initial };
   const cache = new Map();
   let now = Date.now();
@@ -40,14 +47,103 @@ const bridge = `(() => { const make = (ok, ko) => new Proxy({}, { get: (_, n) =>
   window.google = { script: { run: make() } }; })();`;
 
 async function install(context, world, { auto = false } = {}) {
-  await context.exposeFunction('__srv', world.call); await context.addInitScript(bridge);
+  // Apps Script : faux google.script.run ; Cloudflare : la page a son vrai pont (run.js → /api/…)
+  if (TARGET !== 'cloudflare') { await context.exposeFunction('__srv', world.call); await context.addInitScript(bridge); }
   // les tests existants cliquent eux-mêmes sur « Question suivante » : on coupe le passage automatique, sauf demande explicite
   if (!auto) await context.addInitScript('window.revisionAutoNext = false;');
 }
 let n = 0, fails = 0;
 const ok = (c, m) => { n++; if (!c) fails++; console.log((c ? 'OK   ' : 'ECHEC') + ' ' + m); };
 const summary = () => { console.log(`\n${n} contrôles, ${fails} échec(s)`); return fails; };
-module.exports = { makeWorld, install, bridge, ok, summary, SRC };
+
+// ---- version Cloudflare : le vrai cœur du Worker (src/core.js + src/router.js) sur node:sqlite, pages servies en HTTP ----
+let cfMods = null, current = null, PORT = 0;
+function cfLoad() {
+  if (cfMods) return cfMods;
+  require('child_process').execFileSync(process.execPath, [CF + 'build.cjs'], { stdio: 'ignore' });
+  const emit = process.emitWarning; process.emitWarning = (w, ...a) => (/SQLite|require\(\) of ES|CommonJS/.test(String(w)) ? undefined : emit.call(process, w, ...a));
+  const { DatabaseSync } = require('node:sqlite');
+  cfMods = { DatabaseSync, core: require(CF + 'src/core.js'), router: require(CF + 'src/router.js') };
+  return cfMods;
+}
+function sqlOf(db) {
+  return { exec(q, ...b) { const st = db.prepare(q); const rows = /^\s*select/i.test(q) ? st.all(...b) : (st.run(...b), []); return { toArray: () => rows }; } };
+}
+const MIME = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', webmanifest: 'application/manifest+json', svg: 'image/svg+xml', png: 'image/png' };
+// comme les « assets » de Cloudflare (html_handling auto-trailing-slash) : / → index.html, /parents → parents.html
+function assetCf(request) {
+  let p = decodeURIComponent(new URL(request.url).pathname);
+  if (p === '/') p = '/index.html'; else if (!/\.[a-z0-9]+$/i.test(p)) p += '.html';
+  const f = require('path').join(CF, 'public', p);
+  if (!f.startsWith(CF + 'public/') || !fs.existsSync(f)) return new Response('Introuvable', { status: 404 });
+  return new Response(fs.readFileSync(f), { headers: { 'content-type': MIME[f.split('.').pop()] || 'application/octet-stream' } });
+}
+function startServer() {
+  if (PORT) return;
+  PORT = 30000 + (process.pid % 25000);
+  const srv = require('http').createServer(async (req, res) => {
+    const chunks = []; for await (const c of req) chunks.push(c);
+    const body = chunks.length ? Buffer.concat(chunks) : undefined;
+    const request = new Request('http://' + req.headers.host + req.url, { method: req.method, headers: req.headers, body: req.method === 'GET' || req.method === 'HEAD' ? undefined : body });
+    let r;
+    try { r = await cfMods.router.route(request, { store: rq => current.serve(rq), assets: assetCf }); }
+    catch (e) { r = new Response(String(e.stack || e), { status: 500 }); }
+    res.writeHead(r.status, Object.fromEntries(r.headers)); res.end(Buffer.from(await r.arrayBuffer()));
+  });
+  srv.listen(PORT, '127.0.0.1'); srv.unref();
+}
+function makeWorldCf(initial = { ADMIN_PASSWORD: 'secret' }, { timeZone, env = {}, now: start } = {}) {
+  const { DatabaseSync, core } = cfLoad();
+  startServer();
+  let now = start || Date.now();
+  class FakeDate extends Date { static now() { return now; } }
+  const db = new DatabaseSync(':memory:');
+  // fuseau : comme le harnais Apps Script (fuseau du processus), sauf demande explicite (ex. 'Europe/Paris' pour la vraie appli)
+  const sql = sqlOf(db), tz = timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const c = core.createCore({ sql, DateImpl: FakeDate, env, testTimeZone: tz });
+  for (const [k, v] of Object.entries(initial || {})) c.store.setProperty(k, v);
+  const st = c.store;
+  const props = new Proxy({}, {
+    get: (_, k) => (typeof k === 'string' ? st.getProperty(k) ?? undefined : undefined),
+    set: (_, k, v) => { st.setProperty(k, v); return true; },
+    deleteProperty: (_, k) => { st.deleteProperty(k); return true; },
+    has: (_, k) => st.getProperty(k) != null,
+    ownKeys: () => st.getKeys(),
+    getOwnPropertyDescriptor: (_, k) => (st.getProperty(k) != null ? { value: st.getProperty(k), enumerable: true, configurable: true, writable: true } : undefined),
+  });
+  const world = { props, advance: ms => { now += ms; }, now: () => now, core: c, ctx: c.app, target: 'cloudflare', sql,
+    // un autre « démarrage » du Durable Object sur la même base (ex. avec d'autres variables d'environnement)
+    reopen: (env2 = env) => core.createCore({ sql, DateImpl: FakeDate, env: env2, testTimeZone: tz }) };
+  world.call = async (fn, args) => { const r = c.call(fn, args); return r.error !== undefined ? { err: r.error } : { ok: r.value }; };
+  world.handler = null;   // un test peut remplacer le serveur (pannes simulées) : (fn, args) → { ok } | { err }
+  world.serve = async rq => {
+    const path = new URL(rq.url).pathname;
+    if (world.handler && path.startsWith('/api/')) {
+      const r = await world.handler(decodeURIComponent(path.slice(5)), await rq.json());
+      return c.json(r.err !== undefined ? { error: r.err } : { ok: true, value: r.ok });
+    }
+    return c.handle(rq);
+  };
+  world.run = (fn, ...args) => c.app[fn](...args);
+  world.try = (fn, ...args) => { try { return { ok: c.app[fn](...args) }; } catch (e) { return { err: e.message }; } };
+  current = world;
+  return world;
+}
+// Adresse d'une page ('Index.html' = page élève, 'admin.html' = espace parents) et fichier servi
+function page(name, target = TARGET) {
+  if (target !== 'cloudflare') return 'file://' + SRC + name;
+  cfLoad(); startServer();
+  return 'http://127.0.0.1:' + PORT + (name === 'admin.html' ? '/parents' : name === 'Index.html' ? '/' : '/' + name);
+}
+function pageFile(name) {
+  if (TARGET !== 'cloudflare') return SRC + name;
+  cfLoad();
+  return CF + 'public/' + (name === 'admin.html' ? 'parents.html' : name === 'Index.html' ? 'index.html' : name);
+}
+// liens entre les deux pages
+const LINKS = TARGET === 'cloudflare' ? { admin: '/parents', student: '/' } : { admin: '/exec?p=admin', student: '/exec' };
+
+module.exports = { makeWorld, makeWorldAs, makeWorldCf, install, bridge, ok, summary, SRC, TARGET, CF, page, pageFile, LINKS };
 
 // ---- aides pour les tests de pages ----
 const PW = 'secret';

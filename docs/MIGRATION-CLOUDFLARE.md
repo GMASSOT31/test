@@ -10,6 +10,12 @@ Tout se pilote depuis un téléphone. **Règle de l'utilisateur (16/11/2026) : l
 il reste en ligne et utilisable pendant et après la migration ; rien ne le bloque, ne le redirige ni ne le met en lecture seule
 sans son accord explicite.
 
+## État (16/11/2026)
+- ✅ Version Cloudflare construite et testée en local (branche `cloudflare-migration`) : les 24 suites passent sur les deux versions,
+  + export (28), import (29), fuseau (30), bout en bout sur `wrangler dev` (31). Détails techniques : `docs/REPRISE.md` §5 bis.
+- ✅ Bouton « 💾 Exporter toutes les données » (menu 👤, administrateur principal) ajouté à l'espace parents.
+- ⏳ Mise en ligne (jeton Cloudflare), publication du bouton d'export sur l'appli Apps Script, transfert des données.
+
 ---
 
 ## 1. Architecture cible (offre gratuite Cloudflare)

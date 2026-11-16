@@ -1,12 +1,13 @@
 const { chromium } = require('playwright');
 const { makeWorld, install, login } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 const W = makeWorld(); require('./harness').seed(W, { allToLeo: true });
 const ok = (c, m) => console.log((c ? 'OK   ' : 'ECHEC'), m);
 (async () => {
   const b = await chromium.launch();
   const p = await (await (async () => { const c = await b.newContext(); await install(c, W); return c; })()).newPage({ viewport: { width: 1000, height: 900 } });
   const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + require('path').join(__dirname, '..', 'apps-script', 'Index.html') + ''); await login(p);
+  await p.goto(page('Index.html')); await login(p);
   const quizTitles = await p.locator('.card h3').allInnerTexts();
   await p.click('#tab-flashcards');
   const deckTitles = await p.locator('.card h3').allInnerTexts();

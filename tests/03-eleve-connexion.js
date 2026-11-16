@@ -1,7 +1,8 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const { makeWorld, install, ok, summary, seed, login, LEO, EMMA, PW, SRC, startLesson, answerCurrent } = require('./harness');
-const URL_ = 'file://' + SRC + 'Index.html';
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
+const URL_ = page('Index.html');
 
 (async () => {
   const w = makeWorld(); seed(w);
@@ -17,11 +18,11 @@ const URL_ = 'file://' + SRC + 'Index.html';
   const labels = await p.locator('#login-form label').allInnerTexts();
   ok(JSON.stringify(labels) === '["Classe","Pseudo","PIN"]', 'trois champs : ' + labels.join(', '));
   ok((await p.locator('#login-pin').getAttribute('type')) === 'password' && (await p.locator('#login-pin').getAttribute('inputmode')) === 'numeric', 'le PIN est masqué et le clavier numérique est demandé');
-  const html = fs.readFileSync(SRC + 'Index.html', 'utf8');
+  const html = fs.readFileSync(pageFile('Index.html'), 'utf8');
   ok(!/sahara square|Justinien|Constantinople|Zootopia/.test(html), 'le fichier de la page ne contient plus aucun quiz (ils viennent du serveur)');
   ok((await p.evaluate(() => QUIZZES.length + FLASHCARDS.length)) === 0, 'avant connexion : aucune donnée en mémoire');
   const toAdmin = p.locator('#to-admin');
-  ok(await toAdmin.isVisible() && (await toAdmin.innerText()).includes('Espace parents') && (await toAdmin.getAttribute('href')).endsWith('/exec?p=admin') && (await toAdmin.getAttribute('target')) === '_top', 'lien discret « Espace parents » sous la connexion (vers ?p=admin, dans toute la fenêtre)');
+  ok(await toAdmin.isVisible() && (await toAdmin.innerText()).includes('Espace parents') && (await toAdmin.getAttribute('href')).endsWith(LINKS.admin) && (await toAdmin.getAttribute('target')) === '_top', 'lien discret « Espace parents » sous la connexion (vers ?p=admin, dans toute la fenêtre)');
   ok((await toAdmin.evaluate(e => parseFloat(getComputedStyle(e).fontSize))) < 14 && (await p.locator('#to-admin').boundingBox()).y > (await p.locator('#login-btn').boundingBox()).y, 'le lien est petit et placé sous le bouton « Entrer »');
 
   // ---- 2. mauvais identifiants ----

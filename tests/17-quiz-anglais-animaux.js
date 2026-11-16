@@ -1,6 +1,7 @@
 // Quiz intégré « Anglais : les animaux » : 20 questions à réponse écrite, corrigé officiel accepté
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 const KEY = ['A porcupine', 'A sloth', 'A ferret', 'A reindeer', 'A racoon', 'A cheetah', 'A camel', 'A polar bear', 'A yak', 'An antelope',
   'Wolves', 'Foxes', 'Sheep', 'Squirrels', 'Buffalo', 'A sloth', 'A giraffe', 'A cheetah', 'A camel', 'A pig'];
 (async () => {
@@ -17,7 +18,7 @@ const KEY = ['A porcupine', 'A sloth', 'A ferret', 'A reindeer', 'A racoon', 'A 
 
   const b = await chromium.launch(); const c = await b.newContext({ viewport: { width: 1000, height: 900 } }); await install(c, w);
   const errs = []; const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + SRC + 'Index.html'); await login(p, LEO);
+  await p.goto(page('Index.html')); await login(p, LEO);
   const prev = i => p.evaluate(i => revisionPreview('anglais-animaux', i, 'rappel'), i);
   const res = () => p.evaluate(() => window.revisionPreviewResult);
   const refused = [];

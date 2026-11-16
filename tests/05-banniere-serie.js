@@ -1,10 +1,11 @@
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, seed, login, LEO, EMMA, SRC } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 const day = n => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
 (async () => {
   const w = makeWorld(); seed(w);
   const b = await chromium.launch(); const errs = [];
-  const open = async (ctx, f) => { const p = await ctx.newPage(); p.on('pageerror', e => errs.push(f + ': ' + e.message)); await p.goto('file://' + SRC + f); return p; };
+  const open = async (ctx, f) => { const p = await ctx.newPage(); p.on('pageerror', e => errs.push(f + ': ' + e.message)); await p.goto(page(f)); return p; };
   let c = await b.newContext({ viewport: { width: 1100, height: 800 } }); await install(c, w);
 
   // bannière sur les 2 pages, ancienne retirée, page Byzance supprimée
@@ -34,7 +35,7 @@ const day = n => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
   // stockage refusé
   const c2 = await b.newContext(); await install(c2, w); const q = await c2.newPage(); const e2 = []; q.on('pageerror', e => e2.push(e.message));
   await q.addInitScript(() => Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('x', 'SecurityError'); } }));
-  await q.goto('file://' + SRC + 'Index.html'); await login(q, LEO);
+  await q.goto(page('Index.html')); await login(q, LEO);
   ok(e2.length === 0 && (await q.locator('#rvStreak').innerText()) === '👋 Bienvenue' && (await q.locator('.card').count()) === 2, 'stockage refusé : connexion OK, 2 quiz affichés, pas de série (non comptable) mais aucune erreur');
   // mouvement réduit + masquage lecteurs d'écran + 320 px
   const c3 = await b.newContext({ reducedMotion: 'reduce', viewport: { width: 320, height: 700 } }); await install(c3, w);
@@ -47,7 +48,10 @@ const day = n => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
   // ouverture hors du script déployé : message clair
   const c4 = await b.newContext(); const t = await open(c4, 'Index.html');
   await t.fill('#login-classe', 'x'); await t.fill('#login-pseudo', 'x'); await t.fill('#login-pin', '1234'); await t.click('#login-btn');
-  ok((await t.locator('#login-error').innerText()).includes('script déployé'), 'sans serveur : message « ' + await t.locator('#login-error').innerText() + ' »');
+  if (TARGET === 'cloudflare') {   // Cloudflare : la page porte son propre pont vers le serveur (run.js), il n'y a pas de cas « sans serveur »
+    await t.waitForFunction(() => document.querySelector('#login-error').textContent.length > 0);
+    ok((await t.locator('#login-error').innerText()) === 'Classe, pseudo ou PIN incorrect.', 'page ouverte seule : elle joint le serveur toute seule (run.js) : « ' + await t.locator('#login-error').innerText() + ' »');
+  } else ok((await t.locator('#login-error').innerText()).includes('script déployé'), 'sans serveur : message « ' + await t.locator('#login-error').innerText() + ' »');
   ok(errs.length === 0, 'aucune erreur JavaScript ' + JSON.stringify(errs));
   await b.close(); process.exit(summary() ? 1 : 0);
 })().catch(e => { console.log('ECHEC:', e.message.split('\n')[0]); process.exit(1); });

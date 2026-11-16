@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QUIZy · Installer</title>
+    <meta name="theme-color" content="#3b6fe0">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <style>
+        :root { --bleu: #3b6fe0; --violet: #785aff; --or: #ffd166; --texte: #1f2a44; --doux: #5b6680; --fond: #f4f6fc; --carte: #fff; --bord: #dfe4f2; --ok: #1f8a4c; --ko: #c0392b; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--texte); background: var(--fond); }
+        header { background: linear-gradient(135deg, var(--bleu), var(--violet)); color: #fff; padding: 18px 16px; text-align: center; }
+        header h1 { margin: 0; font-size: 1.5rem; }
+        header p { margin: 4px 0 0; opacity: .9; }
+        main { max-width: 560px; margin: 0 auto; padding: 16px; }
+        .card { background: var(--carte); border: 1px solid var(--bord); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+        h2 { margin: 0 0 8px; font-size: 1.15rem; }
+        label { display: block; font-weight: 600; margin: 12px 0 4px; }
+        input[type=text], input[type=password], textarea { width: 100%; font: inherit; padding: 10px 12px; border: 1px solid var(--bord); border-radius: 10px; background: #fff; }
+        textarea { min-height: 90px; font-size: .85rem; }
+        input[type=file] { width: 100%; font: inherit; }
+        .hint { color: var(--doux); font-size: .9rem; margin: 4px 0; }
+        .btn { display: inline-block; font: inherit; font-weight: 700; border: 0; border-radius: 12px; padding: 12px 18px; background: var(--bleu); color: #fff; cursor: pointer; text-decoration: none; }
+        .btn[disabled] { opacity: .6; cursor: wait; }
+        .btn.secondary { background: #e8edfb; color: var(--bleu); }
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+        .status { margin-top: 12px; font-weight: 600; }
+        .status.ok { color: var(--ok); } .status.ko { color: var(--ko); }
+        .resume { margin: 8px 0 0; padding-left: 20px; }
+        .check { display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; font-weight: 400; }
+        details summary { cursor: pointer; color: var(--bleu); margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <header><h1>QUIZy</h1><p id="sous-titre">Installation</p></header>
+    <main>
+        <section class="card" id="chargement"><p>Chargement…</p></section>
+
+        <form class="card" id="form" hidden>
+            <h2 id="titre"></h2>
+            <p class="hint" id="intro"></p>
+
+            <div id="zone-code">
+                <label for="code">Code d'installation</label>
+                <input type="text" id="code" autocomplete="off" autocapitalize="characters" spellcheck="false">
+            </div>
+
+            <label for="fichier">Fichier exporté de l'ancienne appli <span id="fichier-facultatif">(facultatif)</span></label>
+            <input type="file" id="fichier" accept=".json,application/json">
+            <details id="coller-zone"><summary>ou coller le contenu du fichier</summary><textarea id="coller" spellcheck="false" aria-label="Contenu du fichier exporté"></textarea></details>
+            <div id="resume-fichier" class="hint" role="status"></div>
+
+            <label for="pseudo" id="pseudo-label">Ton pseudo (administrateur)</label>
+            <input type="text" id="pseudo" maxlength="30" autocomplete="username">
+            <label for="password" id="password-label">Choisis ton mot de passe</label>
+            <input type="password" id="password" autocomplete="new-password">
+            <div id="zone-confirm">
+                <label for="password2">Confirme le mot de passe</label>
+                <input type="password" id="password2" autocomplete="new-password">
+                <p class="hint">8 caractères au moins. Il n'est pas repris de l'ancienne appli.</p>
+            </div>
+            <label class="check" id="zone-remplacer" hidden><input type="checkbox" id="remplacer"> <span>Je remplace toutes les données actuelles de QUIZy par celles du fichier (mon pseudo et mon mot de passe sont conservés).</span></label>
+
+            <div class="actions"><button class="btn" id="go" type="submit"></button></div>
+            <p class="status" id="status" role="status"></p>
+        </form>
+
+        <section class="card" id="fini" hidden>
+            <h2>✅ C'est prêt !</h2>
+            <ul class="resume" id="resume"></ul>
+            <p class="hint">Les enfants se connectent avec leur classe, leur pseudo et leur PIN habituels ; les familles avec leur pseudo et leur mot de passe habituels.</p>
+            <div class="actions"><a class="btn" href="/parents">👨‍👩‍👧 Espace parents</a><a class="btn secondary" href="/">🎒 Espace élève</a></div>
+        </section>
+    </main>
+    <script>
+        const $ = id => document.getElementById(id);
+        let mode = 'install', fileData = null;
+        const post = (path, body) => fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+            .then(r => r.json()).catch(() => ({ error: 'Connexion impossible. Vérifie le réseau et réessaie.' }));
+        const status = (kind, text) => { $('status').className = 'status ' + kind; $('status').textContent = text; };
+        const plural = (n, one, many) => n + ' ' + (n > 1 ? many || one + 's' : one);
+
+        function describe(data) {
+            const keys = Object.keys(data.proprietes).filter(k => !/~\d+$/.test(k)), n = p => keys.filter(k => k.startsWith(p)).length;
+            return 'Fichier du ' + new Date(data.date).toLocaleString('fr-FR') + ' : ' + plural(n('student_'), 'enfant') + ', ' + plural(n('parent_'), 'famille invitée', 'familles invitées') + ', ' +
+                plural(n('quiz_'), 'leçon créée', 'leçons créées') + ', ' + plural(n('srs_'), 'progression') + '.';
+        }
+        function readData(text) {
+            const data = JSON.parse(text);
+            if (!data || typeof data !== 'object' || !data.proprietes || data.schema !== 3) throw new Error('format');
+            return data;
+        }
+        function useText(text) {
+            fileData = null; $('resume-fichier').textContent = '';
+            if (!text.trim()) return;
+            try {
+                fileData = readData(text);
+                $('resume-fichier').textContent = '📄 ' + describe(fileData);
+                if (mode === 'install' && !$('pseudo').value && fileData.proprietes.ADMIN_PSEUDO) $('pseudo').value = fileData.proprietes.ADMIN_PSEUDO;
+            } catch (e) { $('resume-fichier').textContent = "⚠️ Ce n'est pas un fichier exporté de QUIZy."; }
+        }
+        $('fichier').addEventListener('change', () => {
+            const f = $('fichier').files[0];
+            if (!f) { useText(''); return; }
+            const rd = new FileReader();
+            rd.onload = () => useText(String(rd.result));
+            rd.readAsText(f);
+        });
+        $('coller').addEventListener('input', () => useText($('coller').value));
+
+        // lien d'installation : …/installer#code=XXXX-XXXX
+        function codeFromLink() { const m = /code=([\w-]+)/.exec(location.hash); if (m && mode === 'install') $('code').value = m[1]; }
+        window.addEventListener('hashchange', codeFromLink);
+        function setMode(installed) {
+            mode = installed ? 'import' : 'install';
+            $('chargement').hidden = true; $('form').hidden = false;
+            if (mode === 'install') {
+                $('sous-titre').textContent = 'Installation';
+                $('titre').textContent = '🚀 Installer QUIZy';
+                $('intro').textContent = "Choisis le fichier exporté de l'ancienne appli (menu 👤 → « 💾 Exporter toutes les données ») : enfants, leçons, progressions et familles sont repris tels quels. Sans fichier, QUIZy démarre vide.";
+                $('go').textContent = '🚀 Installer';
+                codeFromLink();
+            } else {
+                $('sous-titre').textContent = 'Importer des données';
+                $('titre').textContent = '📥 Importer un nouveau fichier';
+                $('intro').textContent = "QUIZy est déjà installé. Pour reprendre les révisions faites entre-temps sur l'ancienne appli, exporte-les de nouveau puis importe le fichier ici. Réservé à l'administrateur principal.";
+                $('zone-code').hidden = true; $('zone-confirm').hidden = true; $('zone-remplacer').hidden = false;
+                $('fichier-facultatif').hidden = true;
+                $('pseudo-label').textContent = 'Ton pseudo'; $('password-label').textContent = 'Ton mot de passe';
+                $('password').autocomplete = 'current-password';
+                $('go').textContent = '📥 Importer';
+            }
+        }
+        $('form').addEventListener('submit', async e => {
+            e.preventDefault();
+            status('', '');
+            if ($('fichier').files[0] && !fileData || $('coller').value.trim() && !fileData) { status('ko', "Ce n'est pas un fichier exporté de QUIZy."); return; }
+            let res;
+            if (mode === 'install') {
+                if ($('password').value !== $('password2').value) { status('ko', 'Les deux mots de passe ne sont pas identiques.'); return; }
+                $('go').disabled = true; status('', '⏳ Installation…');
+                res = await post('/setup/install', { code: $('code').value, data: fileData, pseudo: $('pseudo').value, password: $('password').value });
+            } else {
+                if (!fileData) { status('ko', 'Choisis le fichier exporté.'); return; }
+                if (!$('remplacer').checked) { status('ko', 'Coche la case pour confirmer le remplacement des données.'); return; }
+                $('go').disabled = true; status('', '⏳ Import…');
+                res = await post('/setup/import', { cred: { pseudo: $('pseudo').value.trim(), password: $('password').value }, data: fileData });
+            }
+            $('go').disabled = false;
+            if (res.error) { status('ko', res.error); return; }
+            const v = res.value;
+            $('password').value = ''; $('password2').value = '';
+            $('form').hidden = true; $('fini').hidden = false;
+            $('resume').replaceChildren(...[
+                '👤 Administrateur : ' + v.adminPseudo,
+                '🎒 ' + plural(v.enfants, 'enfant'), '👪 ' + plural(v.familles, 'famille invitée', 'familles invitées'),
+                '📚 ' + plural(v.lecons, 'leçon créée', 'leçons créées') + ', ' + plural(v.paquets, 'paquet') + ' de cartes, ' + plural(v.leconsFourniesModifiees, 'leçon fournie modifiée', 'leçons fournies modifiées'),
+                '📈 ' + plural(v.progressions, 'progression')
+            ].map(t => { const li = document.createElement('li'); li.textContent = t; return li; }));
+        });
+        fetch('/setup/status', { cache: 'no-store' }).then(r => r.json()).then(s => setMode(s.installed))
+            .catch(() => { $('chargement').textContent = 'Connexion impossible. Recharge la page.'; });
+    </script>
+</body>
+</html>

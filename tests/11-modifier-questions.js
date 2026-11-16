@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, login, PW, SRC } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 const w = makeWorld();
 let opn = 0;   // une réponse = une nouvelle séance (le niveau ne monte qu'au premier essai d'une séance, et quand la question est à réviser)
 const ans = (cred, quiz, id, good, stage = 'qcm') => w.run('answer', ...cred, quiz, id, stage, good, '', 'seance' + (++opn), 'op' + opn).item;
@@ -87,7 +88,7 @@ const orig = w.ctx.BUILTIN_QUIZZES.map(q => JSON.stringify(q)).join();
   const c = await b.newContext({ viewport: { width: 1200, height: 1000 } }); await install(c, w);
   const errs = [];
   const a = await c.newPage(); a.on('pageerror', e => errs.push(e.message)); a.on('dialog', d => d.accept());
-  await a.goto('file://' + SRC + 'admin.html'); await a.fill('#admin-pseudo', 'Papa'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])');
+  await a.goto(page('admin.html')); await a.fill('#admin-pseudo', 'Papa'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])');
   await a.click('#tab-quiz-liste');
   const row = id => a.locator(`.builtin[data-id="${id}"]`);
   const openRow = async id => { if (await row(id).locator('.builtin-details').isHidden()) await row(id).locator('.builtin-toggle').click(); };
@@ -95,6 +96,7 @@ const orig = w.ctx.BUILTIN_QUIZZES.map(q => JSON.stringify(q)).join();
   ok((await row('musique-carnaval').locator('.badge-modifie').count()) === 1 && (await row('zootopia').locator('.badge-modifie').count()) === 0, 'pastille « ✏️ modifié » sur le bon quiz');
   // modifier Zootopia depuis l'interface (correction d'une faute)
   await openRow('zootopia'); await row('zootopia').locator('text=Modifier').click();
+  await a.waitForFunction(() => document.querySelector('#quiz-form-title').textContent.includes('leçon fournie'), null, { timeout: 5000 }).catch(() => {});   // réponse du serveur
   ok((await a.locator('.pane:visible').getAttribute('id')) === 'pane-quiz-ajout' && (await a.locator('#quiz-form-title').innerText()).includes('leçon fournie') && await a.locator('#builtin-note').isVisible(), '« Modifier » : formulaire ouvert, titre « ' + await a.locator('#quiz-form-title').innerText() + ' », avertissement affiché');
   ok((await a.locator('#questions .question').count()) === 10 && (await a.locator('#quiz-pour input:checked').evaluateAll(l => l.map(i => i.value))).join() === 'leo', '10 questions chargées, destinataire actuel coché (Léo seul)');
   ok((await a.locator('#q-count').innerText()) === '10 questions', 'compteur : « ' + await a.locator('#q-count').innerText() + ' »');
@@ -114,6 +116,7 @@ const orig = w.ctx.BUILTIN_QUIZZES.map(q => JSON.stringify(q)).join();
   ok(w.run('getStudentData', ...L).quizzes.find(q => q.id === 'zootopia').questions[0].question.includes('(en anglais)') && JSON.stringify(prog(L, 'zootopia')[hz]) === '[2,0]', 'côté élève : énoncé corrigé ET progression intacte (niveau 2)');
   // musique : l'icône du lien survit à une modification par l'interface
   await openRow('musique-carnaval'); await row('musique-carnaval').locator('text=Modifier').click();
+  await a.waitForFunction(() => document.querySelectorAll('#questions .question').length === 40, null, { timeout: 5000 }).catch(() => {});   // réponse du serveur
   ok((await a.locator('#lien-icone').inputValue()) === '🎧' && (await a.locator('#lien-url').inputValue()).includes('digipad') && (await a.locator('#questions .question').count()) === 40, 'quiz de musique chargé : 40 questions, lien et icône 🎧 dans le formulaire');
   await a.click('#save-quiz'); await a.waitForSelector('#quizlist-status.ok');
   ok(quizOf(L, 'musique-carnaval').lien.icone === '🎧' && quizOf(L, 'musique-carnaval').questions.filter(q => q.champs).length === 12, 'ré-enregistré sans rien changer : icône, champs et questions conservés');

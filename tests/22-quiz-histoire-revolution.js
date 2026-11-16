@@ -1,6 +1,7 @@
 // Quiz intégré « De 1789 à l'exécution du Roi » : 30 questions (QCM, réponses écrites, champs), corrigé du cahier accepté
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 const w = makeWorld();
 w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' });
 const Q = w.ctx.BUILTIN_QUIZZES.find(q => q.id === 'histoire-revolution');
@@ -11,7 +12,7 @@ const Q = w.ctx.BUILTIN_QUIZZES.find(q => q.id === 'histoire-revolution');
   w.run('setBuiltinAssign', PW, 'histoire-revolution', ['leo']);
   const b = await chromium.launch(); const c = await b.newContext({ viewport: { width: 1000, height: 900 } }); await install(c, w);
   const errs = []; const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + SRC + 'Index.html'); await login(p, LEO);
+  await p.goto(page('Index.html')); await login(p, LEO);
   const types = { qcm: 0, texte: 0, champs: 0 }, refused = [];
   for (let i = 0; i < Q.questions.length; i++) {
     const q = Q.questions[i];

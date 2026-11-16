@@ -1,6 +1,7 @@
 // Les 4 leçons de physique-chimie 5ᵉ : 60 questions, corrigé accepté, décimales « 0,25 » = « 0.25 » (mais ≠ « 25 »)
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 const w = makeWorld();
 w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' });
 const IDS = ['pc5-melanges', 'pc5-conversions', 'pc5-solubilite', 'pc5-graphiques'];
@@ -12,7 +13,7 @@ const Q = IDS.map(id => w.ctx.BUILTIN_QUIZZES.find(q => q.id === id));
   ok(new Set(Q.flatMap(q => q.questions.map(x => w.ctx.qhash_(x.question)))).size === 60, 'les 60 énoncés sont tous différents');
   const b = await chromium.launch(); const c = await b.newContext({ viewport: { width: 1000, height: 900 } }); await install(c, w);
   const errs = []; const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + SRC + 'Index.html'); await login(p, LEO);
+  await p.goto(page('Index.html')); await login(p, LEO);
   ok((await p.locator('.card.lecon').count()) === 4, 'l\'élève voit ses 4 leçons');
   const res = () => p.evaluate(() => window.revisionPreviewResult);
   const refused = [];

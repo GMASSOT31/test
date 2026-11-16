@@ -1,6 +1,7 @@
 // Créer une leçon : choix « Avec une IA » / « À la main » ; assistant IA en 3 étapes (demande, réponse collée, vérification)
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, SRC } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 const DAY = 86400000;
 
 const REPONSE_IA = `Voici le quiz demandé :
@@ -33,7 +34,7 @@ N'hésite pas si tu veux plus de questions !`;
   const c = await b.newContext({ viewport: { width: 390, height: 844 } }); await install(c, w);
   await c.grantPermissions(['clipboard-read', 'clipboard-write']);
   const a = await c.newPage(); const errs = []; a.on('pageerror', e => errs.push(e.message));
-  await a.goto('file://' + SRC + 'admin.html');
+  await a.goto(page('admin.html'));
   await a.fill('#admin-pseudo', 'Papa'); await a.fill('#password', 'secret'); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])');
   const pane = async () => (await a.locator('.pane:visible').evaluateAll(l => l.map(e => e.id))).join();
 
@@ -130,7 +131,7 @@ N'hésite pas si tu veux plus de questions !`;
     } });
   });
   const t = await m.newPage(); t.on('pageerror', e => errs.push(e.message));
-  await t.goto('file://' + SRC + 'admin.html');
+  await t.goto(page('admin.html'));
   await t.fill('#admin-pseudo', 'Papa'); await t.fill('#password', 'secret'); await t.click('#unlock'); await t.waitForSelector('#admin-area:not([hidden])');
   await t.click('#tab-quiz-liste'); await t.click('#tab-quiz-ajout'); await t.click('#mode-ia');
   const cls = async id => t.locator(id).getAttribute('class');
