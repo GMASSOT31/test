@@ -294,6 +294,7 @@
         .student-sum { display: block; font-size: .82rem; color: var(--muted); font-weight: 600; }
         .difficiles, .historique { margin: 6px 0; font-size: .88rem; }
         .difficiles summary, .historique summary { cursor: pointer; font-weight: 800; color: var(--navy); }
+        .syn-texte-parent { margin: 4px 0 8px; padding: 6px 10px; border-left: 4px solid var(--gold); background: #fff9e8; border-radius: 6px; font-style: italic; white-space: pre-wrap; }
         .exam-label { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: .88rem; }
         .exam-input { width: auto; padding: 5px 8px; }
         .exam-row { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
@@ -334,6 +335,7 @@
         .q-count { font-size: .85rem; color: var(--muted); font-weight: 700; }
         .question[hidden] { display: none; }
         .question.collapsed > :not(.question-head):not(.q-text) { display: none !important; }
+        .question-head .q-type { min-width: 0; max-width: 100%; }
         .q-toggle { padding: 4px 10px; }
         .badge-modifie { font-size: .75rem; font-weight: 800; padding: 2px 9px; border-radius: 999px; background: #fff6dc; color: #8a6100; margin-left: 8px; }
         .parcours-admin { font-size: .8rem; font-weight: 800; padding: 2px 10px; border-radius: 999px; background: #f1eeff; color: var(--violet); }
@@ -1175,14 +1177,15 @@
         // ================= QUIZ =================
         function addQuestion(data) {
             const n = ++questionCount;
-            const kind = !data ? "choice" : data.champs ? "fields" : Array.isArray(data.reponses) ? "typed" : "choice";
+            const kind = !data ? "choice" : data.synthese ? "synthese" : data.champs ? "fields" : Array.isArray(data.reponses) ? "typed" : "choice";
             const block = h("div", { class: "question" });
 
             const title = h("span", {}, "");
             const type = h("select", { class: "q-type", "aria-label": "Type de question" },
                 h("option", { value: "choice" }, "Choix"),
                 h("option", { value: "typed" }, "Réponse écrite"),
-                h("option", { value: "fields" }, "Plusieurs champs"));
+                h("option", { value: "fields" }, "Plusieurs champs"),
+                h("option", { value: "synthese" }, "Synthèse"));
             type.value = kind;
             const remove = h("button", { class: "btn danger", type: "button", onclick: () => { block.remove(); renumber(); } }, "Supprimer");
             const text = h("textarea", { class: "q-text", placeholder: "Énoncé de la question" });
@@ -1228,6 +1231,15 @@
             if (kind === "fields") data.champs.forEach(f => addFieldRow(rowsBox, f));
             else { addFieldRow(rowsBox); addFieldRow(rowsBox); }
 
+            // Zone « synthèse » : réponse modèle + éléments essentiels attendus (l'enfant compare et s'autoévalue)
+            const synModele = h("textarea", { class: "syn-modele", maxlength: "1000", placeholder: "Réponse modèle, en 2 à 5 phrases" });
+            const synAttendus = h("textarea", { class: "syn-attendus", maxlength: "1100", placeholder: "Un élément attendu par ligne (3 à 5)" });
+            if (kind === "synthese") { synModele.value = data.modele || ""; synAttendus.value = (data.attendus || []).join("\n"); }
+            const syntheseArea = h("div", { class: "synthese-area" },
+                h("label", {}, "Réponse modèle"), synModele,
+                h("label", {}, "Éléments essentiels attendus (un par ligne)"), synAttendus,
+                h("p", { class: "hint" }, "L'enfant rédige sa réponse, découvre la réponse modèle et les éléments attendus, puis s'autoévalue (réussi, partiellement, pas réussi). Elle arrive quand les bases de la leçon sont maîtrisées."));
+
             const explication = h("input", { type: "text", class: "q-expl", maxlength: "400", placeholder: "Explication affichée après la réponse (facultatif)" });
             explication.value = data && data.explication ? data.explication : "";
 
@@ -1235,6 +1247,7 @@
                 choiceArea.style.display = type.value === "choice" ? "" : "none";
                 typedArea.style.display = type.value === "typed" ? "" : "none";
                 fieldsArea.style.display = type.value === "fields" ? "" : "none";
+                syntheseArea.style.display = type.value === "synthese" ? "" : "none";
             };
             type.addEventListener("change", sync);
 
@@ -1244,7 +1257,7 @@
                 block.classList.toggle("collapsed");
                 toggle.textContent = block.classList.contains("collapsed") ? "▸" : "▾";
             } }, "▾");
-            block.append(h("div", { class: "question-head" }, toggle, title, type, remove), text, choiceArea, typedArea, fieldsArea,
+            block.append(h("div", { class: "question-head" }, toggle, title, type, remove), text, choiceArea, typedArea, fieldsArea, syntheseArea,
                 h("label", {}, "Explication"), explication);
             sync();
             qList.append(block);
@@ -1282,7 +1295,13 @@
                 if (blk.dataset.qid) out.id = blk.dataset.qid;
 
                 const kind = blk.querySelector(".q-type").value;
-                if (kind === "fields") {
+                if (kind === "synthese") {
+                    out.synthese = true;
+                    out.modele = blk.querySelector(".syn-modele").value.trim();
+                    out.attendus = blk.querySelector(".syn-attendus").value.split("\n").map(x => x.replace(/^[-•*\s]+/, "").trim()).filter(Boolean);
+                    if (!out.modele) throw new Error(label + "écris la réponse modèle.");
+                    if (out.attendus.length < 2 || out.attendus.length > 5) throw new Error(label + "il faut 2 à 5 éléments attendus (un par ligne).");
+                } else if (kind === "fields") {
                     const rows = [...blk.querySelectorAll(".field-row")];
                     if (rows.length < 2) throw new Error(label + "il faut au moins 2 champs.");
                     out.champs = rows.map((r, j) => {
@@ -1383,7 +1402,10 @@
         const AI = { step: 1, count: 20, classe: "5ᵉ", quiz: null, ignored: 0, timer: 0 };
         try { const p = JSON.parse(localStorage.getItem(AI_PREFS_KEY)); if (p && [10, 20, 30, 40, 50, 60].includes(p.count)) AI.count = p.count; if (p && p.classe) AI.classe = p.classe; } catch (e) { /* stockage indisponible */ }
         function saveAiPrefs() { try { localStorage.setItem(AI_PREFS_KEY, JSON.stringify({ count: AI.count, classe: AI.classe })); } catch (e) { /* stockage indisponible */ } }
+        // Questions de synthèse demandées en plus : 15 % du nombre de questions, arrondi au-dessus (20 → 3, 60 → 9)
+        const nbSyntheses = n => Math.ceil(n * 0.15);
         function buildPrompt(n, classe) {
+            const m = nbSyntheses(n);
             return [
                 "Tu es un professeur expérimenté. Tu prépares un quiz de révision pour un élève de " + classe + ".",
                 "",
@@ -1402,6 +1424,14 @@
                 "8. En français, adapté à un élève de " + classe + " ; pour une leçon de langue étrangère, garde les mots dans la langue étudiée.",
                 "9. Longueur maximale : question 200 caractères, réponse 80, explication 200.",
                 "",
+                "En plus, écris " + m + " QUESTIONS DE SYNTHÈSE (dans « syntheses ») : l'élève y répond en rédigeant quelques phrases, puis compare avec ton corrigé.",
+                "10. Chaque question de synthèse relie plusieurs informations de la leçon (au moins 2 notions) : explique comment, pourquoi, quelles conséquences, compare, raconte un enchaînement. Jamais une simple question de cours.",
+                "11. Adaptée à un élève de " + classe + " : il doit pouvoir y répondre en 3 à 6 phrases avec ce qu'il a appris.",
+                "12. « reponse_modele » : la réponse attendue, rédigée simplement, en 2 à 5 phrases, uniquement avec le contenu de la leçon.",
+                "13. « elements_attendus » : 3 à 5 idées essentielles que la réponse doit contenir, chacune en une phrase courte et vérifiable.",
+                "14. Si la leçon est trop courte pour écrire " + m + " questions de synthèse vraiment pertinentes, écris-en moins, voire aucune (« syntheses » vide) : n'invente rien.",
+                "15. Longueur maximale : question de synthèse 300 caractères, réponse modèle 600, élément attendu 120.",
+                "",
                 "Réponds UNIQUEMENT par un seul bloc de code JSON, sans texte avant ni après, exactement dans ce format :",
                 "",
                 "```json",
@@ -1418,11 +1448,21 @@
                 '      "rappel": ["1789"],',
                 '      "explication": "La prise de la Bastille, le 14 juillet 1789, marque le début de la Révolution."',
                 "    }",
+                "  ],",
+                '  "syntheses": [',
+                "    {",
+                '      "question": "Explique comment le cœur, les poumons et les vaisseaux sanguins travaillent ensemble pour apporter du dioxygène aux organes.",',
+                '      "reponse_modele": "Le cœur propulse le sang dans les vaisseaux sanguins. Le sang passe par les poumons où il se charge en dioxygène. Il est ensuite envoyé vers les organes par les artères. Les veines ramènent le sang vers le cœur.",',
+                '      "elements_attendus": ["Le cœur propulse le sang.", "Les poumons chargent le sang en dioxygène.", "Les artères transportent le sang du cœur vers les organes.", "Les veines ramènent le sang vers le cœur."]',
+                "    }",
                 "  ]",
                 "}",
                 "```",
                 "",
-                "Avant de répondre, vérifie : exactement " + n + " questions, chaque « bonne_reponse » recopiée à l'identique dans « options », JSON valide."
+                "(Les exemples ci-dessus montrent seulement le format : écris tes propres questions sur la leçon jointe.)",
+                "",
+                "Avant de répondre, vérifie : exactement " + n + " questions, chaque « bonne_reponse » recopiée à l'identique dans « options », " +
+                    m + " questions de synthèse (ou moins si la leçon est trop courte) avec 3 à 5 éléments attendus chacune, JSON valide."
             ].join("\n");
         }
         function renderAiSettings() {
@@ -1543,22 +1583,42 @@
             if (expl) out.explication = String(expl).trim().slice(0, 400);
             return out;
         }
+        // Question de synthèse lue avec tolérance (noms de champs avec ou sans accents, éléments en texte ou en objets)
+        function normalizeSynthese(x) {
+            if (!x || typeof x !== "object") return null;
+            const str = (v, n) => String(v == null ? "" : v).trim().slice(0, n);
+            const pickKey = (...keys) => { for (const k of keys) if (x[k] != null) return x[k]; return null; };
+            const question = str(pickKey("question", "enonce", "énoncé"), 300);
+            const modele = str(pickKey("reponse_modele", "réponse_modèle", "reponse_modèle", "modele", "modèle", "reponse", "réponse", "corrige", "corrigé"), 1000);
+            let att = pickKey("elements_attendus", "éléments_attendus", "elements", "éléments", "attendus", "points_cles", "points_clés");
+            if (typeof att === "string") att = att.split(/\n|;/);
+            const attendus = [...new Set((Array.isArray(att) ? att : []).map(a => str(typeof a === "object" && a ? (a.texte || a.element || a.text || "") : a, 200).replace(/^[-•*\d.)\s]+/, "")).filter(Boolean))].slice(0, 5);
+            if (!question || !modele || attendus.length < 2) return null;
+            return { question, synthese: true, modele, attendus };
+        }
+        const looksSynthese = x => x && typeof x === "object" && ("reponse_modele" in x || "réponse_modèle" in x || "elements_attendus" in x || "éléments_attendus" in x || x.type === "synthese" || x.type === "synthèse");
         function parseAiQuiz(text) {
             const data = extractJson(text);
             if (!data) return null;
             const obj = Array.isArray(data) ? { questions: data } : data;
-            const raw = Array.isArray(obj.questions) ? obj.questions : Array.isArray(obj.quiz) ? obj.quiz : null;
-            if (!raw) return null;
+            const all = Array.isArray(obj.questions) ? obj.questions : Array.isArray(obj.quiz) ? obj.quiz : null;
+            if (!all) return null;
+            // les synthèses : la liste « syntheses » (ou une synthèse glissée par erreur parmi les questions)
+            const rawSyn = (Array.isArray(obj.syntheses) ? obj.syntheses : Array.isArray(obj.questions_de_synthese) ? obj.questions_de_synthese : Array.isArray(obj.synthèses) ? obj.synthèses : [])
+                .concat(all.filter(looksSynthese));
+            const raw = all.filter(x => !looksSynthese(x));
             let questions = raw.map(normalizeQuestion).filter(Boolean);
-            const ignored = raw.length - questions.length;
+            const syntheses = rawSyn.map(normalizeSynthese).filter(Boolean).slice(0, 10);
+            const ignored = raw.length - questions.length, ignoredSyn = rawSyn.length - syntheses.length;
             const cut = Math.max(0, questions.length - 60);
             questions = questions.slice(0, 60);
             if (!questions.length) return { quiz: null, ignored, cut };
+            questions = questions.concat(syntheses);
             const str = (v, n) => String(v == null ? "" : v).trim().slice(0, n);
             return {
                 quiz: { titre: str(obj.titre || obj.title, 120) || "Nouvelle leçon", matiere: str(obj.matiere || obj.matière || obj.subject, 40) || "Divers",
                         emoji: str(obj.emoji, 8) || "📘", description: str(obj.description, 300), questions },
-                ignored, cut
+                ignored, cut, ignoredSyn, syntheses: syntheses.length
             };
         }
         function analyseAnswer() {
@@ -1573,26 +1633,32 @@
                     : "❌ Je ne trouve pas de quiz dans ce texte. Copie toute la réponse de l'IA (le bloc qui commence par { et finit par }).");
                 return;
             }
-            AI.quiz = res.quiz; AI.ignored = res.ignored; AI.cut = res.cut;
+            AI.quiz = res.quiz; AI.ignored = res.ignored; AI.cut = res.cut; AI.ignoredSyn = res.ignoredSyn;
             $("ia-titre").value = res.quiz.titre;
-            showStatus(st, "ok", "✅ " + res.quiz.questions.length + " questions trouvées : « " + res.quiz.titre + " »" + (res.ignored ? " (" + res.ignored + " ignorée" + (res.ignored > 1 ? "s" : "") + ")" : "") + ".");
+            const nb = res.quiz.questions.length - res.syntheses;
+            showStatus(st, "ok", "✅ " + nb + " questions" + (res.syntheses ? " + " + res.syntheses + " de synthèse" : "") + " trouvées : « " + res.quiz.titre + " »" + (res.ignored ? " (" + res.ignored + " ignorée" + (res.ignored > 1 ? "s" : "") + ")" : "") + ".");
             $("ia-next-2").disabled = false;
         }
         function renderAiReview() {
-            const q = AI.quiz, n = q.questions.length, withRecall = q.questions.filter(x => x.rappel).length;
+            const q = AI.quiz, syn = q.questions.filter(x => x.synthese), n = q.questions.length - syn.length, withRecall = q.questions.filter(x => x.rappel).length;
             const notes = [];
             if (AI.ignored) notes.push("⚠️ " + AI.ignored + " question" + (AI.ignored > 1 ? "s" : "") + " ignorée" + (AI.ignored > 1 ? "s" : "") + " (bonne réponse introuvable dans les choix).");
             if (AI.cut) notes.push("⚠️ " + AI.cut + " question" + (AI.cut > 1 ? "s" : "") + " en trop retirée" + (AI.cut > 1 ? "s" : "") + " (60 au maximum).");
             if (n < AI.count && !AI.ignored) notes.push("ℹ️ L'IA a écrit " + n + " questions au lieu de " + AI.count + ".");
+            const voulu = nbSyntheses(AI.count || n);
+            if (AI.ignoredSyn) notes.push("⚠️ " + AI.ignoredSyn + " question" + (AI.ignoredSyn > 1 ? "s" : "") + " de synthèse ignorée" + (AI.ignoredSyn > 1 ? "s" : "") + " (réponse modèle ou éléments attendus manquants).");
+            else if (syn.length < voulu) notes.push("ℹ️ " + (syn.length ? syn.length + " question" + (syn.length > 1 ? "s" : "") + " de synthèse au lieu de " + voulu : "Aucune question de synthèse") + " : la leçon est peut-être trop courte. Tu peux en ajouter à la main.");
             $("ia-summary").replaceChildren(h("div", { class: "ia-sum" },
-                h("strong", {}, q.emoji + " " + n + " questions"),
+                h("strong", {}, q.emoji + " " + n + " questions" + (syn.length ? " + " + syn.length + " de synthèse" : "")),
                 h("span", {}, q.matiere + " · " + withRecall + " avec une réponse à écrire de mémoire" + (q.description ? " · " + q.description : "")),
                 notes.map(t => h("p", { class: "hint warn" }, t))));
             const keep = pourValues($("ia-pour"));
             pourBoxes($("ia-pour"), keep.length ? keep : DATA.students.length === 1 ? [DATA.students[0].id] : []);
             $("ia-exam").min = new Date(DATA.now || Date.now()).toISOString().slice(0, 10);
-            $("ia-preview-sum").textContent = "👀 Voir les " + n + " questions";
-            $("ia-questions").replaceChildren(...q.questions.map(x => h("li", {}, x.question, h("span", { class: "ok-ans" }, "✅ " + x.options[x.correct]))));
+            $("ia-preview-sum").textContent = "👀 Voir les " + (n + syn.length) + " questions";
+            $("ia-questions").replaceChildren(...q.questions.map(x => x.synthese
+                ? h("li", { class: "ia-syn" }, "🧩 " + x.question, h("span", { class: "ok-ans" }, "📘 " + x.modele), h("span", { class: "ok-ans" }, "☑️ " + x.attendus.join(" · ")))
+                : h("li", {}, x.question, h("span", { class: "ok-ans" }, "✅ " + x.options[x.correct]))));
             $("ia-status").className = "status";
         }
         async function saveAiQuiz() {
@@ -1608,7 +1674,8 @@
                 pour.forEach(id => setKidOpen(id, true));   // avant le rechargement : les fiches s'affichent ouvertes
                 await reload();
                 const names = pour.map(studentName).filter(Boolean);
-                const msg = "✅ Leçon « " + titre + " » créée (" + AI.quiz.questions.length + " questions)";
+                const nbSyn = AI.quiz.questions.filter(x => x.synthese).length;
+                const msg = "✅ Leçon « " + titre + " » créée (" + (AI.quiz.questions.length - nbSyn) + " questions" + (nbSyn ? " + " + nbSyn + " de synthèse" : "") + ")";
                 AI.quiz = null;
                 if (names.length) {
                     go("programmes");
@@ -2120,6 +2187,10 @@
                     levelBarAdmin(l), levelLegendAdmin(l),
                     l.difficiles.length ? h("details", { class: "difficiles" }, h("summary", {}, "Questions difficiles (" + l.difficiles.length + ")"),
                         h("ol", {}, l.difficiles.map(d => h("li", {}, d.question + " — " + d.erreurs + " erreur" + (d.erreurs > 1 ? "s" : "") + (d.sures ? " (dont " + d.sures + " en étant sûr·e)" : "") + " · " + LEVELS[d.niveau][1])))) : null,
+                    (l.syntheses || []).length ? h("details", { class: "difficiles syntheses" }, h("summary", {}, "🧩 Questions de synthèse (" + l.syntheses.filter(x => x.dernier).length + " / " + l.syntheses.length + " faites)"),
+                        h("ol", {}, l.syntheses.map(x => h("li", {}, x.question + " — ",
+                            x.dernier ? h("strong", {}, { reussi: "✅ réussie", partiel: "🟡 partiellement", non: "❌ pas réussie" }[x.dernier.eval] + " (" + new Date(x.dernier.date).toLocaleDateString("fr-FR") + ")") : h("em", {}, "pas encore proposée"),
+                            x.dernier && x.dernier.texte ? h("blockquote", { class: "syn-texte-parent" }, x.dernier.texte) : null)))) : null,
                     l.seances.length ? h("details", { class: "historique" }, h("summary", {}, "Historique (" + l.nbSeances + " séance" + (l.nbSeances > 1 ? "s" : "") + ")"),
                         h("ul", {}, l.seances.map(x => h("li", {}, timeFr(x.debut) + " · " + Math.max(1, Math.round(x.duree / 60)) + " min · " + x.reussies + " / " + x.questions + " réussies du premier coup" + (x.bonus ? " · bonus" : ""))))) : null,
                     h("div", { class: "lesson-actions" },
@@ -2315,6 +2386,13 @@
     c4 -- "Oui" --> c5["🎉 Bravo<br/>question suivante"]:::succes
     c4 -- "Non" --> c6["🔁 Je corrige<br/>elle revient 4 écrans plus loin"]:::alerte
   end
+  subgraph P3B["③ bis Question de synthèse · en fin de séance"]
+    direction ${D}
+    s1["🧩 Elle arrive quand les bases sont maîtrisées<br/>plus souvent à l'approche du contrôle"]:::etape --> s2["✍️ Je rédige ma réponse<br/>puis « Valider »"]:::etape --> s3["📘 Réponse modèle<br/>☑️ éléments attendus à cocher"]:::etape --> s4{"Mon<br/>autoévaluation"}:::choix
+    s4 -- "✅ J'ai réussi" --> s5["revient plus tard<br/>intervalle plus long"]:::succes
+    s4 -- "🟡 Partiellement" --> s6["revient plus vite"]:::action
+    s4 -- "❌ Pas réussi" --> s7["revient à court terme"]:::alerte
+  end
   subgraph P4["④ Le bilan"]
     direction ${D}
     d1["🏆 X / Y du premier coup<br/>niveaux gagnés"]:::succes --> d2["📅 Prochaine séance au bon moment<br/>on revient à l'étape ②"]:::action --> d3{"Contrôle<br/>passé ?"}:::choix
@@ -2331,7 +2409,8 @@
     e3(["🚪 Se déconnecter"]):::debut
     e1 ~~~ e2 ~~~ e3
   end
-  P1 ==> P2 ==> P3 ==> P4
+  P1 ==> P2 ==> P3 ==> P3B ==> P4
+  style P3B fill:#FBF8FF,stroke:#9872C6,stroke-width:2px,stroke-dasharray:6 4,color:#102B52
   P3 -. "une bonne réponse sans choix fait monter d'un niveau, une erreur fait redescendre" .-> NIV
   P4 --> P5
 ${UX_STYLES}` },
@@ -2347,13 +2426,13 @@ ${UX_STYLES}` },
   end
   subgraph P3["③ Les leçons"]
     direction ${D}
-    c1{"➕ Créer<br/>une leçon"}:::choix -- "le plus rapide" --> c2["🤖 Avec une IA<br/>demande · réponse collée · vérifier"]:::etape --> c4["✅ Leçon créée<br/>pour qui · date du contrôle"]:::succes
+    c1{"➕ Créer<br/>une leçon"}:::choix -- "le plus rapide" --> c2["🤖 Avec une IA<br/>demande · réponse collée · vérifier<br/>+ 15 % de questions de synthèse"]:::etape --> c4["✅ Leçon créée<br/>pour qui · date du contrôle"]:::succes
     c1 -- "ou" --> c3["✍️ À la main"]:::etape --> c4
     c5["🏛️ Leçons fournies<br/>partagées par l'administrateur"]:::action --> c6["⚙️ Gérer<br/>cocher mes enfants"]:::action
   end
   subgraph P4["④ Suivre les révisions"]
     direction ${D}
-    d1["👨‍👧 Fiche de l'enfant<br/>avancement · prochain contrôle"]:::ecran --> d2["🔎 Détail d'une leçon<br/>niveaux · questions difficiles"]:::ecran --> d3{"Prêt pour<br/>le contrôle ?"}:::choix
+    d1["👨‍👧 Fiche de l'enfant<br/>avancement · prochain contrôle"]:::ecran --> d2["🔎 Détail d'une leçon<br/>niveaux · questions difficiles<br/>🧩 synthèses : autoévaluation et réponse"]:::ecran --> d3{"Prêt pour<br/>le contrôle ?"}:::choix
     d3 -- "90 % et plus" --> d4["✅ Prêt"]:::succes
     d3 -- "pas encore" --> d5["🟡 / 🔴 Encore à revoir<br/>une séance de plus, ou décaler le contrôle"]:::alerte
   end
