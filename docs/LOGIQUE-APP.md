@@ -166,6 +166,17 @@ définitives : PIN incorrect, leçon inaccessible…). Indicateur « ⏳ Sauvega
   Hésité reviennent jusqu'à Trouvé. **N'influence jamais la révision espacée.**
 - Téléphone : bandeau fin, barre d'onglets en bas (Mes leçons, Mes progrès, Flashcards, Se déconnecter).
 
+### 5 bis. Écran « Qui es-tu ? » (QUIZy Cloudflare, depuis le 16/11/2026)
+- Après chaque connexion réussie (élève ou parent), le profil est mémorisé **sur l'appareil** (localStorage `profiles`, 8 au plus,
+  le plus récent en premier, sans doublon) : nom, rôle, identifiant de connexion (classe + pseudo, ou pseudo), couleur d'avatar.
+  Jamais de PIN, de mot de passe, de jeton ni de donnée sensible ; rien dans l'URL.
+- Au lancement, sans session ouverte et avec au moins un profil : grille de pastilles (initiale colorée + prénom + rôle) sur les
+  deux pages. Toucher un profil ne demande plus que le PIN (élève) ou le mot de passe (parent) ; un profil de l'autre rôle ouvre
+  l'autre page. « ➕ Autre profil / Nouvelle connexion » = formulaire complet ; « Retirer » enlève un profil de l'appareil.
+- Refus : « PIN (ou mot de passe) incorrect, ou ce profil n'existe plus » (on ne dit pas lequel, sécurité) + « Retirer ce profil ».
+- Renommage d'un enfant depuis l'espace parents sur le même appareil : son profil suit. Déconnexion : formulaire normal.
+- Stockage bloqué (navigation privée) : pas d'écran « Qui es-tu ? », le reste marche normalement.
+
 ---
 
 ## 6. L'espace parents

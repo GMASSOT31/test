@@ -88,7 +88,7 @@ const api = async (fn, ...args) => (await post('/api/' + fn, args)).json();
   // ---- 7. navigateur : séance complète, espace parents, vraie panne réseau ----
   const b = await chromium.launch();
   const c = await b.newContext({ viewport: { width: 390, height: 844 } });
-  await c.addInitScript('window.revisionAutoNext = false;');
+  await c.addInitScript('window.revisionAutoNext = false; window.QUIZY_PROFILS = false;');   // profils : suite 32
   const errs = []; const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message));
   await p.goto(BASE + '/'); await login(p, LEO);
   ok((await p.locator('.card h3').allInnerTexts()).length === 2, 'page élève (téléphone) : Léo voit ses 2 leçons');

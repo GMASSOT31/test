@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QUIZy</title>
+    <style>
+        /* ===== Palette et style « sticker » repris de la bannière : couleurs vives, ombres dures, coins arrondis ===== */
+        :root {
+            --navy: #1e3a8a;
+            --blue: #3b6fe0;
+            --gold: #ffd166;
+            --pink: #ff8fb8;
+            --violet: #785aff;
+            --mint: #5dffb0;
+            --ink: #1f2a4d;
+            --muted: #6a7394;
+            --line: #e3e8f5;
+            --bg: #f4f6fb;
+            --green: #22c55e;
+            --red: #ef4444;
+            --sticker: 0 3px 0 rgba(15,23,80,.35);
+            --soft: 0 5px 0 rgba(15,23,80,.12), 0 12px 28px rgba(30,58,138,.10);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--ink);
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Mise en page */
+        .layout { display: flex; flex: 1; min-height: 0; }
+        .sidebar {
+            width: 230px;
+            flex-shrink: 0;
+            padding: 22px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .tab {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 12px 14px;
+            border: 0;
+            border-radius: 12px;
+            background: #fff;
+            font: inherit;
+            font-weight: 800;
+            color: var(--navy);
+            cursor: pointer;
+            text-align: left;
+            box-shadow: var(--sticker);
+            transition: transform .15s;
+        }
+        .tab:nth-child(odd) { transform: rotate(-1.5deg); }
+        .tab:nth-child(even) { transform: rotate(1.5deg); }
+        .tab:hover { transform: rotate(0) translateY(-2px) scale(1.04); }
+        .tab[aria-selected="true"] { background: var(--gold); transform: rotate(0) scale(1.03); }
+        .tab .count {
+            margin-left: auto;
+            font-size: .8rem;
+            padding: 2px 9px;
+            border-radius: 999px;
+            background: var(--navy);
+            color: #fff;
+        }
+
+        .content { flex: 1; padding: 28px; min-width: 0; }
+        .content h2 {
+            display: inline-block;
+            margin: 0 0 20px;
+            font-size: 1.7rem;
+            font-weight: 900;
+            letter-spacing: -.5px;
+            color: var(--navy);
+            background: linear-gradient(transparent 62%, rgba(255,209,102,.8) 62%);
+        }
+
+        /* Liste de cartes */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 18px;
+        }
+        .card {
+            background: #fff;
+            border: 0;
+            border-radius: 16px;
+            padding: 18px;
+            text-align: left;
+            font: inherit;
+            cursor: pointer;
+            box-shadow: var(--soft);
+            transition: transform .15s, box-shadow .15s;
+        }
+        .card:hover { transform: translateY(-3px) rotate(-.6deg); box-shadow: 0 8px 0 rgba(15,23,80,.14), 0 16px 32px rgba(30,58,138,.14); }
+        .card { position: relative; }
+        .fois { position: absolute; top: 12px; right: 12px; padding: 3px 10px; border-radius: 999px; background: var(--gold); color: var(--navy); font-size: .75rem; font-weight: 800; box-shadow: var(--sticker); }
+        /* Accueil : la question centrale */
+        .home-question { text-align: center; margin: 10px 0 26px; }
+        .home-question h2 { display: block; background: none; margin: 0; font-size: clamp(1.6rem, 3.6vw, 2.3rem); line-height: 1.2; }
+        .home-question h2::after { content: ""; display: block; width: 90px; height: 6px; margin: 12px auto 0; border-radius: 999px; background: linear-gradient(90deg, var(--gold), var(--pink)); }
+        .card.lecon .etape { margin-top: 8px; font-size: .85rem; font-weight: 800; color: var(--violet); }
+        .etape-dots { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+        .etape-dots .dot { font-size: .72rem; font-weight: 800; padding: 2px 9px; border-radius: 999px; background: #eef0fa; color: var(--muted); }
+        .etape-dots .dot.done { background: var(--mint); color: #07402a; }
+        .etape-dots .dot.on { background: var(--gold); color: var(--navy); box-shadow: var(--sticker); }
+        .etape-banner { text-align: center; font-weight: 800; color: var(--violet); background: #f1eeff; border-radius: 12px; padding: 8px 12px; margin-bottom: 12px; }
+        .etape-msg { margin: 0 0 20px; padding: 14px 16px; border-radius: 12px; background: #fff6dc; border-left: 5px solid var(--gold); font-weight: 700; text-align: left; line-height: 1.4; }
+        .etape-intro { margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; background: #f1eeff; border-left: 5px solid var(--violet); font-weight: 700; line-height: 1.4; }
+        .finish-zone { margin-top: 18px; }
+        .finish-btn { background: var(--green); padding: 14px 30px; font-size: 1.05rem; }
+        .finish-btn:hover:not(:disabled) { background: #1aa34f; }
+        .card .emoji { font-size: 2rem; }
+        .card h3 { margin: 8px 0 4px; font-size: 1.1rem; font-weight: 800; color: var(--navy); }
+        .card .meta { font-size: .85rem; font-weight: 600; color: var(--muted); }
+        .card .desc { margin: 8px 0 0; font-size: .9rem; color: var(--ink); }
+        .empty {
+            background: #fff;
+            border: 2px dashed var(--line);
+            border-radius: 16px;
+            padding: 40px 20px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--muted);
+        }
+
+        /* Quiz */
+        .panel {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: var(--soft);
+            padding: 28px;
+            max-width: 720px;
+            margin: 0 auto;
+        }
+        .back {
+            border: 0; background: none; font: inherit; font-weight: 800;
+            color: var(--blue); cursor: pointer; padding: 0; margin-bottom: 14px;
+        }
+        .progress { display: flex; justify-content: space-between; font-size: .9rem; font-weight: 700; color: var(--muted); margin-bottom: 18px; }
+        .progress .score { color: var(--violet); }
+        .question { font-size: 1.35rem; font-weight: 800; color: var(--navy); text-align: center; margin: 0 0 22px; line-height: 1.35; }
+        .options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .option {
+            padding: 14px 16px;
+            border: 2px solid var(--line);
+            border-radius: 14px;
+            background: #f9faff;
+            font: inherit; font-weight: 700; color: var(--ink);
+            text-align: left; cursor: pointer;
+            transition: transform .15s, border-color .15s, background .15s;
+        }
+        .option:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--gold); background: #fff9e8; }
+        .option:disabled { cursor: default; }
+        /* la couleur est doublée d'un symbole pour ne pas dépendre d'elle seule */
+        .option.correct { background: var(--mint); border-color: #1fbf7a; color: #07402a; }
+        .option.correct::after { content: " ✓"; font-weight: 900; }
+        .option.incorrect { background: var(--pink); border-color: #e0558a; color: #5a0a2a; }
+        .option.incorrect::after { content: " ✗"; font-weight: 900; }
+        .option.dim { opacity: .5; }
+        .explication {
+            margin: 0 0 20px; padding: 14px 16px; border-radius: 12px;
+            background: #fff6dc; border-left: 5px solid var(--gold);
+            font-size: .95rem; line-height: 1.4;
+        }
+        .btn {
+            display: block; margin: 0 auto; border: 0; border-radius: 999px;
+            padding: 12px 28px; background: var(--blue); color: #fff;
+            font: inherit; font-weight: 800; cursor: pointer;
+            box-shadow: var(--sticker);
+            transition: transform .12s, box-shadow .12s, background .15s;
+        }
+        .btn:hover:not(:disabled) { background: #2f5fd0; transform: translateY(-2px); }
+        .btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgba(15,23,80,.35); }
+        .result { text-align: center; }
+        .result .big-emoji { font-size: 4rem; }
+        .result .final { font-size: 3rem; font-weight: 900; color: var(--violet); margin: 6px 0 14px; }
+        .result .msg { font-style: italic; margin-bottom: 22px; }
+        .result .actions { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+        .btn.secondary { background: #fff; color: var(--navy); }
+        .btn.secondary:hover:not(:disabled) { background: #fff9e8; }
+
+        /* Questions à réponse écrite */
+        .saisie {
+            width: 100%; padding: 14px 16px; font: inherit; font-size: 1.15rem;
+            border: 3px solid var(--line); border-radius: 14px; background: #fff;
+        }
+        .saisie:focus { outline: none; border-color: var(--blue); }
+        .saisie.input-correct { border-color: #1fbf7a; background: #effff7; color: #07402a; }
+        .saisie.input-wrong { border-color: #e0558a; background: #fff0f6; color: #5a0a2a; }
+        .panel-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+        .panel-top .back { margin-bottom: 0; }
+        .quiz-link { padding: 5px 14px; border-radius: 999px; background: var(--gold); color: var(--navy); font-weight: 800; font-size: .85rem; text-decoration: none; box-shadow: var(--sticker); }
+        .quiz-link:hover { transform: translateY(-2px); }
+        .champ-row { display: grid; grid-template-columns: minmax(120px, 38%) 1fr; gap: 10px; align-items: center; margin-bottom: 10px; }
+        .champ-label { font-weight: 800; font-size: .9rem; color: var(--navy); }
+        .saisie.champ { padding: 10px 12px; font-size: 1rem; border-width: 2px; }
+        .feedback { min-height: 28px; margin: 12px 0; font-weight: 800; }
+        .feedback.ok { color: #0f8a52; }
+        .feedback.ko { color: #c0264b; }
+        .saisie-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 18px; }
+        .saisie-actions .btn { margin: 0; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+        .shake { animation: shake .4s ease-in-out; }
+
+        /* Flashcards */
+        .flashcard {
+            width: 100%; min-height: 240px; padding: 24px; cursor: pointer; font: inherit;
+            border: 0; border-radius: 20px; background: #fff;
+            box-shadow: 0 6px 0 rgba(15,23,80,.18), 0 14px 30px rgba(30,58,138,.10);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px;
+            transition: background .2s;
+        }
+        .flashcard.flipped { background: #fff6dc; box-shadow: 0 6px 0 #e0b040, 0 14px 30px rgba(30,58,138,.10); }
+        .face-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--violet); font-weight: 800; }
+        .face-text { font-size: 1.5rem; font-weight: 800; text-align: center; line-height: 1.35; color: var(--navy); }
+        .auto-next { height: 5px; width: 0; max-width: 220px; margin: 14px auto 0; border-radius: 999px; background: linear-gradient(90deg, var(--gold), var(--pink)); animation: auto-next linear forwards; }
+        @keyframes auto-next { from { width: 0; } to { width: 220px; } }
+        @media (prefers-reduced-motion: reduce) { .auto-next { animation: none; width: 220px; } }
+        .mastery-line { margin-top: 8px; font-size: .9rem; font-weight: 700; color: var(--violet); text-align: center; }
+        .explication + .mastery-line, .mastery-line + .explication { margin-top: 0; }
+        .progress-panel { margin-bottom: 0; }
+        .bar { height: 12px; border-radius: 999px; background: #e8ecf8; overflow: hidden; margin: 8px 0 4px; }
+        .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--pink)); transition: width .4s; }
+        .pile-title { margin: 24px 0 14px; font-size: 1.05rem; font-weight: 900; color: var(--navy); }
+        .bar.small { height: 8px; margin: 10px 0 0; }
+        .card.done { opacity: .6; cursor: default; }
+        .card.done:hover { transform: none; box-shadow: var(--soft); }
+        .deck-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 18px; }
+        .deck-nav .btn { margin: 0; }
+        .btn:disabled { opacity: .5; cursor: default; box-shadow: none; }
+        .btn:focus-visible, .tab:focus-visible, .card:focus-visible, .option:focus-visible, .flashcard:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+        .panel > .mastery-line { margin: 4px 0 14px; }
+        .hint-small { text-align: center; color: var(--muted); font-size: .85rem; margin: 12px 0 0; }
+
+        /* Connexion */
+        [hidden] { display: none !important; }
+        .login { display: flex; justify-content: center; padding: 28px 16px 40px; }
+        .login-card { background: #fff; border-radius: 20px; box-shadow: var(--soft); padding: 28px; width: 100%; max-width: 400px; }
+        .login-emoji { font-size: 2.4rem; text-align: center; }
+        /* profil mémorisé choisi : classe et pseudo déjà remplis, seul le PIN est demandé */
+        .login-card.avec-profil .login-help, .login-card.avec-profil label[for="login-classe"], .login-card.avec-profil #login-classe,
+        .login-card.avec-profil label[for="login-pseudo"], .login-card.avec-profil #login-pseudo { display: none; }
+        .login-card h2 { margin: 4px 0 6px; text-align: center; font-size: 1.5rem; font-weight: 900; color: var(--navy); }
+        .login-help { text-align: center; color: var(--muted); font-size: .9rem; margin: 0 0 12px; }
+        .login-card label { display: block; font-weight: 800; font-size: .9rem; margin: 12px 0 4px; color: var(--navy); }
+        .login-card input { width: 100%; padding: 12px 14px; border: 3px solid var(--line); border-radius: 14px; font: inherit; font-size: 1.05rem; background: #fff; }
+        .login-card input:focus { outline: none; border-color: var(--blue); }
+        .login-error { min-height: 24px; margin: 12px 0 8px; color: #c0264b; font-weight: 800; text-align: center; }
+        .login-card .btn { width: 100%; }
+        .login { flex-direction: column; align-items: center; }
+        .switch-link { margin-top: 14px; font-size: .8rem; font-weight: 600; color: var(--muted); text-decoration: none; opacity: .8; }
+        .switch-link:hover, .switch-link:focus-visible { text-decoration: underline; opacity: 1; }
+        #app { flex: 1; display: flex; flex-direction: column; }
+        .whoami { display: flex; justify-content: flex-end; align-items: center; gap: 12px; padding: 12px 20px 0; font-weight: 800; color: var(--navy); }
+        .sync-status { color: #c0264b; font-weight: 700; font-size: .85rem; }
+        .whoami .btn { margin: 0; padding: 7px 14px; font-size: .85rem; }
+
+        /* Mobile : les onglets passent en barre horizontale */
+        @media (max-width: 700px) {
+            .layout { flex-direction: column; }
+            .sidebar { width: 100%; flex-direction: row; gap: 8px; padding: 14px 12px 4px; }
+            /* trois onglets de même forme : le libellé au-dessus, le compteur dessous */
+            .tab { flex-direction: column; justify-content: center; text-align: center; padding: 9px 4px; font-size: .82rem; gap: 4px; transform: none !important; }
+            .tab .count { margin-left: 0; padding: 1px 8px; }
+            .content { padding: 16px; }
+            .options { grid-template-columns: 1fr; }
+            .panel { padding: 20px; }
+            .champ-row { grid-template-columns: 1fr; gap: 4px; }
+        }
+        /* ===== Flashcards actives, statut des leçons ===== */
+        .card.lecon .verified { margin-top: 4px; font-size: .85rem; font-weight: 700; color: var(--muted); }
+        .action-pill { display: inline-block; margin-top: 10px; padding: 6px 14px; border-radius: 999px; background: var(--blue); color: #fff; font-weight: 800; font-size: .9rem; box-shadow: var(--sticker); }
+        .cards-count { font-size: .85rem; font-weight: 700; color: var(--muted); text-align: right; }
+        .face-hint { margin-top: 14px; color: var(--violet); font-weight: 800; font-size: .95rem; }
+        .face-expl { margin-top: 14px; padding: 10px 12px; border-radius: 12px; background: #fff6dc; border-left: 5px solid var(--gold); font-weight: 700; font-size: .95rem; text-align: left; }
+        .flashcard.flipped { cursor: default; }
+        .eval { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 14px; }
+        .eval-btn { flex: 1 1 110px; }
+        .eval-btn.oublie { background: #ffe3ee; color: #8a1740; }
+        .eval-btn.hesite { background: #fff0c9; color: #6b4a00; }
+        .eval-btn.trouve { background: #d9fff0; color: #07402a; }
+        .eval-btn:focus-visible, .flip-btn:focus-visible, .flashcard:focus-visible { outline: 3px solid var(--navy); outline-offset: 3px; }
+        /* ===== Parcours v3 : révision du jour, niveaux, plan, séance ===== */
+        .daily { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin: 0 0 18px; padding: 16px 18px; border-radius: 18px;
+                 background: linear-gradient(135deg, #1e3a8a, #3b6fe0); color: #fff; box-shadow: var(--soft); }
+        .daily.done { background: #fff; color: var(--ink); }
+        .daily-txt { display: flex; flex-direction: column; gap: 4px; }
+        .daily-txt strong { font-size: 1.15rem; }
+        .daily-txt span { font-weight: 600; opacity: .9; }
+        .daily-btn { background: var(--gold); color: var(--navy); }
+        .exam-badge { position: absolute; top: 10px; right: 10px; font-size: .78rem; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: #eef2ff; color: var(--navy); }
+        .exam-badge.hot { background: #ffe1ea; color: #b4123f; }
+        .lvl-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: #eceff7; margin: 10px 0 2px; }
+        .lvl-bar.big { height: 16px; }
+        .lvl, .lvl-dot { display: block; height: 100%; }
+        .l0 { background: #dfe3ee; } .l1 { background: #9be7c4; } .l2 { background: #2fbf7f; } .l3 { background: #ffd166; } .l4 { background: #785aff; }
+        .lvl-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .82rem; font-weight: 700; color: var(--muted); margin-top: 6px; }
+        .leg { display: inline-flex; align-items: center; gap: 5px; }
+        .lvl-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .lesson-head { display: flex; align-items: center; gap: 12px; margin: 6px 0 12px; }
+        .lesson-head .emoji { font-size: 2.2rem; }
+        .lesson-head h2 { margin: 0; font-size: 1.35rem; color: var(--navy); background: none; padding: 0; }
+        .sync-status.ok { color: #07603b; }
+        .exam-line { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 800; color: var(--navy); margin-bottom: 12px; }
+        .linkish { background: none; border: 0; color: var(--blue); font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; padding: 4px; }
+        .plan { background: #f6f7fd; border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; }
+        .plan-title { font-weight: 800; color: var(--navy); margin-bottom: 8px; }
+        .plan-dots { list-style: none; display: flex; flex-wrap: wrap; gap: 10px 16px; margin: 0; padding: 0; }
+        .plan-dots li { display: flex; align-items: center; gap: 7px; font-weight: 700; color: var(--muted); font-size: .9rem; }
+        .plan-dots .dot { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #e3e6ef; color: var(--muted); font-weight: 900; }
+        .plan-dots li.done .dot { background: var(--green); color: #fff; }
+        .plan-dots li.on { color: var(--navy); }
+        .plan-dots li.on .dot { background: var(--gold); color: var(--navy); box-shadow: var(--sticker); }
+        .lesson-levels { margin-bottom: 14px; }
+        .big-btn { font-size: 1.05rem; padding: 14px 22px; }
+        .lesson-screen .actions, .setup .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+        .setup h3 { margin: 18px 0 8px; color: var(--navy); }
+        .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+        .choice { border: 3px solid var(--line); background: #fff; border-radius: 14px; padding: 10px 14px; font: inherit; font-weight: 800; color: var(--navy); cursor: pointer; }
+        .choice.on { border-color: var(--blue); background: #eef3ff; box-shadow: var(--sticker); }
+        .choice.wide { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; flex: 1 1 240px; text-align: left; }
+        .choice.wide span { font-weight: 600; color: var(--muted); font-size: .88rem; }
+        .date-choice { display: inline-flex; align-items: center; gap: 8px; cursor: default; }
+        .saisie.date { width: auto; padding: 6px 8px; font-size: .95rem; }
+        .btn[disabled] { opacity: .45; cursor: not-allowed; }
+        .session-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .session-head .back { margin: 0; }
+        .stage-chip { font-weight: 900; font-size: .9rem; padding: 4px 12px; border-radius: 999px; background: #eef2ff; color: var(--navy); }
+        .stage-chip.carte { background: #e7fbf1; color: #07603b; }
+        .stage-chip.corrige { background: #fff1d6; color: #7a4b00; }
+        .session-count { font-weight: 800; color: var(--muted); font-size: .9rem; }
+        .session-bar { margin: 10px 0 14px; }
+        .flashcard.learn { cursor: default; }
+        .face-answer { margin-top: 14px; font-size: 1.25rem; font-weight: 900; color: #07603b; }
+        .masked { margin-top: 10px; }
+        .masked-hint { font-weight: 700; color: var(--muted); }
+        .masked-btns { display: flex; flex-wrap: wrap; gap: 10px; }
+        .archived { margin-top: 22px; }
+        .archived summary { cursor: pointer; font-weight: 800; color: var(--muted); }
+        .card.lecon.archive { opacity: .7; }
+        /* ===== Téléphone : bandeau très fin, connexion compacte, onglets en barre fine tout en bas ===== */
+        .login-card label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+        .login-card input { margin-top: 10px; }
+        .whoami .ico { display: none; }
+        .tab .ico { font-size: 1.1rem; line-height: 1; }
+        @media (max-width: 700px) {
+            .login { padding: 10px 12px 16px; }
+            .login-card { padding: 12px 14px; border-radius: 16px; }
+            .login-emoji { display: none; }
+            .login-card h2 { margin: 0 0 2px; font-size: 1.15rem; }
+            .login-help { font-size: .75rem; margin: 0 0 2px; line-height: 1.25; }
+            .login-card input { padding: 9px 12px; margin-top: 8px; font-size: 1rem; }
+            .login-error { min-height: 0; margin: 6px 0; }
+            .login-error:empty { display: none; }
+            .whoami { padding: 6px 12px 0; gap: 8px; font-size: .9rem; }
+            html { scroll-padding-bottom: 84px; }
+            .layout .content { padding-bottom: 76px; }
+            /* barre fine fixée en bas : Mes leçons · Flashcards · Programme · Se déconnecter */
+            .sidebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; width: 100%; flex-direction: row; gap: 4px;
+                       padding: 5px 6px calc(5px + env(safe-area-inset-bottom)); background: #fff; border-top: 3px solid var(--gold); box-shadow: 0 -4px 14px rgba(30,58,138,.12); }
+            .sidebar .tab { flex: 1 1 0; min-width: 0; flex-direction: column; justify-content: center; gap: 1px; padding: 3px 2px; font-size: .64rem; line-height: 1.1;
+                            box-shadow: none; background: #f4f6ff; border-radius: 10px; position: relative; }
+            .sidebar .tab[aria-selected="true"] { background: var(--gold); transform: none; }
+            .sidebar .tab .lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+            .sidebar .tab .count { position: absolute; top: -4px; right: 2px; margin: 0; padding: 0 5px; font-size: .58rem; }
+            .sidebar .tab .count:empty { display: none; }
+            .sidebar .tab.logout-tab { background: #fff0f3; color: #c0264b; }
+            .sidebar .tab .ico { display: inline; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .tab, .card, .btn, .option { transition: none; }
+            .tab:nth-child(odd), .tab:nth-child(even) { transform: none; }
+            .shake { animation: none; }
+        }
+
+        /* ===== BANNIÈRE (fournie) ===== */
+      .rv-banner {
+        position: relative; overflow: hidden; color: #fff; text-align: center;
+        padding: 14px 16px 0;
+        background:
+          radial-gradient(circle at 12% 20%, rgba(255,95,162,.55), transparent 38%),
+          radial-gradient(circle at 88% 10%, rgba(255,209,102,.40), transparent 34%),
+          radial-gradient(circle at 70% 100%, rgba(120,90,255,.55), transparent 45%),
+          linear-gradient(135deg, #1e3a8a 0%, #3b6fe0 100%);
+        border-bottom: 3px solid #ffd166;
+      }
+      .rv-banner::before { /* motif points façon cahier */
+        content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .18;
+        background-image: radial-gradient(#fff 1.2px, transparent 1.4px);
+        background-size: 22px 22px;
+      }
+      .rv-inner { position: relative; z-index: 2; max-width: 760px; margin: 0 auto; }
+
+      .rv-sticker {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.35);
+        backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+        padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .3px;
+        transform: rotate(-2deg);
+      }
+      .rv-dot { width: 9px; height: 9px; border-radius: 50%; background: #5dffb0; box-shadow: 0 0 0 0 rgba(93,255,176,.7); animation: rv-pulse 1.8s infinite; }
+      @keyframes rv-pulse { 70% { box-shadow: 0 0 0 10px rgba(93,255,176,0); } 100% { box-shadow: 0 0 0 0 rgba(93,255,176,0); } }
+
+      .rv-title {
+        margin: 8px 0 2px; font-size: clamp(24px, 4.6vw, 36px); line-height: 1.05; font-weight: 900; letter-spacing: -1px;
+        text-shadow: 0 3px 0 rgba(15,23,80,.35);
+      }
+      .rv-title .rv-hl {
+        background: linear-gradient(90deg, #ffd166, #ff8fb8); -webkit-background-clip: text; background-clip: text;
+        -webkit-text-fill-color: transparent; text-shadow: none; filter: drop-shadow(0 3px 0 rgba(15,23,80,.35));
+      }
+      .rv-sub { min-height: 20px; margin: 0 0 8px; font-size: clamp(13px, 2vw, 15px); font-weight: 600; opacity: .95; transition: opacity .35s, transform .35s; }
+      .rv-sub.rv-out { opacity: 0; transform: translateY(6px); }
+
+      .rv-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
+      .rv-chip {
+        background: #fff; color: #1e3a8a; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 10px;
+        box-shadow: 0 3px 0 rgba(15,23,80,.35); transition: transform .15s;
+      }
+      .rv-chip:nth-child(odd) { transform: rotate(-2deg); }
+      .rv-chip:nth-child(even) { transform: rotate(2deg); }
+      .rv-chip:hover { transform: rotate(0) translateY(-2px) scale(1.06); }
+
+      /* emojis flottants */
+      .rv-float { position: absolute; z-index: 1; font-size: 24px; opacity: .9; animation: rv-bob 5s ease-in-out infinite; user-select: none; }
+      .rv-f1 { left: 5%;  top: 22%; animation-delay: 0s; }
+      .rv-f2 { left: 14%; top: 62%; animation-delay: -1.2s; font-size: 19px; }
+      .rv-f3 { right: 6%; top: 18%; animation-delay: -2.4s; }
+      .rv-f4 { right: 15%; top: 58%; animation-delay: -3.3s; font-size: 19px; }
+      @keyframes rv-bob { 0%,100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-12px) rotate(8deg); } }
+
+      /* bandeau défilant */
+      .rv-ticker { position: relative; z-index: 2; margin: 0 -16px; background: #ffd166; color: #1e3a8a; overflow: hidden; white-space: nowrap; transform: rotate(-.6deg) scale(1.02); }
+      .rv-track { display: inline-block; padding: 4px 0; font-size: 11px; font-weight: 900; letter-spacing: 1.2px; animation: rv-scroll 28s linear infinite; }
+      @keyframes rv-scroll { to { transform: translateX(-50%); } }
+
+      @media (max-width: 560px) { .rv-float { display: none; } .rv-banner { padding-top: 10px; } }
+      @media (prefers-reduced-motion: reduce) { .rv-float, .rv-track, .rv-dot { animation: none; } }
+      /* téléphone : bandeau très fin (même que l'administration) */
+      @media (max-width: 700px) {
+        .rv-banner { padding: 6px 12px; border-bottom-width: 2px; }
+        .rv-sticker, .rv-sub, .rv-chips, .rv-ticker, .rv-float { display: none; }
+        .rv-title { margin: 0; font-size: 18px; letter-spacing: -.5px; text-shadow: 0 2px 0 rgba(15,23,80,.35); }
+      }
+    </style>
+</head>
+<body>
+
+    <header class="rv-banner">
+      <span aria-hidden="true" class="rv-float rv-f1">📚</span>
+      <span aria-hidden="true" class="rv-float rv-f2">⚡</span>
+      <span aria-hidden="true" class="rv-float rv-f3">🧠</span>
+      <span aria-hidden="true" class="rv-float rv-f4">🎯</span>
+    
+      <div class="rv-inner">
+        <span class="rv-sticker"><span class="rv-dot"></span> QUIZy · Mode révision activé</span>
+        <h1 class="rv-title">Prêt·e à <span class="rv-hl">tout déchirer</span> ? 🚀</h1>
+        <p class="rv-sub" id="rvSub">Tous tes quiz et flashcards au même endroit</p>
+        <div class="rv-chips">
+          <span class="rv-chip">🧠 Quiz</span>
+          <span class="rv-chip">🃏 Flashcards</span>
+          <span class="rv-chip">📅 Programme</span>
+          <span class="rv-chip" id="rvStreak">👋 Bienvenue</span>
+        </div>
+      </div>
+    
+      <div class="rv-ticker" aria-hidden="true">
+        <div class="rv-track">
+          QUIZ • FLASHCARDS • ZÉRO STRESS • 100 % SKILL • RÉVISE UN PEU, RETIENS BEAUCOUP • TU GÈRES • QUIZ • FLASHCARDS • ZÉRO STRESS • 100 % SKILL • RÉVISE UN PEU, RETIENS BEAUCOUP • TU GÈRES •&nbsp;
+          QUIZ • FLASHCARDS • ZÉRO STRESS • 100 % SKILL • RÉVISE UN PEU, RETIENS BEAUCOUP • TU GÈRES • QUIZ • FLASHCARDS • ZÉRO STRESS • 100 % SKILL • RÉVISE UN PEU, RETIENS BEAUCOUP • TU GÈRES •&nbsp;
+        </div>
+      </div>
+    </header>
+
+    <!-- Connexion : l'élève saisit la classe, le pseudo et le PIN créés par l'administrateur -->
+    <section id="login" class="login">
+        <!-- Écran « Qui es-tu ? » : profils mémorisés sur cet appareil (static/profils.js) -->
+        <div id="who" class="qp-zone" hidden></div>
+        <form id="login-form" class="login-card" autocomplete="off">
+            <div class="login-emoji" aria-hidden="true">🎒</div>
+            <h2>Connecte-toi</h2>
+            <p class="login-help">Ta classe, ton pseudo et ton PIN : demande-les à la personne qui gère tes révisions.</p>
+            <div id="login-profil" class="qp-puce" hidden></div>
+            <label for="login-classe">Classe</label>
+            <input id="login-classe" placeholder="Classe" type="text" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+            <label for="login-pseudo">Pseudo</label>
+            <input id="login-pseudo" placeholder="Pseudo" type="text" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+            <label for="login-pin">PIN</label>
+            <input id="login-pin" placeholder="PIN" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" required>
+            <div id="login-error" class="login-error" role="alert"></div>
+            <button class="btn" type="submit" id="login-btn">Entrer 🚀</button>
+            <!-- après le bouton « Entrer » : pas de retrait par erreur en voulant se connecter -->
+            <div id="login-profil-retrait" hidden></div>
+        </form>
+        <!-- lien discret vers la connexion parents (target _top : l'application s'affiche dans un cadre Google) -->
+        <a class="switch-link" id="to-admin" href="https://script.google.com/macros/s/AKfycbzzqlCAUDZAoHOmhxufvj4CAAHWX8JtU8vBsTB0ZsoEK_mLu2tW4BoESRUdrg4b7bkF/exec?p=admin" target="_top">👨‍👩‍👧 Espace parents</a>
+    </section>
+
+    <div id="app" hidden>
+        <div class="whoami">
+            <span id="sync-status" class="sync-status" role="status"></span>
+            <span id="whoami-name"></span>
+            <button type="button" class="btn secondary" id="logout"><span class="ico">🚪</span><span class="lbl">Se déconnecter</span></button>
+        </div>
+        <div class="layout">
+            <nav class="sidebar" role="tablist" aria-label="Sections">
+                <button class="tab" role="tab" id="tab-quiz" data-tab="quiz"><span class="ico">🎓</span><span class="lbl">Mes leçons</span> <span class="count" id="count-quiz"></span></button>
+                <button class="tab" role="tab" id="tab-flashcards" data-tab="flashcards"><span class="ico">🃏</span><span class="lbl">Flashcards</span> <span class="count" id="count-flashcards"></span></button>
+                <button class="tab" role="tab" id="tab-programme" data-tab="programme"><span class="ico">📈</span><span class="lbl">Mes progrès</span> <span class="count" id="count-programme"></span></button>
+            </nav>
+            <main class="content" id="content" role="tabpanel"></main>
+        </div>
+    </div>
+
+    <script>
+(function () {
+  // Phrases qui tournent sous le titre
+  var phrases = [
+    "Tous tes quiz et flashcards au même endroit",
+    "5 minutes de quiz = un cerveau en mode boss 🧠",
+    "Pas de stress, juste du skill ✨",
+    "Un petit effort aujourd'hui, un gros GG demain 🏆",
+    "Ton futur toi te dira merci 🙏",
+    "Rate un quiz ? Pas grave, c'est comme ça qu'on level up 🎮"
+  ];
+  var el = document.getElementById("rvSub"), i = 0;
+  if (el) setInterval(function () {
+    el.classList.add("rv-out");
+    setTimeout(function () { i = (i + 1) % phrases.length; el.textContent = phrases[i]; el.classList.remove("rv-out"); }, 350);
+  }, 4500);
+
+  // Série de jours consécutifs, propre à chaque élève (stockée sur son appareil, sans aucune donnée envoyée).
+  // Appelée par la page une fois l'élève connecté.
+  window.rvStreakFor = function (uid) {
+    try {
+      var kLast = "rvLast:" + uid, kStreak = "rvStreak:" + uid;
+      var today = new Date().toISOString().slice(0, 10);
+      var last = localStorage.getItem(kLast), n = parseInt(localStorage.getItem(kStreak) || "0", 10);
+      if (last !== today) {
+        var yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+        n = (last === yesterday) ? n + 1 : 1;
+        localStorage.setItem(kLast, today); localStorage.setItem(kStreak, String(n));
+      }
+      var s = document.getElementById("rvStreak");
+      if (s) s.textContent = "🔥 Série : " + (n || 1) + " jour" + (n > 1 ? "s" : "");
+    } catch (e) { /* stockage indisponible : on garde le texte par défaut */ }
+  };
+})();
+</script>
+
+    <script>
+        // Les quiz et les paquets de flashcards viennent du serveur une fois l'élève connecté :
+        // chaque élève ne reçoit que ce qui lui est destiné.
+        let QUIZZES = [];
+        let FLASHCARDS = [];
+
+        // ================================================================
+        // Révision espacée : chaque question a un niveau (0 à 4) et une date de prochaine révision, calculés par le
+        // serveur (Code.gs, « Révision espacée »). La page compose les séances : découvrir -> tester -> corriger.
+        // ================================================================
+        const content = document.getElementById("content");
+        let activeTab = "quiz";
+        let inQuiz = false;   // vrai pendant une séance ou un paquet (évite de les remplacer par la liste)
+        let SRS = {};         // quiz.id -> { it: { idQuestion: [niveau, échéance, erreurs, réussites, erreursSûres] }, exam, plan, tf, cfg, mode, ses }
+        let clockSkew = 0;    // écart entre l'horloge du serveur et celle de l'appareil
+        let session = null;   // identifiants de l'élève connecté (en mémoire), pour enregistrer ses résultats
+        const now = () => Date.now() + clockSkew;
+        const DAY = 86400000, HOUR = 3600000;
+        const LEVEL_MAX = 4;
+        const LEVELS = [
+            { nom: "Nouvelle", ico: "🌱" }, { nom: "Découverte", ico: "🌿" }, { nom: "Rappelée", ico: "🌳" },
+            { nom: "Ancrée", ico: "⭐" }, { nom: "Maîtrisée", ico: "🏆" }];
+        const NEW_BLOCK = 5;          // nouvelles questions découvertes par bloc (cartes puis test)
+        const SESSION_TARGET = 15;    // questions visées par séance (environ 10 minutes)
+        const MAX_DUE = 20;           // révisions au plus par séance
+
+        // Identifiant stable d'une question (la progression s'y rattache : corriger l'énoncé ne la fait pas perdre).
+        // Sans identifiant, c'est l'empreinte de l'énoncé : même calcul que le serveur (qhash_ dans Code.gs).
+        function qhash(text) {
+            let h = 0x811c9dc5;
+            for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+            return ("0000000" + (h >>> 0).toString(16)).slice(-8);
+        }
+        function qid(q) { return q.id || qhash(q.question); }
+
+        // ---------------- Enregistrement sur le serveur ----------------
+        // Un appel après l'autre et dans l'ordre ; chaque appel a un identifiant d'opération (rejouer la même opération ne
+        // compte rien de plus) et 3 essais en cas de panne réseau. Renvoie une promesse { ok, value | error }.
+        let saveChain = Promise.resolve();
+        let pendingSaves = 0, syncTimer = null, syncFailed = false;
+        function setSync(text) { const el = document.getElementById("sync-status"); if (el) { el.textContent = text; el.classList.toggle("ok", text.startsWith("✅")); } }
+        function newOp() { return Math.random().toString(36).slice(2, 10) + Date.now().toString(36); }
+        function enqueue(method, quizId, ...args) { return enqueueOp(newOp(), method, quizId, ...args); }
+        function enqueueOp(op, method, quizId, ...args) {
+            if (!hasServer || !session) return Promise.resolve({ ok: false, error: "Pas de connexion au serveur." });
+            const c = session;
+            pendingSaves++; clearTimeout(syncTimer);
+            if (!syncFailed) setSync("⏳ Sauvegarde en attente…");
+            const attempt = n => new Promise(resolve => google.script.run
+                .withSuccessHandler(value => resolve({ ok: true, value }))
+                .withFailureHandler(err => {
+                    const msg = String(err && err.message);
+                    if (n < 3 && !/incorrect|Trop d'essais|inaccessible|inconnue|invalide|Choisis une date/.test(msg)) setTimeout(() => attempt(n + 1).then(resolve), 1000 * n);
+                    else resolve({ ok: false, error: cleanError(err) });
+                })
+                [method](c.classe, c.pseudo, c.pin, quizId, ...args, op));
+            const run = saveChain.then(() => attempt(1)).then(res => {
+                pendingSaves--;
+                if (res.ok && session === c) applyServer(method, quizId, res.value);
+                if (!res.ok) { syncFailed = true; setSync("⚠️ Sauvegarde en attente : ta progression n'a pas pu être enregistrée."); }
+                else if (pendingSaves === 0) {
+                    syncFailed = false; setSync("✅ Progression enregistrée");
+                    syncTimer = setTimeout(() => { if (pendingSaves === 0) setSync(""); }, 3000);
+                }
+                return res;
+            });
+            saveChain = run;
+            return run;
+        }
+        // Le serveur fait foi : on recopie ce qu'il renvoie
+        function applyServer(method, quizId, v) {
+            if (!v) return;
+            const r = srsOf(quizId);
+            if (method === "answer" && v.item) r.it[v.qid] = v.item;
+            else if (method === "endSession" && v.ses) r.ses = v.ses;
+            else if ((method === "setLessonPlan" || method === "setLessonMode") && v.it) SRS[quizId] = v;
+        }
+        window.revisionFlush = () => saveChain;   // attend la fin des envois en cours (utile aux tests)
+
+        // ---------------- Outils ----------------
+        // Petit utilitaire pour créer des éléments sans innerHTML
+        function h(tag, props, ...children) {
+            const el = document.createElement(tag);
+            Object.entries(props || {}).forEach(([k, v]) => {
+                if (k === "class") el.className = v;
+                else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+                else el.setAttribute(k, v);
+            });
+            children.flat().forEach(c => { if (c != null) el.append(c); });
+            return el;
+        }
+        // Mélange de Fisher-Yates sur une copie
+        function shuffle(list) {
+            const a = list.slice();
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+        // Place le curseur dans le premier champ, sauf si l'élève a déjà cliqué dans un champ
+        function focusFirst(input) {
+            setTimeout(() => {
+                const a = document.activeElement;
+                if (!a || a === document.body || a.tagName === "BUTTON") input.focus();
+            }, 0);
+        }
+        // Compare sans tenir compte de la casse, des accents, de la ponctuation et des espaces en trop
+        function norm(text) {
+            return String(text).toLowerCase()
+                .normalize("NFD").replace(/[̀-ͯ]/g, "")
+                .replace(/(\d)[.,](\d)/g, "$1¤$2")   // virgule ou point décimal : 0,25 = 0.25 (mais ≠ 25)
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+                .trim()
+                .replace(/\s{2,}/g, " ");
+        }
+        function sameAnswer(a, b) {
+            const x = norm(a), y = norm(b);
+            return x === y || x.replace(/\s/g, "") === y.replace(/\s/g, "");
+        }
+        function matches(value, accepted) { return accepted.some(r => sameAnswer(r, value)); }
+        function answerOf(q) {
+            if (q.champs) return q.champs.map(c => (c.label ? c.label + " : " : "") + c.reponses[0]).join(" · ");
+            return Array.isArray(q.reponses) ? q.reponses[0] : q.options[q.correct];
+        }
+        const plural = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`;
+        // Dates : début du jour local, date AAAA-MM-JJ, et libellés « aujourd'hui / demain / jeudi 13 nov. »
+        function dayStart(ms) { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); }
+        function isoDate(ms) { const d = new Date(ms); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+        function dateMs(iso) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3]).getTime() : 0; }
+        function dayLabel(ms) {
+            const d = Math.round((dayStart(ms) - dayStart(now())) / DAY);
+            if (d === 0) return "aujourd'hui";
+            if (d === 1) return "demain";
+            if (d === 2) return "après-demain";
+            return new Date(ms).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
+        }
+        function whenLabel(ms) {
+            const t = now();
+            if (ms <= t) return "maintenant";
+            if (dayStart(ms) === dayStart(t)) {
+                const m = Math.round((ms - t) / 60000);
+                return m < 60 ? `dans ${m} min` : "à " + new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }).replace(":", " h ");
+            }
+            return dayLabel(ms);
+        }
+
+        // ---------------- État d'une leçon ----------------
+        function srsOf(quizId) {
+            if (!SRS[quizId]) SRS[quizId] = { it: {}, exam: "", plan: [], tf: false, cfg: false, mode: "actif", ses: [] };
+            return SRS[quizId];
+        }
+        function itemOf(quiz, q) { return srsOf(quiz.id).it[qid(q)] || [0, 0, 0, 0, 0]; }
+        function levelOf(quiz, q) { return Math.min(LEVEL_MAX, itemOf(quiz, q)[0]); }
+        function isDue(quiz, q) { const it = itemOf(quiz, q); return it[0] > 0 && it[1] <= now(); }
+        function dueList(quiz) { return quiz.questions.filter(q => isDue(quiz, q)).sort((a, b) => itemOf(quiz, a)[1] - itemOf(quiz, b)[1]); }
+        function newList(quiz) { return quiz.questions.filter(q => itemOf(quiz, q)[0] === 0); }
+        function levelCounts(quiz) { const c = [0, 0, 0, 0, 0]; quiz.questions.forEach(q => c[levelOf(quiz, q)]++); return c; }
+        // Contrôle : date (début du jour), jours restants, express (demain), passé
+        function examInfo(quiz) {
+            const r = srsOf(quiz.id), E = dateMs(r.exam);
+            if (!E) return null;
+            const days = Math.round((E - dayStart(now())) / DAY);
+            return { E, days, express: days <= 1 && days >= 0, passed: days < 0 };
+        }
+        function examBadge(quiz) {
+            const x = examInfo(quiz);
+            if (!x || x.passed) return null;
+            if (x.days === 0) return "🔥 Contrôle aujourd'hui";
+            if (x.days === 1) return "🔥 Contrôle demain";
+            return "📅 Contrôle " + dayLabel(x.E);
+        }
+        // Séances du plan (avant le contrôle), cochées quand une séance a eu lieu dans leur créneau
+        function planSlots(quiz) {
+            const r = srsOf(quiz.id), plan = r.plan || [], t = now();
+            const starts = (r.ses || []).map(s => s[0]);
+            return plan.map((s, i) => {
+                const end = i + 1 < plan.length ? plan[i + 1] : s + DAY;
+                const done = starts.some(x => x >= s - 10 * 60000 && x < end);
+                return { at: s, done, current: !done && s <= t && t < end, label: slotLabel(s, i, plan) };
+            });
+        }
+        function slotLabel(s, i, plan) {
+            if (i === 0) return "Séance 1";
+            const prev = plan[i - 1];
+            if (dayStart(s) === dayStart(prev)) return "1 h plus tard";
+            const d = new Date(s);
+            if (d.getHours() === 0 && d.getMinutes() === 0 && i === plan.length - 1 && plan.length <= 3 && Math.round((s - dayStart(plan[0])) / DAY) <= 2) return "Le matin du contrôle";
+            return dayLabel(s).replace(/^./, c => c.toUpperCase());
+        }
+        // Prochaine séance : la plus proche question à revoir (ou la prochaine séance du plan)
+        function nextTime(quiz) {
+            const its = quiz.questions.map(q => itemOf(quiz, q)).filter(it => it[0] > 0).map(it => it[1]);
+            const t = now();
+            const future = its.filter(x => x > t);
+            return future.length ? Math.min(...future) : 0;
+        }
+        function isConfigured(quiz) { const r = srsOf(quiz.id); return !!r.cfg || (r.ses || []).length > 0 || Object.keys(r.it).length > 0; }
+        // Statut et action unique d'une leçon
+        function lessonState(quiz) {
+            const r = srsOf(quiz.id), x = examInfo(quiz);
+            const due = dueList(quiz).length, fresh = newList(quiz).length, n = quiz.questions.length;
+            const counts = levelCounts(quiz);
+            if (r.mode === "archive") return { kind: "archive", statut: "Archivée", action: "Réactiver" };
+            if (x && x.passed && r.mode === "actif") return { kind: "apres", statut: "Contrôle passé : garder cette leçon en mémoire ?", action: "Choisir" };
+            if (!isConfigured(quiz)) return { kind: "nouvelle", statut: `Nouvelle leçon · ${n} questions`, action: "Commencer" };
+            if (due > 0) return { kind: "due", statut: `À réviser : ${plural(due, "question", "questions")}` + (fresh ? ` · ${fresh} à découvrir` : ""), action: "Réviser maintenant" };
+            if (fresh > 0) return { kind: "decouvrir", statut: `${plural(fresh, "question à découvrir", "questions à découvrir")}`, action: "Continuer" };
+            const nt = nextTime(quiz);
+            const anc = counts[3] + counts[4];
+            if (anc === n) return { kind: "ancree", statut: `⭐ Leçon ancrée` + (nt ? ` · rappel ${dayLabel(nt)}` : ""), action: "Séance bonus" };
+            return { kind: "attente", statut: nt ? `Prochaine séance : ${whenLabel(nt)}` : "À jour", action: "Séance bonus" };
+        }
+        function lessonOpen(quiz) { const k = lessonState(quiz).kind; return k !== "archive"; }
+
+        // Barre des niveaux (5 couleurs) et légende
+        function levelBar(quiz, big) {
+            const c = levelCounts(quiz), n = quiz.questions.length || 1;
+            return h("div", { class: "lvl-bar" + (big ? " big" : ""), role: "img", "aria-label": LEVELS.map((l, i) => `${l.nom} : ${c[i]}`).join(", ") },
+                c.map((k, i) => k ? h("span", { class: "lvl l" + i, style: `width:${k / n * 100}%`, title: `${LEVELS[i].ico} ${LEVELS[i].nom} : ${k}` }) : null));
+        }
+        function levelLegend(quiz) {
+            const c = levelCounts(quiz);
+            return h("div", { class: "lvl-legend" }, LEVELS.map((l, i) => h("span", { class: "leg" }, h("i", { class: "lvl-dot l" + i }), `${l.ico} ${l.nom} ${c[i]}`)));
+        }
+
+        // ---------------- Navigation ----------------
+        function updateCounts() {
+            document.getElementById("count-quiz").textContent = QUIZZES.length;
+            document.getElementById("count-flashcards").textContent = allDecks().length;
+            const due = dailyTasksCount();
+            document.getElementById("count-programme").textContent = "";
+            const badge = document.getElementById("count-quiz");
+            if (due) badge.textContent = due;
+            badge.title = due ? due + " questions à réviser aujourd'hui" : "";
+        }
+        function setTab(tab) {
+            activeTab = tab;
+            document.querySelectorAll(".tab[data-tab]").forEach(b =>
+                b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
+            renderList();
+        }
+        function renderList() {
+            inQuiz = false;
+            content.replaceChildren();
+            updateCounts();
+            if (activeTab === "quiz") renderHome();
+            else if (activeTab === "programme") renderProgres();
+            else renderFlashcards();
+        }
+
+        // ---------------- Accueil : révision du jour + leçons ----------------
+        // Leçons actives (ni archivées) ; les questions à réviser de toutes ces leçons forment la révision du jour.
+        function activeLessons() { return QUIZZES.filter(q => srsOf(q.id).mode !== "archive"); }
+        function dailyTasksCount() { return activeLessons().reduce((n, q) => n + dueList(q).length, 0); }
+        // Ordre : contrôle le plus proche, puis questions à réviser, puis le reste
+        function lessonRank(q) {
+            const x = examInfo(q), st = lessonState(q);
+            const examKey = x && !x.passed ? x.days : 999;
+            const kindKey = { apres: 0, due: 1, nouvelle: 2, decouvrir: 3, attente: 4, ancree: 5, archive: 9 }[st.kind];
+            return examKey * 10 + kindKey;
+        }
+        function renderHome() {
+            content.append(h("div", { class: "home-question" }, h("h2", {}, "Quelle leçon veux-tu réviser maintenant ?")));
+            if (QUIZZES.length === 0) { content.append(h("div", { class: "empty" }, "Aucune leçon pour le moment.")); return; }
+            const due = dailyTasksCount();
+            const lessons = activeLessons().filter(q => dueList(q).length).length;
+            content.append(due
+                ? h("div", { class: "daily" },
+                    h("div", { class: "daily-txt" },
+                        h("strong", {}, "🎯 Ta révision du jour"),
+                        h("span", {}, `${plural(Math.min(due, 30), "question", "questions")}${lessons > 1 ? " de " + lessons + " leçons" : ""} · environ ${Math.max(2, Math.round(Math.min(due, 30) * 0.4))} min`)),
+                    h("button", { class: "btn daily-btn", onclick: () => startSession({ mixed: true }) }, "C'est parti ➔"))
+                : h("div", { class: "daily done" }, h("div", { class: "daily-txt" }, h("strong", {}, "✅ Rien à réviser pour l'instant"),
+                    h("span", {}, "Choisis une leçon pour découvrir de nouvelles questions ou faire une séance bonus."))));
+            const sorted = QUIZZES.slice().sort((a, b) => lessonRank(a) - lessonRank(b));
+            const actives = sorted.filter(lessonOpen), archived = sorted.filter(q => !lessonOpen(q));
+            content.append(h("div", { class: "grid" }, actives.map(q => lessonCard(q))));
+            if (archived.length) {
+                content.append(h("details", { class: "archived" }, h("summary", {}, `Leçons archivées (${archived.length})`),
+                    h("div", { class: "grid" }, archived.map(q => lessonCard(q)))));
+            }
+        }
+        function lessonCard(q) {
+            const st = lessonState(q), badge = examBadge(q);
+            return h("button", { class: "card lecon " + st.kind, onclick: () => openLesson(q), "data-quiz": q.id },
+                badge ? h("span", { class: "exam-badge" + (/demain|aujourd/.test(badge) ? " hot" : "") }, badge) : null,
+                h("div", { class: "emoji" }, q.emoji),
+                h("h3", {}, q.titre),
+                h("div", { class: "meta" }, `${q.matiere} · ${q.questions.length} questions`),
+                levelBar(q),
+                h("div", { class: "etape" }, st.statut),
+                h("span", { class: "action-pill" }, st.action));
+        }
+
+        // ---------------- Écran d'une leçon ----------------
+        function openLesson(quiz) {
+            inQuiz = true;
+            if (!isConfigured(quiz)) return showSetup(quiz);
+            const r = srsOf(quiz.id), st = lessonState(quiz), x = examInfo(quiz);
+            const parts = [h("button", { class: "back", onclick: renderList }, "← Retour aux leçons"),
+                h("div", { class: "lesson-head" }, h("span", { class: "emoji" }, quiz.emoji), h("div", {}, h("h2", {}, quiz.titre), h("div", { class: "meta" }, `${quiz.matiere} · ${quiz.questions.length} questions`)))];
+
+            if (st.kind === "apres") {
+                parts.push(h("div", { class: "etape-intro" }, "Ton contrôle est passé. Veux-tu garder cette leçon en mémoire ? Quelques rappels très courts dans les semaines qui viennent t'éviteront de l'oublier."),
+                    h("div", { class: "actions" },
+                        h("button", { class: "btn", onclick: () => changeMode(quiz, "entretien") }, "🧠 Oui, la garder en mémoire"),
+                        h("button", { class: "btn secondary", onclick: () => changeMode(quiz, "archive") }, "📦 Non, l'archiver")));
+                content.replaceChildren(h("div", { class: "panel" }, parts));
+                return;
+            }
+            if (st.kind === "archive") {
+                parts.push(h("div", { class: "etape-intro" }, "Cette leçon est archivée : elle n'apparaît plus dans ta révision du jour."),
+                    h("div", { class: "actions" }, h("button", { class: "btn", onclick: () => changeMode(quiz, "entretien") }, "Réactiver la leçon")));
+                content.replaceChildren(h("div", { class: "panel" }, parts));
+                return;
+            }
+            // contrôle et plan
+            const examLine = h("div", { class: "exam-line" },
+                x ? h("span", {}, (examBadge(quiz) || "📅 Contrôle") + (x.express ? " · révision express" : "")) : h("span", {}, r.mode === "entretien" ? "🧠 En mémoire : rappels espacés" : "📅 Pas de contrôle prévu"),
+                h("button", { class: "linkish", onclick: () => showSetup(quiz, true) }, "Modifier"));
+            parts.push(examLine);
+            const slots = planSlots(quiz);
+            if (slots.length && x && !x.passed) {
+                parts.push(h("div", { class: "plan" },
+                    h("div", { class: "plan-title" }, `Ton plan : ${plural(slots.length, "séance courte", "séances courtes")} avant le contrôle`),
+                    h("ol", { class: "plan-dots" }, slots.map((s, i) => h("li", { class: s.done ? "done" : s.current ? "on" : "" },
+                        h("span", { class: "dot" }, s.done ? "✓" : String(i + 1)), h("span", { class: "lbl" }, s.label))))));
+            } else {
+                parts.push(h("div", { class: "plan" }, h("div", { class: "plan-title" }, "Comment ça marche ?"),
+                    h("p", { class: "hint-small" }, "Chaque séance dure environ 10 minutes : tu découvres quelques cartes, puis tu te testes. Les questions réussies reviennent de plus en plus tard (1 jour, 3 jours, 7 jours…), celles ratées reviennent vite. C'est comme ça que ta mémoire les garde.")));
+            }
+            parts.push(h("div", { class: "lesson-levels" }, levelBar(quiz, true), levelLegend(quiz)));
+            const due = dueList(quiz).length, fresh = newList(quiz).length;
+            const main = due || fresh
+                ? h("button", { class: "btn big-btn", onclick: () => startSession({ quiz }) }, due ? `▶ Réviser maintenant (${plural(due, "question", "questions")})` : `▶ Découvrir la suite (${plural(fresh, "question", "questions")})`)
+                : h("button", { class: "btn big-btn", onclick: () => startSession({ quiz, bonus: true }) }, "▶ Séance bonus");
+            const nt = nextTime(quiz);
+            parts.push(h("div", { class: "etape-msg", role: "status" }, h("strong", {}, st.statut),
+                !due && !fresh ? h("div", { class: "hint-small" }, "Ta mémoire travaille d'ici là. Une séance bonus est possible : tes erreurs y comptent, mais elle ne fait pas avancer le plan.") : null));
+            parts.push(h("div", { class: "actions" }, main,
+                h("button", { class: "btn secondary", onclick: () => startDeck(deckOf(quiz), { back: "← Retour à la leçon", onBack: () => openLesson(quiz) }) }, "🃏 Voir les cartes")));
+            content.replaceChildren(h("div", { class: "panel lesson-screen" }, parts));
+        }
+        function changeMode(quiz, mode) {
+            const status = h("div", { class: "etape-msg", role: "status" }, "Enregistrement…");
+            content.append(status);
+            enqueue("setLessonMode", quiz.id, mode).then(r => {
+                if (!r.ok) { status.textContent = "⚠️ " + r.error; return; }
+                if (mode === "archive") renderList(); else openLesson(quiz);
+            });
+        }
+
+        // Première ouverture (ou « Modifier ») : date du contrôle, puis « déjà vue en classe ? »
+        function showSetup(quiz, editing) {
+            inQuiz = true;
+            const r = srsOf(quiz.id);
+            let exam = r.exam || null;      // null = pas encore choisi
+            let tf = editing ? r.tf : null;
+            const t = now();
+            const options = [["Demain", isoDate(dayStart(t) + DAY + 2 * HOUR)], ["Après-demain", isoDate(dayStart(t) + 2 * DAY + 2 * HOUR)],
+                ["Dans une semaine", isoDate(dayStart(t) + 7 * DAY + 2 * HOUR)], ["Pas de contrôle prévu", ""]];
+            const dateInput = h("input", { type: "date", class: "saisie date", min: isoDate(t), "aria-label": "Autre date" });
+            const go = h("button", { class: "btn big-btn", disabled: "disabled", onclick: save }, editing ? "Enregistrer" : "C'est parti ➔");
+            const status = h("div", { class: "etape-msg", role: "status", style: "display:none" });
+            const examBtns = options.map(([label, value]) => h("button", { class: "choice", "data-value": value, onclick: () => { exam = value; dateInput.value = ""; refresh(); } }, label));
+            dateInput.addEventListener("change", () => { exam = dateInput.value || null; refresh(); });
+            const tfBtns = [[true, "Oui, je l'ai déjà travaillée", "On commence par un petit test : tu ne perds pas de temps sur ce que tu sais déjà."],
+                [false, "Non, je la découvre", "On lit d'abord les cartes, puis on teste."]].map(([v, label, sub]) =>
+                h("button", { class: "choice wide", "data-value": String(v), onclick: () => { tf = v; refresh(); } }, h("strong", {}, label), h("span", {}, sub)));
+            function refresh() {
+                examBtns.forEach(b => b.classList.toggle("on", exam !== null && b.dataset.value === exam && !dateInput.value));
+                tfBtns.forEach(b => b.classList.toggle("on", tf !== null && b.dataset.value === String(tf)));
+                const ok = exam !== null && tf !== null;
+                if (ok) go.removeAttribute("disabled"); else go.setAttribute("disabled", "disabled");
+                hint.textContent = exam === null ? "" : planHint(exam);
+            }
+            const hint = h("p", { class: "hint-small plan-hint" });
+            function save() {
+                go.setAttribute("disabled", "disabled");
+                status.style.display = "block"; status.textContent = "Enregistrement…";
+                enqueue("setLessonPlan", quiz.id, exam, tf).then(res => {
+                    if (!res.ok) { status.textContent = "⚠️ " + res.error; go.removeAttribute("disabled"); return; }
+                    if (editing) openLesson(quiz); else startSession({ quiz });
+                });
+            }
+            content.replaceChildren(h("div", { class: "panel setup" },
+                h("button", { class: "back", onclick: editing ? () => openLesson(quiz) : renderList }, editing ? "← Retour à la leçon" : "← Retour aux leçons"),
+                h("div", { class: "lesson-head" }, h("span", { class: "emoji" }, quiz.emoji), h("h2", {}, quiz.titre)),
+                h("h3", {}, "📅 Quand est ton contrôle sur cette leçon ?"),
+                r.exam && !editing ? h("p", { class: "hint-small" }, "Date prévue par tes parents : " + dayLabel(dateMs(r.exam)) + ". Tu peux la changer.") : null,
+                h("div", { class: "choices" }, examBtns, h("label", { class: "choice date-choice" }, "Autre date : ", dateInput)),
+                hint,
+                h("h3", {}, "📚 As-tu déjà travaillé cette leçon en classe ?"),
+                h("div", { class: "choices" }, tfBtns),
+                status,
+                h("div", { class: "actions" }, go)));
+            if (r.exam && !options.some(o => o[1] === r.exam)) dateInput.value = r.exam;
+            refresh();
+        }
+        function planHint(exam) {
+            if (!exam) return "Sans contrôle prévu, les questions reviennent au bon moment pour ne pas les oublier : 1 jour, 3 jours, 7 jours…";
+            const d = Math.round((dateMs(exam) - dayStart(now())) / DAY);
+            if (d <= 0) return "Contrôle aujourd'hui : une séance pour tout revoir maintenant.";
+            if (d === 1) return "Révision express : une séance maintenant, une autre 1 h plus tard, et un dernier coup d'œil demain matin.";
+            return `Ton plan : des séances courtes d'ici au contrôle, la dernière la veille (${dayLabel(dateMs(exam) - DAY)}).`;
+        }
+
+        // ---------------- Séance ----------------
+        // Tâches : { quiz, q, stage: 'carte' | 'qcm' | 'rappel', retest }. Une question nouvelle : carte puis QCM (ou QCM direct
+        // si l'élève « a déjà travaillé la leçon » / révision express). Une question à réviser : rappel (sans choix).
+        // Une erreur : la bonne réponse s'affiche tout de suite, puis la question revient plus loin dans la séance jusqu'à être réussie.
+        let S = null;   // séance en cours
+        function buildTasks(opts) {
+            const tasks = [];
+            if (opts.mixed) {
+                const due = [];
+                activeLessons().forEach(quiz => dueList(quiz).forEach(q => due.push({ quiz, q, stage: "rappel" })));
+                due.sort((a, b) => itemOf(a.quiz, a.q)[1] - itemOf(b.quiz, b.q)[1]);
+                return shuffle(due.slice(0, 30));   // mélanger les leçons aide la mémoire
+            }
+            const quiz = opts.quiz, r = srsOf(quiz.id), x = examInfo(quiz);
+            if (opts.bonus) {
+                // entraînement libre : les questions les moins avancées puis les plus ratées
+                const pick = quiz.questions.slice().sort((a, b) => levelOf(quiz, a) - levelOf(quiz, b) || itemOf(quiz, b)[2] - itemOf(quiz, a)[2]).slice(0, 10);
+                return pick.map(q => ({ quiz, q, stage: levelOf(quiz, q) >= 1 ? "rappel" : "qcm", bonus: true }));
+            }
+            dueList(quiz).slice(0, MAX_DUE).forEach(q => tasks.push({ quiz, q, stage: "rappel" }));
+            const fresh = newList(quiz);
+            // avec un contrôle, toutes les nouvelles questions dès que possible (sinon elles n'auraient pas le temps de revenir)
+            let budget = x && !x.passed ? 40 : Math.max(tasks.length ? 0 : NEW_BLOCK, SESSION_TARGET - tasks.length);
+            budget = Math.ceil(budget / NEW_BLOCK) * NEW_BLOCK;
+            const take = fresh.slice(0, budget);
+            if (r.tf) take.forEach(q => tasks.push({ quiz, q, stage: "qcm" }));
+            else for (let i = 0; i < take.length; i += NEW_BLOCK) {
+                const block = take.slice(i, i + NEW_BLOCK);
+                block.forEach(q => tasks.push({ quiz, q, stage: "carte" }));
+                shuffle(block).forEach(q => tasks.push({ quiz, q, stage: "qcm" }));
+            }
+            return tasks;
+        }
+        function startSession(opts) {
+            const tasks = buildTasks(opts);
+            if (!tasks.length) { if (opts.quiz) openLesson(opts.quiz); else renderList(); return; }
+            inQuiz = true;
+            S = { opts, tasks, i: 0, sid: newOp(), start: now(), seen: new Set(), firstOk: new Set(), done: new Set(), lessons: new Map(),
+                before: new Map(), back: opts.quiz ? () => openLesson(opts.quiz) : renderList };
+            tasks.forEach(t => { const k = key(t); if (!S.before.has(k)) S.before.set(k, levelOf(t.quiz, t.q)); S.lessons.set(t.quiz.id, t.quiz); });
+            showTask();
+        }
+        const key = t => t.quiz.id + "|" + qid(t.q);
+        function stageLabel(t) {
+            if (t.retest) return ["🔁", "Je corrige"];
+            if (t.stage === "carte") return ["📖", "Je découvre"];
+            return ["✅", t.bonus ? "Séance bonus" : "Je teste"];
+        }
+        function showTask() {
+            if (S.i >= S.tasks.length) return endSessionScreen();
+            const t = S.tasks[S.i];
+            const [ico, label] = stageLabel(t);
+            const testsTotal = new Set(S.tasks.filter(x => x.stage !== "carte").map(key)).size;
+            const testsDone = S.done.size;
+            const head = h("div", { class: "session-head" },
+                h("button", { class: "back", onclick: quitSession }, "✕ Arrêter"),
+                h("span", { class: "stage-chip " + (t.retest ? "corrige" : t.stage) }, ico + " " + label),
+                h("span", { class: "session-count" }, `${testsDone} / ${testsTotal}`));
+            const bar = h("div", { class: "bar session-bar", role: "progressbar", "aria-valuenow": String(testsDone), "aria-valuemax": String(testsTotal) },
+                h("span", { style: `width:${testsTotal ? testsDone / testsTotal * 100 : 0}%` }));
+            const lessonName = S.opts.mixed ? h("div", { class: "meta" }, t.quiz.emoji + " " + t.quiz.titre) : null;
+            if (t.stage === "carte") {
+                const nextBtn = h("button", { class: "btn", onclick: () => { S.i++; showTask(); } }, "J'ai lu, carte suivante ➔");
+                content.replaceChildren(h("div", { class: "panel session" }, head, bar, lessonName,
+                    h("div", { class: "flashcard flipped learn" },
+                        h("div", { class: "face-label" }, "À retenir"),
+                        h("div", { class: "face-text" }, t.q.question),
+                        h("div", { class: "face-answer" }, answerOf(t.q)),
+                        t.q.explication ? h("div", { class: "face-expl" }, t.q.explication) : null),
+                    h("div", { class: "actions" }, nextBtn)));
+                nextBtn.focus();
+                return;
+            }
+            const lien = t.quiz.lien && /^https?:\/\//.test(t.quiz.lien.url || "")
+                ? h("a", { class: "quiz-link", href: t.quiz.lien.url, target: "_blank", rel: "noopener noreferrer" }, (t.quiz.lien.icone || "🔗") + " " + (t.quiz.lien.texte || "Ouvrir le lien"))
+                : null;
+            const panel = h("div", { class: "panel session" }, head, bar, lessonName, lien);
+            renderQuestion(panel, t, (ok, conf) => onAnswered(t, ok, conf));
+            content.replaceChildren(panel);
+        }
+        function quitSession() {
+            if (S && S.seen.size) return endSessionScreen(true);
+            S = null; renderList();
+        }
+        // Résultat d'une question : envoyé au serveur ; une erreur la fait revenir plus loin dans la séance
+        function onAnswered(t, ok, conf) {
+            const k = key(t), first = !S.seen.has(k);
+            S.seen.add(k);
+            if (ok && first) S.firstOk.add(k);
+            if (ok) S.done.add(k);
+            else {
+                const again = { quiz: t.quiz, q: t.q, stage: t.stage === "qcm" ? "qcm" : "rappel", retest: true, bonus: t.bonus };
+                S.tasks.splice(Math.min(S.tasks.length, S.i + 4), 0, again);
+            }
+            const it = itemOf(t.quiz, t.q);
+            // mise à jour locale immédiate (le serveur confirme ensuite)
+            if (first && ok && it[0] === 0) srsOf(t.quiz.id).it[qid(t.q)] = [1, it[1], it[2], it[3] + 1, it[4]];
+            enqueue("answer", t.quiz.id, qid(t.q), t.stage === "qcm" ? "qcm" : "rappel", ok, conf || "", S.sid);
+        }
+        function advance() { S.i++; showTask(); }
+
+        // Fin de séance : bilan, enregistrement de l'historique, prochaine séance
+        function endSessionScreen(stopped) {
+            const s = S; S = null;
+            const dur = Math.round((now() - s.start) / 1000);
+            const status = h("div", { class: "etape-msg", role: "status" }, "Enregistrement…");
+            const box = h("div", { class: "panel result" },
+                h("div", { class: "big-emoji" }, stopped ? "⏸️" : "🎉"),
+                h("h2", {}, stopped ? "Séance arrêtée" : "Séance terminée !"),
+                h("div", { class: "final" }, `${s.firstOk.size} / ${s.seen.size}`),
+                h("p", { class: "msg" }, s.seen.size ? `${plural(s.firstOk.size, "question réussie", "questions réussies")} du premier coup sur ${s.seen.size}.` : "Aucune question faite."),
+                status);
+            content.replaceChildren(box);
+            const calls = [];
+            s.lessons.forEach(quiz => {
+                const keys = [...s.seen].filter(k => k.startsWith(quiz.id + "|"));
+                if (!keys.length) return;
+                calls.push(enqueue("endSession", quiz.id, s.sid, { n: keys.length, ok: keys.filter(k => s.firstOk.has(k)).length, dur: Math.round(dur * keys.length / s.seen.size), bonus: !!s.opts.bonus }));
+            });
+            Promise.all(calls).then(() => saveChain).then(() => {
+                // niveaux gagnés
+                let up = 0;
+                s.before.forEach((lvl, k) => { const [qzId, id] = k.split("|"); const it = srsOf(qzId).it[id]; if (it && it[0] > lvl) up++; });
+                const lines = [];
+                if (up) lines.push(`📈 ${plural(up, "question a progressé", "questions ont progressé")} d'un niveau.`);
+                if (s.opts.bonus) lines.push("Séance bonus : tes réussites renforcent ta mémoire, le plan reste le même.");
+                const actions = h("div", { class: "actions" });
+                if (s.opts.quiz) {
+                    const quiz = s.opts.quiz, nt = nextTime(quiz), fresh = newList(quiz).length, due = dueList(quiz).length;
+                    if (due) lines.push(`Encore ${plural(due, "question", "questions")} à revoir aujourd'hui.`);
+                    else if (nt) lines.push(`🗓️ Prochaine séance : ${whenLabel(nt)}. Ta mémoire travaille d'ici là !`);
+                    if ((fresh || due) && !stopped) actions.append(h("button", { class: "btn", onclick: () => startSession({ quiz }) }, due ? "Continuer" : `Découvrir ${Math.min(fresh, NEW_BLOCK)} nouvelles questions`));
+                    actions.append(h("button", { class: (fresh || due) && !stopped ? "btn secondary" : "btn", onclick: () => openLesson(quiz) }, "Voir la leçon"));
+                } else {
+                    const left = dailyTasksCount();
+                    lines.push(left ? `Encore ${plural(left, "question", "questions")} à revoir aujourd'hui.` : "✅ Révision du jour terminée !");
+                }
+                actions.append(h("button", { class: "btn secondary", onclick: renderList }, "Retour aux leçons"));
+                status.textContent = lines.join(" ") || "Progression enregistrée.";
+                box.append(actions);
+                updateCounts();
+            });
+        }
+
+        // ---------------- Affichage d'une question ----------------
+        // stage 'qcm' : choix (QCM d'origine ; pour une réponse écrite, choix fabriqués avec les autres réponses de la leçon).
+        // stage 'rappel' : sans choix (réponse écrite, champs, ou « QCM masqué » : réfléchir d'abord, puis voir les choix).
+        function renderQuestion(panel, t, done) {
+            const q = t.q;
+            const explication = q.explication ? h("div", { class: "explication", style: "display:none" }, q.explication) : null;
+            const lvlBefore = levelOf(t.quiz, q);
+            const progressLine = h("div", { class: "mastery-line", style: "display:none" });
+            const next = h("button", { class: "btn next-btn", style: "display:none", onclick: () => go() }, "Continuer ➔");
+            const autoBar = h("div", { class: "auto-next", style: "display:none", "aria-hidden": "true" });
+            let advanced = false, timer = null, settled = false;
+            const go = () => { if (advanced) return; advanced = true; clearTimeout(timer); advance(); };
+            function settle(ok, conf) {
+                if (settled) return;
+                settled = true;
+                done(ok, conf);
+                const firstTry = ok && !t.retest;
+                progressLine.textContent = !ok
+                    ? (conf === "sur" ? "⚠️ Tu étais sûr(e) de toi : retiens bien la bonne réponse, elle revient dans un instant." : "↩️ Pas grave : elle revient dans un instant.")
+                    : t.retest ? "✅ Corrigée !"
+                        : t.bonus ? "✅ Bien joué (séance bonus)."
+                            : t.stage === "qcm" ? "🌿 Découverte ! Elle reviendra sans choix." : `${LEVELS[Math.min(LEVEL_MAX, lvlBefore + (conf === "doute" ? 0 : 1))].ico} ${conf === "doute" ? "Juste, mais tu doutais : elle reviendra bientôt." : "Bravo, elle reviendra plus tard."}`;
+                progressLine.style.display = "block";
+                if (explication) explication.style.display = "block";
+                next.style.display = "block";
+                next.focus();
+                if (firstTry && window.revisionAutoNext !== false) {
+                    const delay = explication ? 1800 : 1000;
+                    autoBar.style.animationDuration = delay + "ms";
+                    autoBar.style.display = "block";
+                    timer = setTimeout(() => { if (next.isConnected) go(); }, delay);
+                }
+            }
+            const kind = q.champs ? "champs" : Array.isArray(q.reponses) ? "texte" : "choix";
+            let body;
+            if (kind === "champs") body = fieldsBody(q, settle);
+            else if (kind === "texte") {
+                const opts = t.stage === "qcm" ? generatedOptions(t.quiz, q) : null;
+                body = opts ? choiceBody(q, opts, settle) : typedBody(q, q.reponses, settle);
+            } else if (t.stage === "qcm") body = choiceBody(q, shuffle(q.options.map((text, i) => ({ text, ok: i === q.correct }))), settle);
+            else if (Array.isArray(q.rappel) && q.rappel.length) body = typedBody(q, q.rappel, settle, q.options[q.correct]);
+            else body = maskedBody(q, harderOptions(t.quiz, q), settle);
+            panel.append(...[h("h3", { class: "question" }, q.question), body, progressLine, explication, next, autoBar].filter(Boolean));
+        }
+
+        // QCM : un seul choix ; la bonne réponse s'affiche toujours
+        function choiceBody(q, order, settle) {
+            let answered = false;
+            const buttons = order.map((o, i) => h("button", { class: "option", onclick: () => {
+                if (answered) return;
+                answered = true;
+                const good = buttons[order.findIndex(x => x.ok)];
+                buttons[i].classList.add(o.ok ? "correct" : "incorrect");
+                good.classList.add("correct");
+                buttons.forEach(b => { b.disabled = true; if (b !== buttons[i] && b !== good) b.classList.add("dim"); });
+                settle(o.ok);
+            } }, o.text));
+            return h("div", { class: "options" }, buttons);
+        }
+        // Choix fabriqués pour une question à réponse écrite : la bonne réponse + jusqu'à 3 autres réponses de la leçon
+        function generatedOptions(quiz, q) {
+            const right = q.reponses[0];
+            const others = [...new Set(quiz.questions.filter(x => x !== q && Array.isArray(x.reponses)).map(x => x.reponses[0]))]
+                .filter(a => !matches(a, q.reponses));
+            if (others.length < 2) return null;
+            return shuffle([{ text: right, ok: true }].concat(shuffle(others).slice(0, 3).map(text => ({ text, ok: false }))));
+        }
+        // QCM plus difficile pour le rappel : les choix d'origine + d'autres bonnes réponses de la leçon (4 à 5 choix)
+        function harderOptions(quiz, q) {
+            const base = q.options.map((text, i) => ({ text, ok: i === q.correct }));
+            if (base.length <= 2) return shuffle(base);   // Vrai / Faux, Oui / Non : on n'ajoute rien
+            const extra = quiz.questions.filter(x => x !== q && Array.isArray(x.options)).map(x => x.options[x.correct])
+                .filter(a => !base.some(b => sameAnswer(b.text, a)));
+            const want = Math.max(0, Math.min(5, Math.max(4, base.length)) - base.length);
+            return shuffle(base.concat(shuffle([...new Set(extra)]).slice(0, want).map(text => ({ text, ok: false }))));
+        }
+        // QCM masqué : l'élève cherche la réponse dans sa tête, dit s'il est sûr, puis choisit parmi les propositions
+        function maskedBody(q, order, settle) {
+            const zone = h("div", { class: "masked" });
+            const reveal = conf => {
+                zone.replaceChildren(h("p", { class: "hint-small" }, "Choisis la réponse à laquelle tu pensais :"),
+                    choiceBody(q, order, ok => settle(ok, conf)));
+            };
+            zone.append(h("p", { class: "masked-hint" }, "💭 Cherche la réponse dans ta tête, sans regarder… Puis :"),
+                h("div", { class: "masked-btns" },
+                    h("button", { class: "btn", onclick: () => reveal("sur") }, "😎 Je sais, je suis sûr(e)"),
+                    h("button", { class: "btn secondary", onclick: () => reveal("doute") }, "🤔 Je crois savoir"),
+                    h("button", { class: "btn secondary idk", onclick: () => { zone.replaceChildren(h("div", { class: "feedback ko" }, "La réponse : " + q.options[q.correct])); settle(false, ""); } }, "Je ne sais pas")));
+            return zone;
+        }
+        // Réponse écrite : une seule validation (ou « Je ne sais pas ») ; la bonne réponse s'affiche en cas d'erreur
+        function typedBody(q, accepted, settle, shown) {
+            let done = false;
+            const input = h("input", { type: "text", class: "saisie", placeholder: "Écris ta réponse…", autocomplete: "off", autocapitalize: "off", spellcheck: "false", "aria-label": "Ta réponse" });
+            const feedback = h("div", { class: "feedback", role: "status" });
+            const check = h("button", { class: "btn", onclick: validate }, "Valider ✔️");
+            const idk = h("button", { class: "btn secondary", onclick: () => finish(false) }, "Je ne sais pas");
+            function finish(ok) {
+                if (done) return;
+                done = true;
+                input.disabled = true; check.style.display = "none"; idk.style.display = "none";
+                input.classList.add(ok ? "input-correct" : "input-wrong");
+                feedback.className = "feedback " + (ok ? "ok" : "ko");
+                feedback.textContent = ok ? "🎉 Bonne réponse !" : "La réponse : " + (shown || accepted[0]);
+                settle(ok);
+            }
+            function validate() { if (!done && norm(input.value)) finish(matches(input.value, accepted)); }
+            input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); validate(); } });
+            focusFirst(input);
+            return h("div", {}, input, feedback, h("div", { class: "saisie-actions" }, check, idk));
+        }
+        // Plusieurs champs : q.libre = ordre libre ; groupe = champs interchangeables entre eux. Une validation :
+        // les champs justes passent en vert, les autres affichent la réponse attendue.
+        function fieldsBody(q, settle) {
+            let done = false;
+            const gid = (ch, i) => ch.groupe || (q.libre ? "_" : "#" + i);
+            const keys = [...new Set(q.champs.map(gid))];
+            const rows = q.champs.map(ch => ({ ch, locked: false, used: -1,
+                input: h("input", { type: "text", class: "saisie champ", autocomplete: "off", autocapitalize: "off", spellcheck: "false", "aria-label": ch.label || "Réponse" }) }));
+            const rowKey = i => gid(q.champs[i], i);
+            const freeExpected = k => q.champs.map((c, i) => i).filter(i => rowKey(i) === k && !rows.some(r => r.locked && r.used === i));
+            function bestMatch(inputs, expected) {
+                let best = [];
+                (function go(i, taken, cur) {
+                    if (cur.length + (inputs.length - i) <= best.length) return;
+                    if (i === inputs.length) { best = cur.slice(); return; }
+                    for (const e of expected) {
+                        if (taken.has(e) || !matches(inputs[i].value, q.champs[e].reponses)) continue;
+                        taken.add(e); cur.push([inputs[i].row, e]);
+                        go(i + 1, taken, cur);
+                        cur.pop(); taken.delete(e);
+                    }
+                    go(i + 1, taken, cur);
+                })(0, new Set(), []);
+                return best;
+            }
+            const feedback = h("div", { class: "feedback", role: "status" });
+            const check = h("button", { class: "btn", onclick: validate }, "Valider ✔️");
+            const idk = h("button", { class: "btn secondary", onclick: () => finish() }, "Je ne sais pas");
+            function finish() {
+                if (done) return;
+                done = true;
+                keys.forEach(k => {
+                    const free = freeExpected(k);
+                    rows.filter((r, i) => rowKey(i) === k && !r.locked).forEach((r, j) => {
+                        r.input.value = q.champs[free[j]].reponses[0];
+                        r.locked = true; r.used = free[j];
+                        r.input.classList.add("input-wrong");
+                    });
+                });
+                rows.forEach(r => { r.input.disabled = true; });
+                check.style.display = "none"; idk.style.display = "none";
+                const ok = rows.every(r => r.input.classList.contains("input-correct"));
+                feedback.className = "feedback " + (ok ? "ok" : "ko");
+                feedback.textContent = ok ? "🎉 Tout est juste !" : "Les bonnes réponses sont en rose.";
+                settle(ok);
+            }
+            function validate() {
+                if (done || !rows.some(r => norm(r.input.value))) return;
+                keys.forEach(k => {
+                    const inputs = rows.map((row, i) => ({ row, i }))
+                        .filter(x => rowKey(x.i) === k && !x.row.locked && norm(x.row.input.value))
+                        .map(x => ({ row: x.row, value: x.row.input.value }));
+                    bestMatch(inputs, freeExpected(k)).forEach(([row, e]) => {
+                        row.locked = true; row.used = e;
+                        row.input.classList.add("input-correct");
+                    });
+                });
+                finish();
+            }
+            rows.forEach(r => r.input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); validate(); } }));
+            focusFirst(rows[0].input);
+            return h("div", {},
+                rows.map(r => h("label", { class: "champ-row" }, h("span", { class: "champ-label" }, r.ch.label || ""), r.input)),
+                feedback, h("div", { class: "saisie-actions" }, check, idk));
+        }
+        // Pour les tests : affiche une question d'une leçon dans un format donné, sans séance
+        window.revisionPreview = (quizId, index, stage) => {
+            const quiz = QUIZZES.find(x => x.id === quizId), q = quiz.questions[index];
+            S = { opts: { quiz }, tasks: [], i: 0, sid: "apercu", start: now(), seen: new Set(), firstOk: new Set(), done: new Set(), lessons: new Map(), before: new Map() };
+            const panel = h("div", { class: "panel session" });
+            const t = { quiz, q, stage };
+            renderQuestion(panel, t, ok => { window.revisionPreviewResult = ok; });
+            content.replaceChildren(panel);
+            inQuiz = true;
+        };
+
+        // ---------------- Mes progrès ----------------
+        function renderProgres() {
+            content.append(h("h2", {}, "Mes progrès"));
+            const total = QUIZZES.reduce((n, q) => n + q.questions.length, 0);
+            const c = [0, 0, 0, 0, 0];
+            QUIZZES.forEach(q => levelCounts(q).forEach((k, i) => { c[i] += k; }));
+            const anc = c[3] + c[4];
+            const week = QUIZZES.reduce((acc, q) => { (srsOf(q.id).ses || []).forEach(s => { if (s[0] > now() - 7 * DAY) { acc.n++; acc.t += s[1]; } }); return acc; }, { n: 0, t: 0 });
+            content.append(h("div", { class: "panel progress-panel" },
+                h("div", { class: "progress" }, h("span", {}, "Questions ancrées"), h("span", { class: "score" }, `${anc} / ${total}`)),
+                h("div", { class: "lvl-legend" }, LEVELS.map((l, i) => h("span", { class: "leg" }, h("i", { class: "lvl-dot l" + i }), `${l.ico} ${l.nom} ${c[i]}`))),
+                h("p", { class: "hint-small" }, `Cette semaine : ${plural(week.n, "séance", "séances")}, ${Math.round(week.t / 60)} min. Une question monte d'un niveau quand tu la réussis du premier coup au bon moment ; une erreur la fait redescendre.`)));
+            if (!QUIZZES.length) return;
+            content.append(h("h3", { class: "pile-title" }, "Mes leçons"));
+            content.append(h("div", { class: "grid" }, QUIZZES.slice().sort((a, b) => lessonRank(a) - lessonRank(b)).map(q => lessonCard(q))));
+        }
+
+        // ---------------- Flashcards libres ----------------
+        // Chaque quiz donne un paquet du même nom : recto = question, verso = bonne réponse.
+        function deckOf(q) {
+            return { id: "quiz-" + q.id, emoji: q.emoji, matiere: q.matiere, titre: q.titre,
+                description: "Cartes générées depuis le quiz : la question au recto, la réponse au verso.",
+                cartes: q.questions.map(x => ({ recto: x.question, verso: answerOf(x) })) };
+        }
+        function decksFromQuizzes() { return QUIZZES.map(deckOf); }
+        function allDecks() { return decksFromQuizzes().concat(FLASHCARDS); }
+        function renderFlashcards() {
+            content.append(h("h2", {}, "Flashcards"));
+            content.append(h("p", { class: "hint-small" }, "Cartes libres pour réviser quand tu veux : elles ne changent pas ton plan de révision."));
+            const decks = allDecks();
+            if (decks.length === 0) { content.append(h("div", { class: "empty" }, "Aucune flashcard pour le moment. Elles apparaîtront ici.")); return; }
+            content.append(h("div", { class: "grid" }, decks.map(d =>
+                h("button", { class: "card", onclick: () => startDeck(d) },
+                    h("div", { class: "emoji" }, d.emoji),
+                    h("h3", {}, d.titre),
+                    h("div", { class: "meta" }, `${d.matiere} · ${d.cartes.length} cartes`),
+                    h("p", { class: "desc" }, d.description)))));
+        }
+
+        // ---------------- Flashcards actives ----------------
+        // Chaque carte : question seule, « Voir la réponse », puis trois choix (Oublié, Hésité, Trouvé). Oublié et Hésité reviennent
+        // dans la même séance jusqu'à Trouvé. La séance ne se termine que lorsque CHAQUE carte a été retournée, évaluée et finit Trouvé.
+        // cfg : { titre, cartes: [{ id, recto, verso, explication? }], etat?: { id: { d, n } }, snapshot?, intro, finishLabel,
+        //         onRate(id, verdict, snapshot), onFinish(setStatus) -> promesse, back }
+        // Les évaluations sont déclaratives et ne changent jamais les séries des quiz.
+        function runCards(cfg) {
+            inQuiz = true;
+            const cards = new Map(cfg.cartes.map(c => [c.id, c]));
+            const ids = cfg.cartes.map(c => c.id);
+            const N = ids.length;
+            const etat = cfg.etat || {};
+            const trouve = new Set(ids.filter(id => etat[id] && etat[id].d === "trouve"));
+            const seen = new Set(ids.filter(id => etat[id] && etat[id].n > 0));
+            const snap = cfg.snapshot || {};
+            const valid = list => (Array.isArray(list) ? list : []).filter((id, i, a) => cards.has(id) && !trouve.has(id) && a.indexOf(id) === i);
+            let fresh = valid(snap.f), oub = valid(snap.o), hes = valid(snap.h);
+            const wait = Object.assign({}, snap.w || {});
+            let cur = cards.has(snap.c) && !trouve.has(snap.c) ? snap.c : "";
+            let last = cards.has(snap.l) ? snap.l : "";
+            // aucune carte ne se perd : celles qui ne sont ni Trouvé ni dans une file sont à présenter
+            ids.forEach(id => { if (!trouve.has(id) && id !== cur && !fresh.includes(id) && !oub.includes(id) && !hes.includes(id)) fresh.push(id); });
+
+            // Prochaine carte : d'abord toutes les cartes jamais présentées ; ensuite les Oublié, puis les Hésité, une carte
+            // revenant après l'évaluation d'au plus 3 autres cartes et jamais deux fois de suite si une autre est disponible.
+            function pick() {
+                if (fresh.length) return fresh[0];
+                const ready = list => list.find(id => (wait[id] || 0) <= 0 && id !== last);
+                const id = ready(oub) || ready(hes);
+                if (id) return id;
+                const pool = oub.concat(hes);
+                return pool.find(x => x !== last) || pool[0] || "";
+            }
+            function take() {
+                const id = pick();
+                fresh = fresh.filter(x => x !== id); oub = oub.filter(x => x !== id); hes = hes.filter(x => x !== id);
+                cur = id;
+            }
+            if (!cur) take();
+            const snapshot = () => ({ f: fresh.slice(), o: oub.slice(), h: hes.slice(), w: Object.assign({}, wait), c: cur, l: last });
+
+            function rate(verdict) {
+                const id = cur;
+                if (!id) return;
+                seen.add(id);
+                Object.keys(wait).forEach(k => { if (k !== id) wait[k] = Math.max(0, wait[k] - 1); });
+                if (verdict === "trouve") { trouve.add(id); delete wait[id]; }
+                else {
+                    trouve.delete(id);
+                    wait[id] = Math.min(3, fresh.length + oub.length + hes.length);
+                    (verdict === "oublie" ? oub : hes).push(id);
+                }
+                last = id; cur = "";
+                take();
+                if (cfg.onRate) cfg.onRate(id, verdict, snapshot());
+                flipped = false;
+                draw();
+            }
+
+            let flipped = false;
+            const header = h("div", { class: "progress" }, h("span", {}, cfg.titre), h("span", { class: "cards-count", "aria-live": "polite" }));
+            const stage = h("div", {});
+            const status = h("div", { class: "etape-msg", role: "status", style: "display:none" });
+            content.replaceChildren(h("div", { class: "panel" },
+                h("button", { class: "back", onclick: cfg.onBack || renderList }, cfg.back || "← Retour aux leçons"),
+                cfg.intro ? h("div", { class: "etape-intro", role: "status" }, cfg.intro) : null,
+                header, stage, status));
+
+            function counters() {
+                header.querySelector(".cards-count").textContent =
+                    `Cartes travaillées ${seen.size} sur ${N} · Cartes encore à revoir ${N - trouve.size}`;
+            }
+            function draw() {
+                counters();
+                status.style.display = "none";
+                if (!cur) return drawEnd();
+                const c = cards.get(cur);
+                if (!flipped) {
+                    const flip = () => { flipped = true; draw(); };
+                    stage.replaceChildren(
+                        h("button", { class: "flashcard", "aria-label": "Voir la réponse", onclick: flip },
+                            h("div", { class: "face-label" }, "Question"),
+                            h("div", { class: "face-text" }, c.recto),
+                            h("div", { class: "face-hint" }, "Cherche ta réponse")),
+                        h("div", { class: "deck-nav" },
+                            h("button", { class: "btn secondary", onclick: () => { fresh = shuffle(fresh); draw(); } }, "🔀 Mélanger"),
+                            h("button", { class: "btn flip-btn", onclick: flip }, "Voir la réponse")));
+                    return;
+                }
+                const guard = { done: false };
+                const choose = v => () => { if (guard.done) return; guard.done = true; rate(v); };
+                const evalBar = h("div", { class: "eval", role: "group", "aria-label": "Comment était cette carte ?" },
+                    h("button", { class: "btn eval-btn oublie", onclick: choose("oublie") }, "❌ Oublié"),
+                    h("button", { class: "btn eval-btn hesite", onclick: choose("hesite") }, "🤔 Hésité"),
+                    h("button", { class: "btn eval-btn trouve", onclick: choose("trouve") }, "✅ Trouvé"));
+                stage.replaceChildren(
+                    h("div", { class: "flashcard flipped", role: "group", "aria-label": "Réponse" },
+                        h("div", { class: "face-label" }, "Réponse"),
+                        h("div", { class: "face-text" }, c.verso),
+                        c.explication ? h("div", { class: "face-expl" }, c.explication) : null),
+                    evalBar);
+                evalBar.querySelector("button").focus();
+                evalBar.scrollIntoView({ block: "nearest" });   // jamais masqué par la barre du bas (scroll-padding)
+            }
+            function drawEnd() {
+                const finish = h("button", { class: "btn finish-btn", onclick: () => {
+                    finish.disabled = true;
+                    status.style.display = "block"; status.textContent = "Enregistrement en cours…";
+                    Promise.resolve(cfg.onFinish((text, retry) => { status.style.display = "block"; status.textContent = text; finish.disabled = false; return retry; }))
+                        .then(() => { /* la suite est gérée par onFinish */ });
+                } }, cfg.finishLabel);
+                stage.replaceChildren(h("div", { class: "panel result" },
+                    h("div", { class: "big-emoji" }, "🎉"),
+                    h("h2", {}, "Toutes les cartes sont trouvées !"),
+                    h("div", { class: "finish-zone" }, finish)));
+            }
+            draw();
+            // pour les tests et la reprise : état courant lisible
+            window.revisionCards = () => ({ cur, trouve: [...trouve], seen: [...seen], fresh: fresh.slice(), oub: oub.slice(), hes: hes.slice(), N });
+        }
+
+        // Flashcards libres (onglet Flashcards ou « Voir les cartes » d'une leçon) : même interaction, sans effet sur le plan de révision
+        function startDeck(deck, opts) {
+            opts = opts || {};
+            runCards({
+                titre: deck.titre,
+                cartes: deck.cartes.map((c, i) => ({ id: "c" + i, recto: c.recto, verso: c.verso })),
+                back: opts.back || "← Retour à la liste",
+                onBack: opts.onBack,
+                finishLabel: "Terminer la séance",
+                onFinish: () => { (opts.onBack || renderList)(); }
+            });
+        }
+
+        // ---------------- Connexion ----------------
+        const SESSION_KEY = "revision-session";    // sessionStorage : garde l'élève connecté le temps de l'onglet
+        const LAST_KEY = "revision-dernier-eleve"; // localStorage : préremplit la classe et le pseudo (jamais le PIN)
+        const hasServer = !!(window.google && google.script && google.script.run);
+        const $ = id => document.getElementById(id);
+        let me = null;
+
+        function cleanError(err) { return String(err && err.message ? err.message : err).replace(/^Error:\s*/, ""); }
+
+        function showLogin(message) {
+            me = null; session = null; QUIZZES = []; FLASHCARDS = []; SRS = {}; S = null; inQuiz = false;
+            content.replaceChildren();
+            $("app").hidden = true;
+            $("login").hidden = false;
+            $("login-error").textContent = message || "";
+            $("login-pin").value = "";
+            $("login-btn").disabled = false;
+            try { sessionStorage.removeItem(SESSION_KEY); } catch (e) { /* ignoré */ }
+            updateCounts();
+        }
+
+        function enterApp(data, creds) {
+            me = data.student;
+            QUIZZES = data.quizzes;
+            FLASHCARDS = data.decks;
+            SRS = data.srs || {};
+            clockSkew = data.now ? data.now - Date.now() : 0;
+            session = creds;
+            try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(creds)); } catch (e) { /* ignoré */ }
+            try { localStorage.setItem(LAST_KEY, JSON.stringify({ classe: creds.classe, pseudo: creds.pseudo })); } catch (e) { /* ignoré */ }
+            $("login").hidden = true;
+            $("app").hidden = false;
+            $("whoami-name").textContent = "👤 " + me.pseudo + " · " + me.classe;
+            if (window.rvStreakFor) window.rvStreakFor(me.id);
+            setTab("quiz");
+            // profil mémorisé (mis à jour si le prénom a changé) — jamais le PIN
+            if (PROFILS) PROFILS.memoriser({ role: "eleve", id: me.id, nom: me.pseudo, pseudo: me.pseudo, classe: me.classe });
+            formulaireComplet(false);
+        }
+
+        function connect(creds, silent) {
+            if (!hasServer) { showLogin("La connexion n'est disponible que depuis le script déployé."); return; }
+            $("login-btn").disabled = true;
+            google.script.run
+                .withSuccessHandler(data => enterApp(data, creds))
+                .withFailureHandler(err => { const m = cleanError(err); showLogin(silent ? "" : m); if (!silent) echecProfil(m); })
+                .getStudentData(creds.classe, creds.pseudo, creds.pin);
+        }
+
+        $("login-form").addEventListener("submit", e => {
+            e.preventDefault();
+            $("login-error").textContent = "";
+            connect({ classe: $("login-classe").value, pseudo: $("login-pseudo").value, pin: $("login-pin").value }, false);
+        });
+        $("logout").addEventListener("click", () => { formulaireComplet(false); showLogin(""); });
+
+        // ---------------- Profils mémorisés : écran « Qui es-tu ? » ----------------
+        // Après chaque connexion réussie, le profil (classe, pseudo, couleur — jamais le PIN) est mémorisé sur l'appareil.
+        // Au lancement, sans session ouverte : grille des profils ; toucher un profil ne demande plus que le PIN.
+        const PROFILS = window.QuizyProfils && window.QuizyProfils.actif() ? window.QuizyProfils : null;
+        let profilChoisi = null;
+        function afficherQuiEsTu() {
+            if (!PROFILS || !PROFILS.lire().length) { formulaireComplet(false); return; }
+            profilChoisi = null;
+            $("login-form").hidden = true; $("login-profil-retrait").hidden = true;
+            PROFILS.grille($("who"), {
+                onChoisir: p => {
+                    if (p.role === "parent") { PROFILS.choisirPour(p); location.href = "/parents"; return; }   // rien dans l'URL
+                    utiliserProfil(p);
+                },
+                onAutre: () => formulaireComplet(true)
+            });
+            const premier = $("who").querySelector(".qp-profil"); if (premier) premier.focus();
+        }
+        function utiliserProfil(p) {
+            profilChoisi = p;
+            $("who").hidden = true; $("login-form").hidden = false;
+            $("login-classe").value = p.classe; $("login-pseudo").value = p.pseudo; $("login-pin").value = "";
+            $("login-error").textContent = ""; $("login-profil-retrait").hidden = true;
+            $("login-form").classList.add("avec-profil");
+            PROFILS.puce($("login-profil"), p, afficherQuiEsTu);
+            $("login-pin").focus();
+        }
+        // Formulaire complet (classe, pseudo, PIN) ; vider = nouvelle connexion
+        function formulaireComplet(vider) {
+            profilChoisi = null;
+            $("who").hidden = true; $("login-form").hidden = false;
+            $("login-form").classList.remove("avec-profil");
+            $("login-profil").hidden = true; $("login-profil-retrait").hidden = true;
+            if (vider) { $("login-classe").value = ""; $("login-pseudo").value = ""; $("login-error").textContent = ""; $("login-classe").focus(); }
+        }
+        // Connexion refusée avec un profil mémorisé : message clair, sans dire si c'est le PIN ou le profil (sécurité)
+        function echecProfil(message) {
+            if (!profilChoisi) return;
+            const p = profilChoisi;
+            const refus = message === "Classe, pseudo ou PIN incorrect.";
+            if (refus) $("login-error").textContent = "PIN incorrect, ou ce profil n'existe plus. Réessaie, ou retire ce profil de l'appareil.";
+            PROFILS.proposerRetrait($("login-profil-retrait"), p, refus ? "Ce profil n'est plus valable ?" : "Un souci avec ce profil ?", afficherQuiEsTu);
+        }
+        // Sur téléphone, « Se déconnecter » devient le 4e onglet de la barre du bas
+        const phoneMq = window.matchMedia("(max-width: 700px)");
+        function placeLogout() {
+            const btn = $("logout");
+            if (phoneMq.matches) { btn.className = "tab logout-tab"; document.querySelector(".sidebar").append(btn); }
+            else { btn.className = "btn secondary"; document.querySelector(".whoami").append(btn); }
+        }
+        placeLogout();
+        if (phoneMq.addEventListener) phoneMq.addEventListener("change", placeLogout);
+
+        // Compteurs dans les onglets + événements
+        updateCounts();
+        document.querySelectorAll(".tab[data-tab]").forEach(b =>
+            b.addEventListener("click", () => setTab(b.dataset.tab)));
+
+        // Préremplit la classe et le pseudo du dernier élève, puis rouvre la session de l'onglet s'il y en a une
+        try {
+            const last = JSON.parse(localStorage.getItem(LAST_KEY));
+            if (last) { $("login-classe").value = last.classe || ""; $("login-pseudo").value = last.pseudo || ""; }
+        } catch (e) { /* ignoré */ }
+        let savedSession = null;
+        try { savedSession = JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch (e) { /* ignoré */ }
+        if (savedSession && savedSession.classe) connect(savedSession, true);
+        else if (PROFILS) {
+            // profil touché dans l'espace parents ? sinon la grille, s'il y a des profils mémorisés
+            const choix = PROFILS.choixEnAttente();
+            if (choix && choix.role === "eleve") utiliserProfil(choix); else afficherQuiEsTu();
+        }
+    </script>
+</body>
+</html>

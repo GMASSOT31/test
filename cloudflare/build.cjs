@@ -1,10 +1,11 @@
-// Construit la version Cloudflare de QUIZy à partir des sources Apps Script, SANS les modifier :
+// Construit QUIZy (Cloudflare) à partir de cloudflare/source/ (pages + Code.gs repris tels quels) :
 //   src/app.gen.js   = Contenu.gs + Code.gs emballés dans createApp(services) (les services Google sont fournis par l'adaptateur)
 //   public/          = pages (Index.html → index.html, admin.html → parents.html) adaptées + fichiers de static/
-// Une seule source pour les deux versions : toute évolution de apps-script/ se retrouve ici à la prochaine construction.
+// Le dossier apps-script/ (ancienne version, figée) n'est plus lu ni modifié.
 'use strict';
 const fs = require('fs'), path = require('path');
-const ROOT = __dirname, AS = path.join(ROOT, '..', 'apps-script');
+// Sources de QUIZy (Cloudflare) : cloudflare/source/. Le dossier apps-script/ est l'ancienne version, figée (16/11/2026).
+const ROOT = __dirname, AS = path.join(ROOT, 'source');
 const read = f => fs.readFileSync(path.join(AS, f), 'utf8');
 const { applyTheme } = require('./theme/theme.cjs');   // identité visuelle QUIZy, propre à la version Cloudflare
 
@@ -60,7 +61,8 @@ function head(manifest, title) {
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="QUIZy">
-    <script src="/run.js"></script>`;
+    <script src="/run.js"></script>
+    <script src="/profils.js"></script>`;
 }
 let eleve = applyTheme(read('Index.html'), 'eleve');
 eleve = replaceOnce(eleve, '<title>QUIZy</title>', head('manifest.webmanifest', 'QUIZy'), 'titre de la page élève');

@@ -1,0 +1,2309 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QUIZy · Parents</title>
+    <style>
+        :root {
+            --navy: #1e3a8a;
+            --blue: #3b6fe0;
+            --gold: #ffd166;
+            --pink: #ff8fb8;
+            --violet: #785aff;
+            --mint: #5dffb0;
+            --ink: #1f2a4d;
+            --muted: #6a7394;
+            --line: #e3e8f5;
+            --bg: #f4f6fb;
+            --green: #16a34a;
+            --red: #dc2626;
+            --sticker: 0 3px 0 rgba(15,23,80,.35);
+            --soft: 0 5px 0 rgba(15,23,80,.12), 0 12px 28px rgba(30,58,138,.10);
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); background: var(--bg); }
+        /* ===== BANNIÈRE (fournie) ===== */
+      .rv-banner {
+        position: relative; overflow: hidden; color: #fff; text-align: center;
+        padding: 14px 16px 0;
+        background:
+          radial-gradient(circle at 12% 20%, rgba(255,95,162,.55), transparent 38%),
+          radial-gradient(circle at 88% 10%, rgba(255,209,102,.40), transparent 34%),
+          radial-gradient(circle at 70% 100%, rgba(120,90,255,.55), transparent 45%),
+          linear-gradient(135deg, #1e3a8a 0%, #3b6fe0 100%);
+        border-bottom: 3px solid #ffd166;
+      }
+      .rv-banner::before { /* motif points façon cahier */
+        content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .18;
+        background-image: radial-gradient(#fff 1.2px, transparent 1.4px);
+        background-size: 22px 22px;
+      }
+      .rv-inner { position: relative; z-index: 2; max-width: 760px; margin: 0 auto; }
+
+      .rv-sticker {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.35);
+        backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+        padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .3px;
+        transform: rotate(-2deg);
+      }
+      .rv-dot { width: 9px; height: 9px; border-radius: 50%; background: #5dffb0; box-shadow: 0 0 0 0 rgba(93,255,176,.7); animation: rv-pulse 1.8s infinite; }
+      @keyframes rv-pulse { 70% { box-shadow: 0 0 0 10px rgba(93,255,176,0); } 100% { box-shadow: 0 0 0 0 rgba(93,255,176,0); } }
+
+      .rv-title {
+        margin: 8px 0 2px; font-size: clamp(24px, 4.6vw, 36px); line-height: 1.05; font-weight: 900; letter-spacing: -1px;
+        text-shadow: 0 3px 0 rgba(15,23,80,.35);
+      }
+      .rv-title .rv-hl {
+        background: linear-gradient(90deg, #ffd166, #ff8fb8); -webkit-background-clip: text; background-clip: text;
+        -webkit-text-fill-color: transparent; text-shadow: none; filter: drop-shadow(0 3px 0 rgba(15,23,80,.35));
+      }
+      .rv-sub { min-height: 20px; margin: 0 0 8px; font-size: clamp(13px, 2vw, 15px); font-weight: 600; opacity: .95; transition: opacity .35s, transform .35s; }
+      .rv-sub.rv-out { opacity: 0; transform: translateY(6px); }
+
+      .rv-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
+      .rv-chip {
+        background: #fff; color: #1e3a8a; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 10px;
+        box-shadow: 0 3px 0 rgba(15,23,80,.35); transition: transform .15s;
+      }
+      .rv-chip:nth-child(odd) { transform: rotate(-2deg); }
+      .rv-chip:nth-child(even) { transform: rotate(2deg); }
+      .rv-chip:hover { transform: rotate(0) translateY(-2px) scale(1.06); }
+
+      /* emojis flottants */
+      .rv-float { position: absolute; z-index: 1; font-size: 24px; opacity: .9; animation: rv-bob 5s ease-in-out infinite; user-select: none; }
+      .rv-f1 { left: 5%;  top: 22%; animation-delay: 0s; }
+      .rv-f2 { left: 14%; top: 62%; animation-delay: -1.2s; font-size: 19px; }
+      .rv-f3 { right: 6%; top: 18%; animation-delay: -2.4s; }
+      .rv-f4 { right: 15%; top: 58%; animation-delay: -3.3s; font-size: 19px; }
+      @keyframes rv-bob { 0%,100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-12px) rotate(8deg); } }
+
+      /* bandeau défilant */
+      .rv-ticker { position: relative; z-index: 2; margin: 0 -16px; background: #ffd166; color: #1e3a8a; overflow: hidden; white-space: nowrap; transform: rotate(-.6deg) scale(1.02); }
+      .rv-track { display: inline-block; padding: 4px 0; font-size: 11px; font-weight: 900; letter-spacing: 1.2px; animation: rv-scroll 28s linear infinite; }
+      @keyframes rv-scroll { to { transform: translateX(-50%); } }
+
+      @media (max-width: 560px) { .rv-float { display: none; } .rv-banner { padding-top: 10px; } }
+      @media (prefers-reduced-motion: reduce) { .rv-float, .rv-track, .rv-dot { animation: none; } }
+
+        section { background: #fff; border-radius: 18px; box-shadow: var(--soft); padding: 22px; }
+        h2 { margin: 0 0 14px; font-size: 1.25rem; font-weight: 900; letter-spacing: -.3px; color: var(--navy); }
+        label { display: block; font-weight: 700; font-size: .9rem; margin: 12px 0 4px; }
+        input[type=text], input[type=password], textarea, select {
+            width: 100%; padding: 10px 12px; border: 2px solid var(--line); border-radius: 12px;
+            font: inherit; background: #f9faff;
+        }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: var(--blue); background: #fff; }
+        textarea { resize: vertical; min-height: 60px; }
+        .row { display: grid; grid-template-columns: 1fr 1fr 90px; gap: 12px; }
+        .hint { font-size: .8rem; color: var(--muted); margin: 4px 0 0; }
+
+        .question {
+            border: 2px solid var(--line); border-radius: 14px; padding: 14px; margin-top: 14px; background: #fafbff;
+        }
+        .question-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 700; margin-bottom: 6px; }
+        .question-head select { width: auto; padding: 6px 10px; font-weight: 600; }
+        .opt { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+        .opt input[type=radio] { width: 20px; height: 20px; accent-color: var(--green); flex-shrink: 0; }
+
+        .btn {
+            border: 0; border-radius: 999px; padding: 10px 22px; font: inherit; font-weight: 800;
+            cursor: pointer; background: var(--blue); color: #fff;
+            box-shadow: var(--sticker); transition: transform .12s, box-shadow .12s, background .15s;
+        }
+        .btn:hover:not(:disabled) { background: #2f5fd0; transform: translateY(-2px); }
+        .btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgba(15,23,80,.35); }
+        .btn:disabled { opacity: .6; cursor: default; box-shadow: none; }
+        .btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+        .btn.secondary { background: #fff; color: var(--navy); }
+        .btn.secondary:hover:not(:disabled) { background: #fff9e8; }
+        .btn.danger { background: #fff; color: var(--red); box-shadow: 0 3px 0 rgba(220,38,38,.4); padding: 6px 14px; }
+        .btn.danger:hover:not(:disabled) { background: #fff0f0; }
+        .btn.small { padding: 6px 14px; }
+        .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+        .status { margin-top: 14px; padding: 10px 14px; border-radius: 12px; font-weight: 700; display: none; }
+        .status.ok { display: block; background: #d9fff0; color: #07402a; }
+        .status.err { display: block; background: #ffe3ee; color: #5a0a2a; }
+        .status.info { display: block; background: #eceaff; color: #3a2a9a; }
+
+        .item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+        .item:first-child { border-top: 0; }
+        .item .info { flex: 1; min-width: 0; }
+        .item .info strong { display: block; }
+        .item .info span { font-size: .85rem; color: var(--muted); }
+        .empty { color: var(--muted); }
+
+        @media (prefers-reduced-motion: reduce) { .btn, .tab { transition: none; } .tab:nth-child(odd), .tab:nth-child(even) { transform: none; } }
+        @media (max-width: 600px) {
+            .row, .row2, .row3 { grid-template-columns: 1fr; }
+            .field-row { grid-template-columns: 1fr 1fr; }
+            .field-row .f-reps { grid-column: 1 / -1; }
+            .inline { flex-wrap: wrap; }
+            .item { flex-wrap: wrap; }
+            .item .info { flex: 1 1 calc(100% - 44px); min-width: 0; }
+        }
+        [hidden] { display: none !important; }
+        .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .inline { display: flex; gap: 12px; align-items: center; }
+        .inline input { flex: 1; }
+        .pour { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 6px; }
+        .pour-item { display: inline-flex; align-items: center; gap: 7px; margin: 0; font-weight: 700; font-size: .95rem; cursor: pointer; }
+        .pour-item input { width: 18px; height: 18px; accent-color: var(--blue); cursor: pointer; }
+        .warn { color: #c0264b !important; font-weight: 700; }
+        .builtin { padding: 14px 0; border-top: 1px solid var(--line); }
+        .builtin:first-child { border-top: 0; }
+        .builtin .info strong { display: block; }
+        .builtin .info span { display: block; font-size: .85rem; color: var(--muted); }
+        .builtin .builtin-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+        .builtin .builtin-name { flex: 1 1 140px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .builtin-pour { font-size: .82rem; font-weight: 700; color: #07603b; }
+        .builtin-pour.none { color: var(--muted); font-weight: 600; }
+        .builtin-pour .matiere { color: var(--muted); font-weight: 600; }
+        .builtin .builtin-details { margin-top: 8px; }
+        .builtin .builtin-details[hidden] { display: none; }
+        .item .info span { display: block; }
+        .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .fields-rows { display: grid; gap: 8px; margin: 8px 0; }
+        .field-row { display: grid; grid-template-columns: 1fr 1.6fr .8fr auto; gap: 8px; align-items: center; }
+        .field-row .btn { padding: 6px 12px; }
+        /* Barre du mot de passe */
+        .lockbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; max-width: 1180px; margin: 16px auto 0; padding: 12px 16px; background: #fff; border-radius: 16px; box-shadow: var(--soft); }
+        .lockbar label { margin: 0; font-weight: 800; color: var(--navy); }
+        .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+        .lockbar input { width: auto; flex: 1; min-width: 150px; max-width: 260px; }
+        .lockbar .btn { padding: 9px 20px; }
+        /* profil mémorisé : la puce (avatar + nom + « Autre profil ») remplace le champ pseudo */
+        .lockbar .qp-puce { flex: 1 1 100%; margin: 0; }
+        .lockbar.avec-profil label[for="admin-pseudo"], .lockbar.avec-profil #admin-pseudo { display: none; }
+        #who-retrait { flex: 1 1 100%; }
+        .status.inline { display: none; margin: 0; padding: 7px 12px; }
+        .status.inline.ok, .status.inline.err, .status.inline.info { display: inline-block; }
+        .locked-hint { max-width: 1180px; margin: 22px auto; padding: 0 16px; color: var(--muted); font-weight: 600; text-align: center; }
+        .switch-zone { text-align: center; margin: 14px auto; }
+        .switch-link { font-size: .8rem; font-weight: 600; color: var(--muted); text-decoration: none; opacity: .8; }
+        .switch-link:hover, .switch-link:focus-visible { text-decoration: underline; opacity: 1; }
+
+        /* Barre du haut : 4 sections, puis Actualiser / Verrouiller */
+        .shell { max-width: 1180px; margin: 14px auto 60px; padding: 0 16px; }
+        .topnav { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 10px; padding: 8px 0 10px; background: var(--bg); }
+        .tabs { display: flex; flex: 1; min-width: 0; gap: 8px; }
+        .tab { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 1 1 0; min-width: 0; padding: 11px 12px;
+               border: 0; border-radius: 14px; background: #fff; font: inherit; font-weight: 800; color: var(--navy); cursor: pointer; box-shadow: var(--sticker); }
+        .tab .t-ico { font-size: 1.2rem; line-height: 1; }
+        .tab:hover { background: #f4f6ff; }
+        .tab[aria-selected="true"] { background: var(--gold); }
+        .tab .count { font-size: .75rem; padding: 1px 8px; border-radius: 999px; background: var(--navy); color: #fff; }
+        .tab .count:empty { display: none; }
+        .tab:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
+        .lockbar.docked { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 6px; margin: 0; padding: 0; background: transparent; box-shadow: none; max-width: none; }
+        .lockbar.docked label, .lockbar.docked input { display: none !important; }
+        .lockbar.docked .status { margin: 0; padding: 6px 10px; font-size: .8rem; white-space: nowrap; }
+        .lockbar.docked .btn { padding: 9px 12px; font-size: .85rem; white-space: nowrap; }
+        /* En-tête de section : ce qu'on peut y faire + l'action principale */
+        section.intro { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; background: linear-gradient(135deg, #eef3ff, #fff); }
+        section.intro .intro-txt { flex: 1 1 320px; }
+        section.intro h2 { margin: 0 0 4px; }
+        section.intro .hint { margin: 0; }
+        .back-link { background: none; border: 0; padding: 0 0 8px; font: inherit; font-weight: 800; color: var(--blue); cursor: pointer; }
+        .back-link:hover { text-decoration: underline; }
+        /* Avancement et guide */
+        .avancement { display: inline-block; margin-left: 8px; font-size: .78rem; font-weight: 800; padding: 2px 10px; border-radius: 999px; background: #e7f0ff; color: var(--navy); vertical-align: middle; }
+        .av-bar { height: 8px; max-width: 260px; margin: 6px 0 4px; }
+        .bar.av-bar span { background: linear-gradient(90deg, #9be7c4, #2fbf7f); }
+        .guide { border: 2px dashed #c9d4f5; border-radius: 16px; padding: 14px 16px; margin: 10px 0 16px; background: #fbfcff; }
+        .guide h3 { margin: 0 0 8px; color: var(--navy); }
+        .guide ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+        .guide li { display: flex; gap: 10px; align-items: flex-start; }
+        .guide li > div { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+        .guide li span:not(.g-dot) { color: var(--muted); font-size: .9rem; }
+        .guide .g-dot { flex: 0 0 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #e3e6ef; font-weight: 900; color: var(--navy); }
+        .guide li.done .g-dot { background: var(--green); color: #fff; }
+        .guide li.done strong { text-decoration: line-through; color: var(--muted); }
+        .content { flex: 1; min-width: 0; }
+        .pane { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }   /* minmax : un titre long ne fait jamais déborder la page */
+
+        /* Listes par classe */
+        details.classe { margin-top: 14px; }
+        details.classe:first-of-type { margin-top: 4px; }
+        details.classe > summary { cursor: pointer; font-weight: 900; color: var(--navy); padding: 8px 12px; background: #eef2ff; border-radius: 10px; list-style-position: inside; }
+        details.classe[open] > summary { margin-bottom: 6px; }
+
+        /* Progression */
+        .bar { height: 12px; border-radius: 999px; background: #e8ecf8; overflow: hidden; margin: 8px 0 6px; }
+        .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--pink)); transition: width .4s; }
+        .prog-card { border: 2px solid var(--line); border-radius: 14px; padding: 14px; margin: 12px 0; background: #fafbff; }
+        .prog-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+        .prog-head .info strong { display: block; font-size: 1.05rem; }
+        .prog-head .info span { font-size: .85rem; color: var(--muted); }
+        .lesson { padding: 12px 0; border-top: 1px solid var(--line); }
+        .lesson-title { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+        .niveau { font-size: .8rem; font-weight: 800; padding: 2px 10px; border-radius: 999px; background: #eef2ff; color: var(--navy); }
+        .lesson-detail { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: .85rem; color: var(--muted); margin-bottom: 8px; }
+        /* ===== Téléphone : bandeau très fin, onglets en symboles sur une seule ligne ===== */
+        @media (max-width: 760px) {
+            .rv-banner { padding: 6px 12px; border-bottom-width: 2px; }
+            .rv-sticker, .rv-sub, .rv-chips, .rv-ticker, .rv-float { display: none; }
+            .rv-title { margin: 0; font-size: 18px; letter-spacing: -.5px; text-shadow: 0 2px 0 rgba(15,23,80,.35); }
+            .lockbar { margin: 8px 12px 0; padding: 6px 8px; gap: 6px; border-radius: 12px; }
+            .lockbar label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+            .lockbar input { flex: 1 1 120px; min-width: 0; padding: 8px 10px; }
+            .lockbar .btn { padding: 8px 12px; white-space: nowrap; }
+            .lockbar .status { flex-basis: 100%; margin: 0; }
+            .lockbar .status:empty { display: none; }
+            .locked-hint { display: none; }
+            .shell { margin: 6px auto 40px; padding: 0 10px; }
+            .topnav { gap: 4px; padding: 4px 0 8px; }
+            .tabs { gap: 4px; }
+            .tab { flex-direction: column; gap: 1px; padding: 5px 2px; font-size: .68rem; border-radius: 12px; }
+            .tab .t-ico { font-size: 1.15rem; }
+            .tab .count { position: absolute; top: -4px; right: 2px; padding: 0 5px; font-size: .6rem; }
+            .lockbar.docked { gap: 4px; }
+            .lockbar.docked .status { display: none !important; }
+            .lockbar.docked .btn { width: 38px; padding: 8px 0; font-size: 0; }
+            .lockbar.docked #unlock::before { content: "↻"; font-size: 1.1rem; }
+            .lockbar.docked #acct-btn::before { content: "👤"; font-size: 1.1rem; }
+            .tab .t-lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            section.signup { margin: 8px 12px; padding: 16px; }
+            section.intro .btn { width: 100%; }
+        }
+        /* Suivi des révisions : niveaux, prête pour le contrôle */
+        .lvl-bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: #eceff7; margin: 8px 0 4px; }
+        .lvl, .lvl-dot { display: block; height: 100%; }
+        .l0 { background: #dfe3ee; } .l1 { background: #9be7c4; } .l2 { background: #2fbf7f; } .l3 { background: #ffd166; } .l4 { background: #785aff; }
+        .lvl-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .8rem; font-weight: 700; color: var(--muted); }
+        .leg { display: inline-flex; align-items: center; gap: 4px; }
+        .lvl-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .pret { font-size: .8rem; font-weight: 800; padding: 2px 10px; border-radius: 999px; }
+        .pret.ok { background: #d9fff0; color: #07402a; } .pret.mid { background: #fff3cd; color: #6b4a00; } .pret.ko { background: #ffe3ee; color: #8a1740; }
+        .student-sum { display: block; font-size: .82rem; color: var(--muted); font-weight: 600; }
+        .difficiles, .historique { margin: 6px 0; font-size: .88rem; }
+        .difficiles summary, .historique summary { cursor: pointer; font-weight: 800; color: var(--navy); }
+        .exam-label { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: .88rem; }
+        .exam-input { width: auto; padding: 5px 8px; }
+        .exam-row { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+        .plan-txt { color: var(--navy); font-weight: 700; }
+        /* Suivi en un coup d'œil : élève, leçons et pourcentage ; « + » pour le détail */
+        .prog-card.compact .prog-head { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; margin-bottom: 6px; }
+        .st-name { flex: 1; min-width: 0; font-size: 1.1rem; }
+        .st-pct { font-weight: 900; font-size: 1.1rem; color: #07603b; }
+        .plus { flex: 0 0 auto; width: 34px; height: 34px; padding: 0; border-radius: 50%; border: 2px solid var(--line); background: #fff; color: var(--navy);
+                font: inherit; font-size: 1.3rem; font-weight: 900; line-height: 1; cursor: pointer; box-shadow: var(--sticker); }
+        .plus.on { background: var(--gold); }
+        .plus:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
+        .lesson-list { list-style: none; margin: 0; padding: 0; }
+        .lesson-row { border-top: 1px solid var(--line); padding: 8px 0; }
+        .lesson-row.archived { opacity: .6; }
+        .lr-main { display: grid; grid-template-columns: minmax(0, 1fr) auto 140px 48px 34px; align-items: center; gap: 10px; }
+        .lr-name { font-weight: 700; color: var(--navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lr-exam { font-size: .75rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: #eef2ff; color: var(--navy); white-space: nowrap; }
+        .lr-exam.empty { background: none; padding: 0; }
+        .lr-bar { display: block; height: 10px; border-radius: 999px; background: #e8ecf8; overflow: hidden; }
+        .lr-bar span { display: block; height: 100%; background: linear-gradient(90deg, #9be7c4, #2fbf7f); }
+        .lr-pct { font-weight: 900; text-align: right; color: var(--navy); }
+        .lesson-row .lesson { border-top: 0; margin-top: 6px; padding: 10px 12px; border-radius: 12px; background: #fff; border: 2px solid var(--line); }
+        .student-extra { margin: 4px 0 8px; }
+        details.advanced { background: #fff; border-radius: 18px; box-shadow: var(--soft); padding: 14px 22px; }
+        details.advanced summary { cursor: pointer; font-weight: 800; color: var(--muted); }
+        /* Programmes de révision : un nom par élève, le détail se déplie */
+        .prog-card.compact { padding: 10px 14px; margin: 8px 0; }
+        .prog-card.compact .prog-head { margin-bottom: 0; }
+        .prog-card.compact .prog-head strong { font-size: 1.05rem; }
+        .prog-detail { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+        .prog-detail .total { font-size: .85rem; color: var(--muted); margin: 0 0 6px; }
+        .prog-detail .detail-actions { margin-top: 8px; }
+        .badges { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+        .fois-admin { font-size: .8rem; font-weight: 800; padding: 2px 10px; border-radius: 999px; background: var(--gold); color: var(--navy); }
+        .q-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0 4px; }
+        .q-tools input { flex: 1; min-width: 200px; width: auto; }
+        .q-count { font-size: .85rem; color: var(--muted); font-weight: 700; }
+        .question[hidden] { display: none; }
+        .question.collapsed > :not(.question-head):not(.q-text) { display: none !important; }
+        .q-toggle { padding: 4px 10px; }
+        .badge-modifie { font-size: .75rem; font-weight: 800; padding: 2px 9px; border-radius: 999px; background: #fff6dc; color: #8a6100; margin-left: 8px; }
+        .parcours-admin { font-size: .8rem; font-weight: 800; padding: 2px 10px; border-radius: 999px; background: #f1eeff; color: var(--violet); }
+        .parcours-admin.attente { background: #ffe3ee; color: #c0264b; }
+        .lesson-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        /* Menu du compte (pseudo) : changer le mot de passe, se déconnecter */
+        .acct { position: relative; }
+        .acct-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 40; display: grid; gap: 2px; min-width: 240px; padding: 6px;
+                     background: #fff; border-radius: 14px; box-shadow: var(--soft); border: 2px solid var(--line); }
+        .menu-item { text-align: left; border: 0; background: none; font: inherit; font-weight: 700; padding: 10px 12px; border-radius: 10px; color: var(--navy); cursor: pointer; white-space: nowrap; }
+        .menu-item:hover, .menu-item:focus-visible { background: #f4f6ff; outline: none; }
+        .menu-who { padding: 6px 12px 8px; font-size: .8rem; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--line); margin-bottom: 4px; white-space: nowrap; }
+        .pw-panel { margin-bottom: 20px; }
+        /* Inscription d'une famille (page de connexion) */
+        .signup { max-width: 640px; margin: 16px auto; }
+        .link-btn { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+        /* Onglet Parents */
+        .invite-code { display: inline-block; font-size: 1.5rem; font-weight: 900; letter-spacing: 2px; color: var(--navy); background: #fff6dc; padding: 4px 14px; border-radius: 12px; }
+        .invite-url { margin-top: 6px; font-size: .85rem; }
+        .stockage { margin: 0 0 12px; font-size: .9rem; font-weight: 700; color: var(--navy); }
+        .stockage .bar { max-width: 360px; margin: 6px 0 2px; }
+        .stockage.warn .bar span { background: linear-gradient(90deg, #ffb3c6, var(--red)); }
+        /* Suivi : leçons archivées repliées */
+        .archived-toggle { margin-top: 6px; background: none; border: 0; padding: 4px 0; font: inherit; font-size: .85rem; font-weight: 800; color: var(--muted); cursor: pointer; }
+        .archived-toggle:hover { color: var(--navy); text-decoration: underline; }
+        .pw-panel { scroll-margin-top: 90px; }
+        /* Téléphone : formulaires sur une colonne (ces règles doivent venir après .row2 / .row3) */
+        @media (max-width: 600px) { .row2, .row3 { grid-template-columns: 1fr; } }
+
+        /* ===== Espace parents épuré : 2 onglets (Enfants, Leçons), une fiche par enfant ===== */
+        .tabs { flex: 0 1 auto; }
+        .tab { flex: 0 1 200px; }
+        .pane-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+        .pane-head h2 { margin: 0; }
+        section .pane-head { margin-bottom: 8px; }
+        /* Fiche enfant en accordéon */
+        div.prog-card.kid { padding: 0; overflow: hidden; }
+        .kid-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+        .kid-head:focus-visible { outline: 3px solid var(--gold); outline-offset: -3px; }
+        .avatar { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 1.05rem; }
+        .kid-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+        .kid-who .st-name { font-size: 1.1rem; color: var(--ink); }
+        .kid-sub { font-size: .8rem; color: var(--muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chev { color: var(--muted); font-weight: 900; width: 14px; text-align: center; }
+        .st-pct.p0, .lr-pct.p0 { color: #9aa3bd; } .plow { color: #b26b00 !important; } .pmid { color: var(--blue) !important; } .phigh { color: #07603b !important; }
+        .prog-card.kid .lesson-list { border-top: 1px solid var(--line); }
+        .prog-card.kid .lesson-row { border-top: 0; border-bottom: 1px solid #eef1f8; padding: 0; }
+        .lesson-row .lr-main { width: 100%; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; padding: 10px 16px;
+                               display: flex; align-items: center; gap: 10px; color: inherit; }
+        .lesson-row .lr-main:hover { background: #f8f9ff; }
+        .lesson-row.open .lr-main { background: #f4f6ff; }
+        .lr-emoji { flex: 0 0 auto; width: 1.4em; text-align: center; }
+        .lesson-row .lr-name { flex: 1; min-width: 0; }
+        .lr-exam.hot { background: #ffe8d6; color: #9a3b00; }
+        .lesson-row .lr-bar { flex: 0 0 120px; }
+        .lesson-row .lr-pct { flex: 0 0 auto; min-width: 46px; }
+        .lr-go { flex: 0 0 auto; color: #b5bdd6; font-weight: 900; width: 12px; text-align: center; }
+        .lesson-row .lesson { margin: 0 12px 10px; }
+        .ld-title { font-weight: 800; color: var(--navy); margin-bottom: 8px; }
+        .arch-row { padding: 6px 16px; }
+        .kid-empty { padding: 8px 16px 0; margin: 0; }
+        .prog-card.kid .card-foot { margin: 0; padding: 10px 16px; border-top: 0; }
+        .link-btn.pick-btn, .link-btn.kid-acct { font-weight: 800; font-size: .92rem; color: var(--blue); padding: 4px 0; }
+        .link-btn.kid-acct { color: var(--muted); }
+        .link-btn.pick-btn.strong { color: #fff; background: var(--blue); padding: 7px 14px; border-radius: 999px; box-shadow: var(--sticker); }
+        .prog-card.kid .picker, .prog-card.kid .student-extra { margin: 0 12px 12px; }
+        .prog-card.kid .student-extra { border-top: 1px solid var(--line); padding-top: 10px; }
+        .add-tile { width: 100%; border: 2px dashed #c9d4f5; border-radius: 16px; background: none; padding: 12px; font: inherit; font-weight: 800; color: var(--blue); cursor: pointer; }
+        .add-tile:hover { background: #fff; }
+        /* Créer une leçon : choix de la méthode, assistant IA en 3 étapes */
+        .choices { display: grid; gap: 12px; margin-top: 6px; }
+        .choice { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 16px; border: 2px solid var(--line); border-radius: 16px;
+                  background: #fff; font: inherit; color: inherit; cursor: pointer; box-shadow: var(--sticker); }
+        .choice:hover { border-color: var(--blue); background: #f8faff; }
+        .choice:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+        .choice-ico { font-size: 2rem; flex: 0 0 auto; }
+        .choice-txt { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+        .choice-txt strong { font-size: 1.1rem; color: var(--navy); }
+        .choice-txt > span { color: var(--muted); font-size: .9rem; }
+        .choice-tag { font-size: .7rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--gold); color: var(--navy); vertical-align: middle; margin-left: 4px; }
+        .choice-go { font-size: 1.6rem; color: #b5bdd6; font-weight: 900; }
+        .stepper { list-style: none; display: flex; gap: 6px; padding: 0; margin: 2px 0 14px; }
+        .stepper li { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 4px; border-radius: 999px; background: #eef1f8;
+                      font-size: .8rem; font-weight: 800; color: var(--muted); white-space: nowrap; }
+        .stepper li span { display: inline-flex; width: 20px; height: 20px; border-radius: 50%; background: #fff; align-items: center; justify-content: center; font-size: .75rem; }
+        .stepper li.on { background: var(--gold); color: var(--navy); }
+        .stepper li.done { background: #d9fff0; color: #07603b; }
+        .stepper li.done span { background: var(--green); color: #fff; }
+        .ia-step h2 { margin-bottom: 4px; }
+        .seg { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0; }
+        .seg button { flex: 1 1 0; min-width: 48px; min-height: 44px; border: 2px solid var(--line); border-radius: 12px; background: #fff; font: inherit; font-weight: 900;
+                      font-size: 1.05rem; color: var(--navy); cursor: pointer; }
+        .seg button[aria-checked="true"] { background: var(--gold); border-color: #e6b84a; }
+        .btn.big { width: 100%; padding: 14px 22px; font-size: 1.1rem; }
+        .ia-send { flex-direction: column; gap: 10px; }
+        .howto { margin: 12px 0 6px; padding-left: 22px; display: grid; gap: 6px; color: var(--ink); font-size: .95rem; }
+        .prompt-view summary, .ia-preview summary, .more-opts summary { cursor: pointer; font-weight: 800; color: var(--blue); margin: 6px 0; }
+        .prompt-view textarea { font-size: .8rem; font-family: ui-monospace, Menlo, Consolas, monospace; }
+        #ia-answer { font-size: .85rem; font-family: ui-monospace, Menlo, Consolas, monospace; min-height: 160px; }
+        .ia-sum { background: #f4f6ff; border-radius: 14px; padding: 12px 14px; }
+        .ia-sum strong { display: block; font-size: 1.1rem; color: var(--navy); }
+        .ia-sum span { display: block; font-size: .9rem; color: var(--muted); margin-top: 2px; }
+        .ia-sum .warn { margin-top: 6px; }
+        #ia-questions { padding-left: 22px; display: grid; gap: 8px; font-size: .9rem; }
+        #ia-questions .ok-ans { display: block; color: #07603b; font-weight: 700; font-size: .85rem; }
+        .facult { font-weight: 600; color: var(--muted); }
+        .ia-edit-line { text-align: center; margin: 12px 0 0; }
+        .ia-edit-line .link-btn { color: var(--muted); font-weight: 700; text-decoration: underline; }
+        .row-me { display: grid; grid-template-columns: 1fr 110px; gap: 12px; }
+        .more-opts { margin-top: 10px; }
+        #guide:empty { display: none; }
+        .prog-card, .prog-card.compact { background: #fff; border: 0; border-radius: 18px; box-shadow: var(--soft); padding: 12px 16px; margin: 0 0 14px; }
+        .st-class { font-size: .8rem; font-weight: 700; color: var(--muted); margin-left: 6px; }
+        .card-foot { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
+        .pick-btn { padding: 7px 14px; font-size: .9rem; }
+        .picker { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: #f6f8ff; display: grid; gap: 2px; }
+        .pick-item { display: flex; align-items: center; gap: 10px; margin: 0; padding: 7px 4px; font-weight: 700; font-size: .95rem; cursor: pointer; border-radius: 8px; }
+        .pick-item:hover { background: #fff; }
+        .pick-item input { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--blue); }
+        .pick-group { font-size: .78rem; font-weight: 800; color: var(--muted); margin: 6px 4px 2px; text-transform: uppercase; letter-spacing: .4px; }
+        .extra-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+        .login-info { font-size: .85rem; color: var(--ink); margin: 6px 0 0; }
+        .access-msg { font-size: .8rem; font-weight: 700; color: #07603b; }
+        @media (max-width: 760px) {
+            /* 2 grands onglets côte à côte (icône + texte), faciles à toucher */
+            .tabs { flex: 1 1 auto; }
+            .tab { flex: 1 1 0; flex-direction: row; gap: 6px; padding: 9px 6px; font-size: .92rem; border-radius: 14px; }
+            .tab .t-ico { font-size: 1.1rem; }
+            .tab .count { position: static; padding: 0 6px; font-size: .7rem; }
+            .pane { gap: 14px; }
+            section { padding: 14px; border-radius: 16px; }
+            .prog-card, .prog-card.compact { padding: 10px 12px; }
+            .pane-head h2 { font-size: 1.15rem; }
+            .lesson-row .lr-bar { display: none; }
+            .lesson-row .lr-main { padding: 10px 12px; gap: 8px; }
+            .kid-head { padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="rv-banner">
+      <span aria-hidden="true" class="rv-float rv-f1">📚</span>
+      <span aria-hidden="true" class="rv-float rv-f2">⚡</span>
+      <span aria-hidden="true" class="rv-float rv-f3">🧠</span>
+      <span aria-hidden="true" class="rv-float rv-f4">🎯</span>
+    
+      <div class="rv-inner">
+        <span class="rv-sticker"><span class="rv-dot"></span> QUIZy · Espace parents</span>
+        <h1 class="rv-title">Espace <span class="rv-hl">admin</span> ⚙️</h1>
+        <p class="rv-sub" id="rvSub">Suis les révisions de tes enfants et donne-leur des leçons</p>
+        <div class="rv-chips">
+          <span class="rv-chip">👨‍👧 Enfants</span>
+          <span class="rv-chip">📚 Leçons</span>
+          <span class="rv-chip">📅 Contrôles</span>
+          <span class="rv-chip">🔒 Réservé aux parents</span>
+        </div>
+      </div>
+    
+      <div class="rv-ticker" aria-hidden="true">
+        <div class="rv-track">
+          ENFANTS • LEÇONS • RÉVISION ESPACÉE : 1, 3, 7 JOURS • RÉVISION EXPRESS LA VEILLE • ENFANTS • LEÇONS • RÉVISION ESPACÉE : 1, 3, 7 JOURS • RÉVISION EXPRESS LA VEILLE •&nbsp;
+        </div>
+      </div>
+    </header>
+
+    <div class="lockbar" id="lockbar">
+        <!-- profil mémorisé choisi : le pseudo est déjà rempli, seul le mot de passe est demandé -->
+        <div id="who-chip" class="qp-puce" hidden></div>
+        <label for="admin-pseudo" class="sr-only">Pseudo</label>
+        <input type="text" id="admin-pseudo" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="30" placeholder="👤 Pseudo">
+        <label for="password" class="sr-only">Mot de passe</label>
+        <input type="password" id="password" autocomplete="current-password" placeholder="🔑 Mot de passe">
+        <button class="btn" id="unlock" type="button" title="Actualiser">Se connecter</button>
+        <div class="acct" id="acct" hidden>
+            <button class="btn secondary" id="acct-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="acct-menu" title="Mon compte : changer le mot de passe, se déconnecter">👤 <span id="acct-name">Mon compte</span> ▾</button>
+            <div class="acct-menu" id="acct-menu" hidden>
+                <div class="menu-who" id="acct-who"></div>
+                <button class="menu-item" id="menu-parents" type="button" hidden>👪 Familles invitées</button>
+                <button class="menu-item" id="menu-export" type="button" hidden>💾 Exporter toutes les données</button>
+                <button class="menu-item" id="change-pw" type="button">🔑 Changer le mot de passe</button>
+                <button class="menu-item" id="lock" type="button">🔒 Se déconnecter</button>
+            </div>
+        </div>
+        <span class="status inline" id="lock-status" role="status"></span>
+        <div id="who-retrait" hidden></div>
+    </div>
+    <!-- Écran « Qui es-tu ? » : profils mémorisés sur cet appareil (static/profils.js) -->
+    <section id="who" class="qp-zone" hidden></section>
+
+    <p class="locked-hint" id="locked-hint">Espace parents : saisis ton pseudo et ton mot de passe. À la toute première connexion, le pseudo que tu choisis devient ton identifiant.</p>
+    <!-- lien discret vers la connexion élève (target _top : l'application s'affiche dans un cadre Google) -->
+    <p class="switch-zone" id="to-student-zone"><button class="switch-link link-btn" id="signup-open" type="button" aria-expanded="false" aria-controls="signup">👪 Créer ma famille</button> · <a class="switch-link" id="to-student" href="https://script.google.com/macros/s/AKfycbzzqlCAUDZAoHOmhxufvj4CAAHWX8JtU8vBsTB0ZsoEK_mLu2tW4BoESRUdrg4b7bkF/exec" target="_top">🎒 Espace élève</a></p>
+    <section class="signup" id="signup" hidden>
+        <h2>👪 Créer ma famille</h2>
+        <p class="hint">Il te faut le <strong>code d'invitation</strong> donné par l'administrateur de l'appli. Tu pourras ensuite créer les comptes de tes enfants et suivre leurs révisions ; personne d'autre ne les voit.</p>
+        <label for="su-code">Code d'invitation</label>
+        <input type="text" id="su-code" maxlength="20" placeholder="Ex : ABCD-EFGH" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <label for="su-famille">Nom de la famille</label>
+        <input type="text" id="su-famille" maxlength="40" placeholder="Ex : Famille Martin" autocomplete="off">
+        <div class="row2">
+            <div>
+                <label for="su-pseudo">Ton pseudo</label>
+                <input type="text" id="su-pseudo" maxlength="30" placeholder="Ex : Maman Martin" autocomplete="username" autocapitalize="off" spellcheck="false">
+            </div>
+            <div>
+                <label for="su-pw">Mot de passe (8 caractères minimum)</label>
+                <input type="password" id="su-pw" autocomplete="new-password">
+            </div>
+        </div>
+        <label for="su-pw2">Confirme le mot de passe</label>
+        <input type="password" id="su-pw2" autocomplete="new-password">
+        <div class="actions">
+            <button class="btn" id="su-save" type="button">👪 Créer ma famille</button>
+            <button class="btn secondary" id="su-cancel" type="button">Annuler</button>
+        </div>
+        <div class="status" id="su-status" role="status"></div>
+    </section>
+
+    <div class="shell" id="admin-area" hidden>
+        <header class="topnav">
+        <nav class="tabs" role="tablist" aria-label="Sections de l'espace parents">
+            <button class="tab" role="tab" id="tab-programmes" data-tab="programmes" title="Tes enfants : où ils en sont, leurs leçons, leur compte"><span class="t-ico" aria-hidden="true">👨‍👧</span><span class="t-lbl">Enfants</span><span class="count" id="count-eleves"></span></button>
+            <button class="tab" role="tab" id="tab-quiz-liste" data-tab="quiz-liste" title="Les leçons (et leurs cartes) à donner à tes enfants"><span class="t-ico" aria-hidden="true">📚</span><span class="t-lbl">Leçons</span></button>
+        </nav>
+        <div id="lock-dock"></div>
+        </header>
+
+        <section class="pw-panel" id="pw-panel" hidden>
+            <button class="back-link" type="button" id="pw-close">✕ Fermer</button>
+            <h2>🔑 Changer le mot de passe</h2>
+            <div class="row3">
+                <div>
+                    <label for="pw-old">Mot de passe actuel</label>
+                    <input type="password" id="pw-old" autocomplete="current-password">
+                </div>
+                <div>
+                    <label for="pw-new">Nouveau mot de passe</label>
+                    <input type="password" id="pw-new" autocomplete="new-password" placeholder="8 caractères minimum">
+                </div>
+                <div>
+                    <label for="pw-new2">Confirme le nouveau</label>
+                    <input type="password" id="pw-new2" autocomplete="new-password">
+                </div>
+            </div>
+            <div class="actions">
+                <button class="btn" id="pw-save" type="button">💾 Enregistrer le nouveau mot de passe</button>
+            </div>
+            <div class="status" id="pw-status" role="status"></div>
+        </section>
+        <!-- Export complet (administrateur principal) : sauvegarde, et transfert vers une autre installation de QUIZy -->
+        <section class="pw-panel" id="export-panel" hidden>
+            <button class="back-link" type="button" id="export-close">✕ Fermer</button>
+            <h2>💾 Exporter toutes les données</h2>
+            <p class="hint">Un fichier avec tous les enfants (PIN protégés), les leçons, les progressions et les familles invitées : il sert de sauvegarde et à installer QUIZy ailleurs. Les mots de passe administrateur n'y sont pas. Garde-le pour toi.</p>
+            <div class="actions" id="export-actions" hidden>
+                <button class="btn" id="export-download" type="button">💾 Télécharger le fichier</button>
+                <button class="btn secondary" id="export-share" type="button" hidden>📤 Partager / Enregistrer</button>
+                <button class="btn secondary" id="export-copy" type="button">📋 Copier le contenu</button>
+            </div>
+            <div class="status" id="export-status" role="status"></div>
+        </section>
+
+        <main class="content">
+
+        <!-- ================= ENFANTS (accueil) : où ils en sont, leurs leçons, leur compte ================= -->
+        <div class="pane" id="pane-programmes" role="tabpanel" aria-labelledby="tab-programmes" hidden>
+            <h2 class="sr-only">Mes enfants</h2>
+            <div id="guide"></div>
+            <div class="status" id="prog-status" role="status"></div>
+            <div id="prog-list"></div>
+            <button class="add-tile" id="tab-eleve-ajout" type="button">➕ Ajouter un enfant</button>
+        </div>
+
+        <!-- ================= AJOUTER / MODIFIER UN ENFANT ================= -->
+        <div class="pane" id="pane-eleve-ajout" role="tabpanel" aria-labelledby="tab-eleve-ajout">
+            <section>
+                <button class="back-link" type="button" data-go="programmes">← Retour à mes enfants</button>
+                <h2 id="student-form-title">➕ Ajouter un enfant</h2>
+                <div class="row3">
+                    <div>
+                        <label for="st-classe">Classe</label>
+                        <input type="text" id="st-classe" maxlength="30" placeholder="Ex : 5e B" autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="st-pseudo">Pseudo</label>
+                        <input type="text" id="st-pseudo" maxlength="30" placeholder="Ex : Léo" autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="st-pin">PIN</label>
+                        <input type="text" id="st-pin" maxlength="8" inputmode="numeric" placeholder="4 à 8 chiffres" autocomplete="off">
+                    </div>
+                </div>
+                <p class="hint">Ton enfant se connecte sur la page élève avec ces trois informations. Le PIN ne peut plus être relu : note-le pour le lui donner. En modification, laisse le PIN vide pour le garder.</p>
+                <div class="actions">
+                    <button class="btn" id="save-student" type="button">💾 Enregistrer</button>
+                    <button class="btn secondary" id="reset-student-form" type="button">Réinitialiser</button>
+                </div>
+                <div class="status" id="student-status" role="status"></div>
+            </section>
+        </div>
+
+        <!-- ================= LEÇONS (et cartes en plus) ================= -->
+        <div class="pane" id="pane-quiz-liste" role="tabpanel" aria-labelledby="tab-quiz-liste" hidden>
+            <div class="pane-head">
+                <h2>📚 Leçons</h2>
+                <button class="btn small" id="tab-quiz-ajout" type="button">➕ Créer une leçon</button>
+            </div>
+            <p class="hint" id="builtin-hint">« ⚙️ Gérer » : coche qui a la leçon (enregistré tout de suite). Les cartes de chaque leçon sont créées toutes seules.</p>
+            <div class="status" id="quizlist-status" role="status"></div>
+            <section id="my-lessons">
+                <h2>✏️ Mes leçons</h2>
+                <div id="quiz-list"></div>
+            </section>
+            <section>
+                <h2>🏛️ Leçons fournies</h2>
+                <div id="builtin-list"></div>
+            </section>
+            <section>
+                <div class="pane-head">
+                    <h2>🃏 Cartes en plus</h2>
+                    <button class="btn small secondary" id="new-deck" type="button">➕ Créer un paquet</button>
+                </div>
+                <p class="hint">Des paquets de flashcards en plus des leçons (par exemple du vocabulaire).</p>
+                <div class="status" id="decklist-status" role="status"></div>
+                <div id="deck-list"></div>
+            </section>
+        </div>
+
+        <!-- ================= PAQUET DE CARTES EN PLUS (formulaire) ================= -->
+        <div class="pane" id="pane-fc-ajout" role="tabpanel" hidden>
+            <section id="deck-form-section">
+                <button class="back-link" type="button" data-go="quiz-liste">← Retour aux leçons</button>
+                <h2 id="deck-form-title">➕ Nouveau paquet de flashcards</h2>
+
+                <label for="deck-titre">Titre</label>
+                <input type="text" id="deck-titre" maxlength="120" placeholder="Ex : Vocabulaire anglais – les animaux">
+
+                <div class="row">
+                    <div>
+                        <label for="deck-matiere">Matière</label>
+                        <input type="text" id="deck-matiere" maxlength="40" placeholder="Ex : Anglais">
+                    </div>
+                    <div>
+                        <label for="deck-description">Description courte</label>
+                        <input type="text" id="deck-description" maxlength="300" placeholder="Ex : 20 mots à connaître">
+                    </div>
+                    <div>
+                        <label for="deck-emoji">Emoji</label>
+                        <input type="text" id="deck-emoji" maxlength="8" placeholder="🃏">
+                    </div>
+                </div>
+
+                <label>Pour quels enfants ?</label>
+                <div class="pour" id="deck-pour"></div>
+
+                <label for="deck-cartes">Cartes</label>
+                <textarea id="deck-cartes" rows="10" placeholder="dog | chien&#10;cat | chat&#10;Quelle est la capitale de l'Empire byzantin ? | Constantinople"></textarea>
+                <p class="hint">Une carte par ligne : le recto, puis le caractère | , puis le verso. Chaque quiz a déjà son paquet généré automatiquement ; celui-ci est un paquet en plus.</p>
+
+                <div class="actions">
+                    <button class="btn" id="save-deck" type="button">💾 Enregistrer le paquet</button>
+                    <button class="btn secondary" id="reset-deck" type="button">Réinitialiser</button>
+                </div>
+                <div class="status" id="deck-status" role="status"></div>
+            </section>
+        </div>
+
+        <!-- ================= PARENTS (administrateur principal) ================= -->
+        <div class="pane" id="pane-parents" role="tabpanel" hidden>
+            <section class="intro">
+                <div class="intro-txt">
+                    <button class="back-link" type="button" data-go="programmes">← Retour à mes enfants</button>
+                    <h2>👪 Familles invitées</h2>
+                    <p class="hint">Les familles qui utilisent l'appli. Chaque parent ne voit que ses enfants, leur suivi et ses propres leçons. Pour inviter une famille, donne-lui l'adresse de l'espace parents et le code d'invitation : elle crée son compte avec « 👪 Créer ma famille ».</p>
+                </div>
+            </section>
+            <section>
+                <h2>🎟️ Inviter une famille</h2>
+                <div id="invite-box"></div>
+            </section>
+            <section>
+                <h2>Familles inscrites</h2>
+                <div class="status" id="parents-status" role="status"></div>
+                <div id="stockage"></div>
+                <div id="parent-list"></div>
+            </section>
+        </div>
+
+        <!-- ================= CRÉER UNE LEÇON : choisir la méthode ================= -->
+        <div class="pane" id="pane-quiz-new" role="tabpanel" hidden>
+            <section>
+                <button class="back-link" type="button" data-go="quiz-liste">← Retour aux leçons</button>
+                <h2>➕ Créer une leçon</h2>
+                <div class="choices">
+                    <button class="choice" id="mode-ia" type="button">
+                        <span class="choice-ico" aria-hidden="true">🤖</span>
+                        <span class="choice-txt"><strong>Avec une IA <span class="choice-tag">le plus rapide</span></strong><span>Tu donnes les photos de la leçon à ton IA, elle écrit le quiz, tu le colles ici.</span></span>
+                        <span class="choice-go" aria-hidden="true">›</span>
+                    </button>
+                    <button class="choice" id="mode-manual" type="button">
+                        <span class="choice-ico" aria-hidden="true">✍️</span>
+                        <span class="choice-txt"><strong>À la main</strong><span>Tu écris toi-même chaque question et ses réponses.</span></span>
+                        <span class="choice-go" aria-hidden="true">›</span>
+                    </button>
+                </div>
+            </section>
+        </div>
+
+        <!-- ================= CRÉER UNE LEÇON AVEC UNE IA : 3 étapes ================= -->
+        <div class="pane" id="pane-quiz-ia" role="tabpanel" hidden>
+            <section>
+                <button class="back-link" type="button" id="ia-back">← Retour</button>
+                <ol class="stepper" aria-label="Étapes">
+                    <li data-step="1"><span>1</span> La demande</li>
+                    <li data-step="2"><span>2</span> La réponse</li>
+                    <li data-step="3"><span>3</span> Vérifier</li>
+                </ol>
+
+                <div class="ia-step" id="ia-step-1">
+                    <h2>Prépare la demande pour ton IA</h2>
+                    <label id="ia-count-label">Combien de questions ?</label>
+                    <div class="seg" id="ia-count" role="radiogroup" aria-labelledby="ia-count-label">
+                        <button type="button" role="radio" aria-checked="false" data-n="10">10</button>
+                        <button type="button" role="radio" aria-checked="false" data-n="20">20</button>
+                        <button type="button" role="radio" aria-checked="false" data-n="30">30</button>
+                        <button type="button" role="radio" aria-checked="false" data-n="40">40</button>
+                        <button type="button" role="radio" aria-checked="false" data-n="50">50</button>
+                        <button type="button" role="radio" aria-checked="false" data-n="60">60</button>
+                    </div>
+                    <p class="hint">Leçon courte : 10 à 20 · un chapitre : 30 · une grosse leçon : 40 à 60.</p>
+                    <label for="ia-classe">Classe de l'enfant</label>
+                    <select id="ia-classe">
+                        <option>CE2</option>
+                        <option>CM1</option>
+                        <option>CM2</option>
+                        <option>6ᵉ</option>
+                        <option>5ᵉ</option>
+                        <option>4ᵉ</option>
+                        <option>3ᵉ</option>
+                        <option>2nde</option>
+                        <option>1re</option>
+                        <option>Terminale</option>
+                    </select>
+                    <div class="actions ia-send">
+                        <button class="btn big" id="ia-share" type="button" hidden>📤 Envoyer à mon IA</button>
+                        <button class="btn big" id="ia-copy" type="button">📋 Copier la demande</button>
+                    </div>
+                    <div class="status" id="ia-copy-status" role="status"></div>
+                    <ol class="howto">
+                        <li>Envoie (ou colle) la demande dans ton IA : ChatGPT, Gemini, Le Chat, Claude…</li>
+                        <li><strong>Ajoute les photos ou le document de la leçon</strong>, puis envoie.</li>
+                        <li>Copie <strong>toute</strong> sa réponse (son bouton « Copier »).</li>
+                    </ol>
+                    <details class="prompt-view" id="ia-prompt-box"><summary>👀 Voir la demande</summary><textarea id="ia-prompt" readonly rows="12" aria-label="Demande à donner à l'IA"></textarea></details>
+                    <div class="actions"><button class="btn secondary" id="ia-next-1" type="button">J'ai la réponse de l'IA →</button></div>
+                </div>
+
+                <div class="ia-step" id="ia-step-2" hidden>
+                    <h2>Colle la réponse de l'IA</h2>
+                    <textarea id="ia-answer" rows="9" placeholder="Colle ici toute la réponse de l'IA…" aria-label="Réponse de l'IA"></textarea>
+                    <div class="status" id="ia-parse-status" role="status"></div>
+                    <div class="actions"><button class="btn" id="ia-next-2" type="button" disabled>Vérifier le quiz →</button></div>
+                </div>
+
+                <div class="ia-step" id="ia-step-3" hidden>
+                    <h2>Vérifie et donne la leçon</h2>
+                    <div id="ia-summary"></div>
+                    <label for="ia-titre">Titre de la leçon</label>
+                    <input type="text" id="ia-titre" maxlength="120">
+                    <label>Pour qui ?</label>
+                    <div class="pour" id="ia-pour"></div>
+                    <label for="ia-exam">📅 Date du contrôle <span class="facult">(facultatif)</span></label>
+                    <input type="date" id="ia-exam" class="exam-input">
+                    <details class="ia-preview"><summary id="ia-preview-sum">👀 Voir les questions</summary><ol id="ia-questions"></ol></details>
+                    <div class="actions"><button class="btn big" id="ia-save" type="button">✅ Créer la leçon</button></div>
+                    <div class="status" id="ia-status" role="status"></div>
+                    <p class="ia-edit-line"><button class="link-btn" id="ia-edit" type="button">✏️ Retoucher les questions à la main</button></p>
+                </div>
+            </section>
+        </div>
+
+        <!-- ================= AJOUTER UN QUIZ ================= -->
+        <div class="pane" id="pane-quiz-ajout" role="tabpanel" aria-labelledby="tab-quiz-ajout" hidden>
+            <section>
+                <button class="back-link" type="button" data-go="quiz-liste">← Retour aux leçons</button>
+                <h2 id="quiz-form-title">➕ Nouvelle leçon (quiz)</h2>
+
+                <label for="titre">Titre</label>
+                <input type="text" id="titre" maxlength="120" placeholder="Ex : La Révolution française">
+
+                <div class="row-me">
+                    <div>
+                        <label for="matiere">Matière</label>
+                        <input type="text" id="matiere" maxlength="40" placeholder="Ex : Histoire">
+                    </div>
+                    <div>
+                        <label for="emoji">Emoji</label>
+                        <input type="text" id="emoji" maxlength="8" placeholder="📘">
+                    </div>
+                </div>
+
+                <details class="more-opts" id="quiz-more">
+                <summary>⚙️ Plus d'options (description, lien utile)</summary>
+                <label for="description">Description courte</label>
+                <input type="text" id="description" maxlength="300" placeholder="Ex : 1789, la Terreur, Napoléon…">
+                <div class="row3">
+                    <div>
+                        <label for="lien-texte">Lien utile (facultatif) : texte du bouton</label>
+                        <input type="text" id="lien-texte" maxlength="60" placeholder="Ex : Écouter les extraits sonores">
+                    </div>
+                    <div>
+                        <label for="lien-url">Adresse du lien</label>
+                        <input type="text" id="lien-url" maxlength="300" placeholder="https://…">
+                    </div>
+                    <div>
+                        <label for="lien-icone">Icône du bouton</label>
+                        <input type="text" id="lien-icone" maxlength="8" placeholder="🔗">
+                    </div>
+                </div>
+                </details>
+
+                <label>Pour quels enfants ?</label>
+                <div class="pour" id="quiz-pour"></div>
+                <p class="hint">Seuls les enfants cochés verront cette leçon. Sans destinataire, elle reste cachée.</p>
+
+                <p class="hint" id="builtin-note" hidden>✏️ Tu modifies un <strong>quiz intégré</strong> : l'original est conservé et peut être rétabli à tout moment depuis l'onglet « Leçons ».</p>
+
+                <h2 style="margin-top:22px">Questions</h2>
+                <p class="hint">Tu peux corriger une question à tout moment, même après l'avoir enregistrée : <strong>la progression des élèves sur cette question est conservée</strong>, même si tu changes l'énoncé ou la réponse. Pour qu'un élève reparte de zéro, onglet « Suivi » : bouton « + » de la leçon, puis « Remettre cette leçon à zéro ».</p>
+                <p class="hint">Choix : remplis au moins 2 réponses et coche la bonne (les réponses sont mélangées à chaque partie, tu peux donc mettre la bonne où tu veux). Réponse écrite : l'élève tape sa réponse au clavier. Plusieurs champs : un champ par blanc à remplir.</p>
+                <div class="q-tools" id="q-tools">
+                    <input type="search" id="q-search" placeholder="🔎 Retrouver une question (énoncé ou réponse)…" aria-label="Rechercher une question">
+                    <span class="q-count" id="q-count" role="status"></span>
+                    <button class="btn secondary small" id="q-collapse" type="button">Tout replier</button>
+                    <button class="btn secondary small" id="q-expand" type="button">Tout déplier</button>
+                </div>
+                <div id="questions"></div>
+
+                <div class="actions">
+                    <button class="btn secondary" id="add-question" type="button">+ Ajouter une question</button>
+                </div>
+                <div class="actions">
+                    <button class="btn" id="save-quiz" type="button">💾 Enregistrer le quiz</button>
+                    <button class="btn secondary" id="reset-quiz" type="button">Réinitialiser</button>
+                </div>
+                <div class="status" id="quiz-status" role="status"></div>
+            </section>
+        </div>
+
+        </main>
+    </div>
+
+    <script>
+(function () {
+  // Phrases qui tournent sous le titre
+  var phrases = [
+    "Suis les révisions de tes enfants et donne-leur des leçons",
+    "Une question courte et claire vaut mieux qu'une longue ✍️",
+    "Chaque enfant ne voit que les leçons qu'on lui donne 🔒",
+    "Fixe la date du contrôle : le plan de révision s'adapte 📅"
+  ];
+  var el = document.getElementById("rvSub"), i = 0;
+  if (el) setInterval(function () {
+    el.classList.add("rv-out");
+    setTimeout(function () { i = (i + 1) % phrases.length; el.textContent = phrases[i]; el.classList.remove("rv-out"); }, 350);
+  }, 4500);
+})();
+    </script>
+
+    <script>
+        const OPTION_LETTERS = ["A", "B", "C", "D"];
+        const TABS = ["programmes", "eleve-ajout", "quiz-liste", "quiz-new", "quiz-ia", "quiz-ajout", "fc-ajout", "parents"];
+        let DATA = { moi: { owner: false, pseudo: "" }, students: [], quizzes: [], decks: [], builtins: [], progress: {} };
+        let editingStudentId = null;
+        let editingQuizId = null;   // id du quiz en cours de modification, null = nouveau
+        let editingDeckId = null;
+        let editingBuiltinId = null;   // id du quiz intégré en cours de modification, null sinon
+        let questionCount = 0;      // sert uniquement à donner un name unique aux boutons radio
+        let firstUnlock = true;
+
+        const qList = document.getElementById("questions");
+        const hasServer = !!(window.google && google.script && google.script.run);
+        const $ = id => document.getElementById(id);
+        // identifiants envoyés au serveur à chaque appel : pseudo + mot de passe
+        const pw = () => ({ pseudo: $("admin-pseudo").value.trim(), password: $("password").value });
+        const ADMIN_PSEUDO_KEY = "revision-admin-pseudo";   // localStorage : préremplit le pseudo (jamais le mot de passe)
+
+        function h(tag, props, ...children) {
+            const el = document.createElement(tag);
+            Object.entries(props || {}).forEach(([k, v]) => {
+                if (k === "class") el.className = v;
+                else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+                else el.setAttribute(k, v);
+            });
+            children.flat().forEach(c => { if (c != null) el.append(c); });
+            return el;
+        }
+        function showStatus(el, kind, text) {
+            el.className = "status " + kind;
+            el.textContent = text;
+        }
+        function server(fn, ...args) {
+            return new Promise((resolve, reject) => {
+                if (!hasServer) {
+                    reject(new Error("Cette page doit être ouverte depuis le script déployé pour fonctionner."));
+                    return;
+                }
+                google.script.run
+                    .withSuccessHandler(resolve)
+                    // Google préfixe les messages d'erreur du serveur par « Error: » : on l'enlève
+                    .withFailureHandler(err => reject(new Error((err && err.message ? err.message : String(err)).replace(/^Error:\s*/, ""))))
+                    [fn](...args);
+            });
+        }
+        const dateFr = ts => new Date(ts).toLocaleString("fr-FR");
+        const studentName = id => { const s = DATA.students.find(x => x.id === id); return s ? s.pseudo : null; };
+
+        // ---------- onglets ----------
+        // 2 sections dans la barre du haut : Enfants (accueil) et Leçons ; les formulaires s'ouvrent depuis leur section,
+        // les familles invitées depuis le menu du compte (administrateur principal)
+        const NAV = ["programmes", "quiz-liste"];
+        const NAV_OF = { "eleve-ajout": "programmes", "quiz-new": "quiz-liste", "quiz-ia": "quiz-liste", "quiz-ajout": "quiz-liste", "fc-ajout": "quiz-liste", "parents": "" };
+        function go(tab) {
+            TABS.forEach(t => { $("pane-" + t).hidden = t !== tab; });
+            const nav = tab in NAV_OF ? NAV_OF[tab] : tab;
+            NAV.forEach(t => $("tab-" + t).setAttribute("aria-selected", String(t === nav)));
+            window.scrollTo({ top: 0 });
+        }
+
+        // ---------- déverrouillage et chargement ----------
+        let lastLoad = 0;
+        async function reload() {
+            DATA = await server("adminData", pw());
+            lastLoad = Date.now();
+            renderAll();
+        }
+        // Une fois connecté, la barre du mot de passe se range dans la barre latérale, sous les onglets.
+        function dockLock() {
+            $("lockbar").classList.add("docked");
+            $("lock-dock").append($("lockbar"));
+            $("unlock").textContent = "↻ Actualiser";
+            $("acct").hidden = false;
+        }
+        function undockLock() {
+            const bar = $("lockbar");
+            bar.classList.remove("docked");
+            document.body.insertBefore(bar, $("locked-hint"));
+            $("unlock").textContent = "Se connecter";
+            $("acct").hidden = true;
+            closeMenu();
+        }
+        function lockAgain() {
+            $("password").value = "";
+            showPwPanel(false);
+            showExportPanel(false);
+            // rien de la session précédente ne doit rester visible (un autre parent peut se connecter sur cet appareil)
+            document.querySelectorAll("#admin-area .status").forEach(el => { el.className = "status"; el.textContent = ""; });
+            [openDetails, openLessons, openArchived, openPickers, openBuiltins].forEach(set => set.clear());
+            DATA = { moi: { owner: false, pseudo: "" }, students: [], quizzes: [], decks: [], builtins: [], progress: {}, now: Date.now() };
+            renderAll();
+            $("admin-area").hidden = true;
+            $("locked-hint").hidden = false; $("to-student-zone").hidden = false;
+            $("lock-status").className = "status inline";
+            $("lock-status").textContent = "";
+            firstUnlock = true;
+            undockLock();
+        }
+        async function unlock() {
+            showStatus($("lock-status"), "info", "Vérification…");
+            try {
+                await reload();
+                $("admin-area").hidden = false;
+                $("locked-hint").hidden = true; $("to-student-zone").hidden = true; showSignup(false);
+                dockLock();
+                showStatus($("lock-status"), "ok", "Connecté.");
+                try { localStorage.setItem(ADMIN_PSEUDO_KEY, pw().pseudo); } catch (e) { /* stockage indisponible */ }
+                profilConnecte();
+                if (firstUnlock) { firstUnlock = false; go("programmes"); }
+            } catch (e) {
+                $("admin-area").hidden = true;
+                $("locked-hint").hidden = false; $("to-student-zone").hidden = false;
+                undockLock();
+                showStatus($("lock-status"), "err", e.message);
+                echecProfil(e.message);
+            }
+        }
+
+        function renderAll() {
+            const owner = !!(DATA.moi && DATA.moi.owner);
+            $("acct-name").textContent = DATA.moi.pseudo || "Mon compte";
+            $("acct-who").textContent = owner ? "👤 " + DATA.moi.pseudo + " · administrateur" : "👤 " + DATA.moi.pseudo + " · " + DATA.moi.famille;
+            $("menu-parents").hidden = !owner;
+            $("menu-export").hidden = !owner;
+            if (!owner && !$("pane-parents").hidden) go("programmes");
+            $("count-eleves").textContent = DATA.students.length || "";
+            // les cases « Pour quels élèves ? » gardent la sélection en cours quand la liste des élèves change
+            pourBoxes($("quiz-pour"), pourValues($("quiz-pour")));
+            pourBoxes($("deck-pour"), pourValues($("deck-pour")));
+            renderQuizList();
+            renderBuiltins();
+            renderDeckList();
+            renderProgrammes();
+            renderParents();
+        }
+
+        function pourBoxes(container, selected) {
+            container.replaceChildren();
+            if (DATA.students.length === 0) {
+                container.append(h("p", { class: "hint" }, "Ajoute d'abord un enfant (onglet « Enfants ») : sans destinataire, un contenu reste caché."));
+                return;
+            }
+            DATA.students.forEach(s => {
+                const cb = h("input", { type: "checkbox", value: s.id });
+                cb.checked = selected.includes(s.id);
+                container.append(h("label", { class: "pour-item" }, cb, s.pseudo + " (" + s.classe + ")"));
+            });
+        }
+        function pourValues(container) { return [...container.querySelectorAll("input:checked")].map(i => i.value); }
+        function pourText(ids) {
+            const names = (ids || []).map(studentName).filter(Boolean);
+            return names.length ? "Pour : " + names.join(", ") : "⚠️ Caché : aucun destinataire";
+        }
+
+        // ================= ENFANTS : compte (ajouter, modifier, supprimer) =================
+        function resetStudentForm() {
+            editingStudentId = null;
+            $("student-form-title").textContent = "➕ Ajouter un enfant";
+            ["st-classe", "st-pseudo", "st-pin"].forEach(id => $(id).value = "");
+        }
+        function loadStudent(s) {
+            editingStudentId = s.id;
+            $("student-form-title").textContent = "✏️ Modifier : " + s.pseudo;
+            $("st-classe").value = s.classe;
+            $("st-pseudo").value = s.pseudo;
+            $("st-pin").value = "";
+            $("student-status").className = "status";
+            go("eleve-ajout");
+        }
+        async function saveStudent() {
+            const status = $("student-status");
+            const payload = { classe: $("st-classe").value, pseudo: $("st-pseudo").value, pin: $("st-pin").value };
+            if (editingStudentId) payload.id = editingStudentId;
+            $("save-student").disabled = true;
+            showStatus(status, "info", "Enregistrement…");
+            try {
+                const isNew = !editingStudentId;
+                const res = await server("saveStudent", pw(), payload);
+                // enfant renommé : son profil mémorisé sur cet appareil suit (nom, classe, pseudo)
+                if (!isNew && PROFILS) PROFILS.mettreAJour("eleve", payload.id, { nom: payload.pseudo.trim(), pseudo: payload.pseudo.trim(), classe: payload.classe.trim() });
+                if (isNew && res && res.id) { openPickers.clear(); openPickers.add(res.id); setKidOpen(res.id, true); }   // nouvel enfant : on propose tout de suite ses leçons
+                resetStudentForm();
+                await reload();
+                status.className = "status";
+                showStatus($("prog-status"), "ok", "« " + payload.pseudo.trim() + " » enregistré : il se connecte avec sa classe, son pseudo et son PIN." + (isNew ? " Choisis maintenant ses leçons 👇" : ""));
+                go("programmes");
+            } catch (e) {
+                showStatus(status, "err", e.message);
+            } finally {
+                $("save-student").disabled = false;
+            }
+        }
+        async function removeStudent(s) {
+            if (!confirm("Supprimer « " + s.pseudo + " » ? Son compte et toute sa progression seront effacés, et il sera retiré de toutes ses leçons.")) return;
+            const status = $("prog-status");
+            try {
+                await server("deleteStudent", pw(), s.id);
+                if (editingStudentId === s.id) resetStudentForm();
+                await reload();
+                showStatus(status, "ok", "« " + s.pseudo + " » supprimé.");
+            } catch (e) {
+                showStatus(status, "err", e.message);
+            }
+        }
+
+        // ================= QUIZ =================
+        function addQuestion(data) {
+            const n = ++questionCount;
+            const kind = !data ? "choice" : data.champs ? "fields" : Array.isArray(data.reponses) ? "typed" : "choice";
+            const block = h("div", { class: "question" });
+
+            const title = h("span", {}, "");
+            const type = h("select", { class: "q-type", "aria-label": "Type de question" },
+                h("option", { value: "choice" }, "Choix"),
+                h("option", { value: "typed" }, "Réponse écrite"),
+                h("option", { value: "fields" }, "Plusieurs champs"));
+            type.value = kind;
+            const remove = h("button", { class: "btn danger", type: "button", onclick: () => { block.remove(); renumber(); } }, "Supprimer");
+            const text = h("textarea", { class: "q-text", placeholder: "Énoncé de la question" });
+            text.value = data ? data.question : "";
+
+            // Zone « choix »
+            const choiceArea = h("div", { class: "choice-area" });
+            OPTION_LETTERS.forEach((letter, i) => {
+                const radio = h("input", { type: "radio", name: "correct-" + n, value: String(i), "aria-label": "Bonne réponse " + letter });
+                const input = h("input", { type: "text", class: "opt-text", maxlength: "150", placeholder: "Réponse " + letter });
+                if (data && kind === "choice") {
+                    input.value = data.options[i] || "";
+                    radio.checked = data.correct === i;
+                } else {
+                    radio.checked = i === 0;
+                }
+                choiceArea.append(h("div", { class: "opt" }, radio, input));
+            });
+            // Réponse courte facultative : permet de reposer la question sans choix (rappel écrit) lors des révisions
+            const rappel = h("input", { type: "text", class: "q-rappel", maxlength: "400", placeholder: "Réponse courte pour le rappel écrit (facultatif), ex : 1793 ; en 1793" });
+            if (data && kind === "choice" && Array.isArray(data.rappel)) rappel.value = data.rappel.join(" ; ");
+            choiceArea.append(h("label", {}, "Réponse courte (facultatif)"), rappel,
+                h("p", { class: "hint" }, "Si tu la remplis, aux révisions la question sera posée sans choix et l'élève écrira la réponse. Sinon, il réfléchit d'abord, puis voit les choix (QCM masqué)."));
+
+            // Zone « réponse écrite »
+            const typedArea = h("div", { class: "typed-area" },
+                h("label", {}, "Réponses acceptées, séparées par ;"),
+                h("input", { type: "text", class: "typed-text", maxlength: "400", placeholder: "Ex : humid ; wet" }),
+                h("p", { class: "hint" }, "La casse, les accents et la ponctuation sont ignorés."));
+            if (kind === "typed") typedArea.querySelector(".typed-text").value = data.reponses.join(" ; ");
+
+            // Zone « plusieurs champs » : un champ par blanc à remplir, chacun avec ses réponses acceptées
+            const rowsBox = h("div", { class: "fields-rows" });
+            const libre = h("select", { class: "q-libre", "aria-label": "Ordre des champs" },
+                h("option", { value: "fixe" }, "Chaque champ a sa place"),
+                h("option", { value: "libre" }, "Ordre libre (les champs sont interchangeables)"));
+            libre.value = kind === "fields" && data.libre ? "libre" : "fixe";
+            const fieldsArea = h("div", { class: "fields-area" },
+                h("label", {}, "Ordre des champs"), libre,
+                h("p", { class: "hint" }, "Un champ par blanc, avec ses réponses acceptées séparées par ;. Dans un même groupe (ou en ordre libre), les champs sont interchangeables et chacun attend une réponse différente."),
+                rowsBox,
+                h("button", { class: "btn secondary small", type: "button", onclick: () => addFieldRow(rowsBox) }, "+ Ajouter un champ"));
+            if (kind === "fields") data.champs.forEach(f => addFieldRow(rowsBox, f));
+            else { addFieldRow(rowsBox); addFieldRow(rowsBox); }
+
+            const explication = h("input", { type: "text", class: "q-expl", maxlength: "400", placeholder: "Explication affichée après la réponse (facultatif)" });
+            explication.value = data && data.explication ? data.explication : "";
+
+            const sync = () => {
+                choiceArea.style.display = type.value === "choice" ? "" : "none";
+                typedArea.style.display = type.value === "typed" ? "" : "none";
+                fieldsArea.style.display = type.value === "fields" ? "" : "none";
+            };
+            type.addEventListener("change", sync);
+
+            // L'identifiant d'une question existante est conservé : sa progression aussi, même si l'énoncé change.
+            if (data && data.id) block.dataset.qid = data.id;
+            const toggle = h("button", { class: "btn secondary q-toggle", type: "button", "aria-label": "Replier ou déplier la question", onclick: () => {
+                block.classList.toggle("collapsed");
+                toggle.textContent = block.classList.contains("collapsed") ? "▸" : "▾";
+            } }, "▾");
+            block.append(h("div", { class: "question-head" }, toggle, title, type, remove), text, choiceArea, typedArea, fieldsArea,
+                h("label", {}, "Explication"), explication);
+            sync();
+            qList.append(block);
+            renumber();
+        }
+        function addFieldRow(container, f) {
+            const row = h("div", { class: "field-row" },
+                h("input", { type: "text", class: "f-label", maxlength: "60", placeholder: "Intitulé (ex : Hauteur)", "aria-label": "Intitulé du champ" }),
+                h("input", { type: "text", class: "f-reps", maxlength: "400", placeholder: "Réponses acceptées ; séparées par ;", "aria-label": "Réponses acceptées" }),
+                h("input", { type: "text", class: "f-groupe", maxlength: "20", placeholder: "Groupe (option)", "aria-label": "Groupe" }),
+                h("button", { class: "btn danger", type: "button", "aria-label": "Retirer le champ", onclick: () => row.remove() }, "✕"));
+            if (f) {
+                row.querySelector(".f-label").value = f.label || "";
+                row.querySelector(".f-reps").value = (f.reponses || []).join(" ; ");
+                row.querySelector(".f-groupe").value = f.groupe || "";
+            }
+            container.append(row);
+        }
+        function renumber() {
+            [...qList.children].forEach((blk, i) => {
+                blk.querySelector(".question-head span").textContent = "Question " + (i + 1);
+            });
+        }
+        function collectQuiz() {
+            const titre = $("titre").value.trim();
+            if (!titre) throw new Error("Le titre est obligatoire.");
+            const blocks = [...qList.children];
+            if (blocks.length === 0) throw new Error("Ajoute au moins une question.");
+
+            const questions = blocks.map((blk, n) => {
+                const label = "Question " + (n + 1) + " : ";
+                const question = blk.querySelector(".q-text").value.trim();
+                if (!question) throw new Error(label + "l'énoncé est vide.");
+                const out = { question };
+                if (blk.dataset.qid) out.id = blk.dataset.qid;
+
+                const kind = blk.querySelector(".q-type").value;
+                if (kind === "fields") {
+                    const rows = [...blk.querySelectorAll(".field-row")];
+                    if (rows.length < 2) throw new Error(label + "il faut au moins 2 champs.");
+                    out.champs = rows.map((r, j) => {
+                        const intitule = r.querySelector(".f-label").value.trim();
+                        const reponses = r.querySelector(".f-reps").value.split(";").map(x => x.trim()).filter(Boolean);
+                        if (!intitule) throw new Error(label + "champ " + (j + 1) + " : l'intitulé est vide.");
+                        if (reponses.length === 0) throw new Error(label + "champ " + (j + 1) + " : indique au moins une réponse acceptée.");
+                        const f = { label: intitule, reponses };
+                        const g = r.querySelector(".f-groupe").value.trim();
+                        if (g) f.groupe = g;
+                        return f;
+                    });
+                    if (blk.querySelector(".q-libre").value === "libre") out.libre = true;
+                } else if (kind === "typed") {
+                    const reponses = blk.querySelector(".typed-text").value.split(";").map(s => s.trim()).filter(Boolean);
+                    if (reponses.length === 0) throw new Error(label + "indique au moins une réponse acceptée.");
+                    out.reponses = reponses;
+                } else {
+                    const checked = blk.querySelector("input[type=radio]:checked");
+                    const correctRaw = checked ? Number(checked.value) : -1;
+                    const options = [];
+                    let correct = -1;
+                    blk.querySelectorAll(".opt-text").forEach((inp, i) => {
+                        const v = inp.value.trim();
+                        if (!v) return;
+                        if (i === correctRaw) correct = options.length;
+                        options.push(v);
+                    });
+                    if (options.length < 2) throw new Error(label + "il faut au moins 2 réponses.");
+                    if (correct < 0) throw new Error(label + "la bonne réponse cochée est vide.");
+                    out.options = options;
+                    out.correct = correct;
+                    const rappel = blk.querySelector(".q-rappel").value.split(";").map(x => x.trim()).filter(Boolean);
+                    if (rappel.length) out.rappel = rappel;
+                }
+                const explication = blk.querySelector(".q-expl").value.trim();
+                if (explication) out.explication = explication;
+                return out;
+            });
+
+            const quiz = {
+                titre,
+                matiere: $("matiere").value.trim() || "Divers",
+                emoji: $("emoji").value.trim() || "📘",
+                description: $("description").value.trim(),
+                pour: pourValues($("quiz-pour")),
+                questions
+            };
+            const lienUrl = $("lien-url").value.trim();
+            if (lienUrl) {
+                if (!/^https?:\/\/\S+$/i.test(lienUrl)) throw new Error("L'adresse du lien doit commencer par http:// ou https://.");
+                quiz.lien = { texte: $("lien-texte").value.trim() || "Ouvrir le lien", url: lienUrl };
+                const icone = $("lien-icone").value.trim();
+                if (icone) quiz.lien.icone = icone;
+            }
+            if (editingQuizId) quiz.id = editingQuizId;
+            return quiz;
+        }
+        function resetQuizForm() {
+            editingQuizId = null;
+            editingBuiltinId = null;
+            $("builtin-note").hidden = true;
+            $("q-search").value = "";
+            $("quiz-form-title").textContent = "✍️ Nouvelle leçon";
+            ["titre", "matiere", "emoji", "description", "lien-texte", "lien-url", "lien-icone"].forEach(id => $(id).value = "");
+            pourBoxes($("quiz-pour"), []);
+            qList.replaceChildren();
+            addQuestion();
+            filterQuestions();
+        }
+        function loadQuiz(quiz) {
+            editingQuizId = quiz.id;
+            $("quiz-form-title").textContent = "✏️ Modifier : " + quiz.titre;
+            $("titre").value = quiz.titre;
+            $("matiere").value = quiz.matiere || "";
+            $("emoji").value = quiz.emoji || "";
+            $("description").value = quiz.description || "";
+            $("lien-texte").value = quiz.lien ? quiz.lien.texte : "";
+            $("lien-url").value = quiz.lien ? quiz.lien.url : "";
+            $("lien-icone").value = quiz.lien && quiz.lien.icone ? quiz.lien.icone : "";
+            $("quiz-more").open = !!(quiz.description || quiz.lien);
+            editingBuiltinId = null;
+            $("builtin-note").hidden = true;
+            $("q-search").value = "";
+            pourBoxes($("quiz-pour"), quiz.pour || []);
+            qList.replaceChildren();
+            quiz.questions.forEach(addQuestion);
+            filterQuestions();
+            $("quiz-status").className = "status";
+            go("quiz-ajout");
+        }
+
+        // ================= CRÉER UNE LEÇON AVEC UNE IA =================
+        // 1. le parent règle le nombre de questions et la classe, puis copie la demande (prompt) pour son IA ;
+        // 2. il colle la réponse de l'IA : on y cherche le quiz (JSON), avec tolérance (texte autour, ```json, virgules en trop) ;
+        // 3. il vérifie le titre, choisit ses enfants et, s'il veut, la date du contrôle, puis crée la leçon.
+        const AI_PREFS_KEY = "revision-ia-reglages";
+        const AI = { step: 1, count: 20, classe: "5ᵉ", quiz: null, ignored: 0, timer: 0 };
+        try { const p = JSON.parse(localStorage.getItem(AI_PREFS_KEY)); if (p && [10, 20, 30, 40, 50, 60].includes(p.count)) AI.count = p.count; if (p && p.classe) AI.classe = p.classe; } catch (e) { /* stockage indisponible */ }
+        function saveAiPrefs() { try { localStorage.setItem(AI_PREFS_KEY, JSON.stringify({ count: AI.count, classe: AI.classe })); } catch (e) { /* stockage indisponible */ } }
+        function buildPrompt(n, classe) {
+            return [
+                "Tu es un professeur expérimenté. Tu prépares un quiz de révision pour un élève de " + classe + ".",
+                "",
+                "Je te joins les photos ou le document de sa leçon : lis-les en entier. Si tu ne peux pas les lire, dis-le simplement au lieu d'inventer.",
+                "",
+                "Écris EXACTEMENT " + n + " questions qui couvrent toute la leçon, pour que l'élève la maîtrise et réussisse son contrôle.",
+                "",
+                "Règles :",
+                "1. Uniquement le contenu de la leçon jointe : n'invente rien.",
+                "2. Couvre toute la leçon, dans l'ordre : définitions, vocabulaire, dates, personnages, lieux, formules, méthodes, causes et conséquences, exemples du cours. Les notions essentielles peuvent revenir sous des angles différents.",
+                "3. Une question = une seule idée, claire, sans ambiguïté, compréhensible sans voir le document (jamais « d'après le document »).",
+                "4. 4 réponses par question, dont UNE SEULE juste. Les 3 fausses sont plausibles (erreurs fréquentes, confusions classiques) et de longueur proche de la bonne. Jamais « toutes les réponses » ni « aucune ».",
+                "5. Mélange les difficultés : un tiers faciles, un tiers moyennes, un tiers qui demandent d'avoir compris.",
+                "6. « rappel » : si la bonne réponse s'écrit de mémoire en 1 à 4 mots (mot, nom, date, nombre, formule courte), donne 1 à 3 façons correctes de l'écrire, sinon [].",
+                "7. « explication » : une phrase courte qui aide à retenir (le pourquoi, une astuce), tirée de la leçon.",
+                "8. En français, adapté à un élève de " + classe + " ; pour une leçon de langue étrangère, garde les mots dans la langue étudiée.",
+                "9. Longueur maximale : question 200 caractères, réponse 80, explication 200.",
+                "",
+                "Réponds UNIQUEMENT par un seul bloc de code JSON, sans texte avant ni après, exactement dans ce format :",
+                "",
+                "```json",
+                "{",
+                '  "titre": "Matière ' + classe + ' : thème de la leçon",',
+                '  "matiere": "Histoire",',
+                '  "emoji": "🏰",',
+                '  "description": "Ce que couvre la leçon, en une phrase",',
+                '  "questions": [',
+                "    {",
+                '      "question": "En quelle année commence la Révolution française ?",',
+                '      "options": ["1789", "1792", "1799", "1815"],',
+                '      "bonne_reponse": "1789",',
+                '      "rappel": ["1789"],',
+                '      "explication": "La prise de la Bastille, le 14 juillet 1789, marque le début de la Révolution."',
+                "    }",
+                "  ]",
+                "}",
+                "```",
+                "",
+                "Avant de répondre, vérifie : exactement " + n + " questions, chaque « bonne_reponse » recopiée à l'identique dans « options », JSON valide."
+            ].join("\n");
+        }
+        function renderAiSettings() {
+            [...$("ia-count").querySelectorAll("button")].forEach(b => b.setAttribute("aria-checked", String(Number(b.dataset.n) === AI.count)));
+            if ([...$("ia-classe").options].some(o => o.value === AI.classe)) $("ia-classe").value = AI.classe;
+            $("ia-prompt").value = buildPrompt(AI.count, AI.classe);
+        }
+        function startAi() {
+            AI.quiz = null; AI.ignored = 0;
+            $("ia-answer").value = ""; $("ia-titre").value = ""; $("ia-exam").value = "";
+            $("ia-pour").replaceChildren();   // nouvelle leçon : personne de coché d'avance (sauf enfant unique)
+            ["ia-copy-status", "ia-parse-status", "ia-status"].forEach(id => { $(id).className = "status"; $(id).textContent = ""; });
+            $("ia-next-2").disabled = true;
+            $("ia-prompt-box").open = false;
+            // téléphone : « Envoyer à mon IA » (menu de partage) en premier ; « Copier » à côté, en second
+            const share = canShare();
+            $("ia-share").hidden = !share; $("ia-share").className = "btn big"; $("ia-share").textContent = "📤 Envoyer à mon IA";
+            $("ia-copy").className = share ? "btn secondary big" : "btn big"; $("ia-copy").textContent = "📋 Copier la demande";
+            $("ia-next-1").className = "btn secondary";
+            renderAiSettings();
+            go("quiz-ia");
+            aiStep(1);
+        }
+        function aiStep(n) {
+            if (n === 3 && !AI.quiz) n = 2;
+            AI.step = n;
+            [1, 2, 3].forEach(i => { $("ia-step-" + i).hidden = i !== n; });
+            [...document.querySelectorAll(".stepper li")].forEach(li => {
+                const i = Number(li.dataset.step);
+                li.className = i === n ? "on" : i < n ? "done" : "";
+                li.querySelector("span").textContent = i < n ? "✓" : String(i);
+            });
+            if (n === 2) setTimeout(() => $("ia-answer").focus(), 50);
+            if (n === 3) renderAiReview();
+            window.scrollTo({ top: 0 });
+        }
+        async function copyPrompt() {
+            const text = $("ia-prompt").value, st = $("ia-copy-status");
+            let copied = false;
+            try { await navigator.clipboard.writeText(text); copied = true; } catch (e) { /* presse-papiers refusé : on essaie autrement */ }
+            if (!copied) {
+                $("ia-prompt-box").open = true;
+                const ta = $("ia-prompt"); ta.focus(); ta.select(); ta.setSelectionRange(0, text.length);
+                try { copied = document.execCommand("copy"); } catch (e) { copied = false; }
+            }
+            promptSent(); $("ia-copy").textContent = "📋 Copier à nouveau";
+            showStatus(st, copied ? "ok" : "info", copied
+                ? "✅ Demande copiée ! Colle-la dans ton IA, ajoute les photos de la leçon et envoie."
+                : "Le texte est sélectionné ci-dessous : copie-le (appui long → Copier), puis colle-le dans ton IA.");
+            if (copied) revealNext();
+        }
+        // Menu de partage du téléphone : la demande part directement dans l'appli d'IA choisie (ChatGPT, Gemini…)
+        const canShare = () => typeof navigator.share === "function" && window.matchMedia("(pointer: coarse)").matches;
+        function promptSent() {   // la demande est partie : l'étape suivante passe en avant
+            $("ia-share").className = "btn secondary big";
+            $("ia-copy").className = "btn secondary big";
+            $("ia-next-1").className = "btn";
+        }
+        // au retour de l'appli d'IA, l'étape suivante doit être sous le pouce (appelé après l'affichage du message)
+        const revealNext = () => $("ia-next-1").scrollIntoView({ block: "center" });
+        async function sharePrompt() {
+            try {
+                await navigator.share({ text: $("ia-prompt").value });
+            } catch (e) {
+                if (e && e.name === "AbortError") return;   // menu refermé sans choisir : rien ne change
+                return copyPrompt();                         // partage impossible : on copie à la place
+            }
+            promptSent();
+            $("ia-share").textContent = "📤 Envoyer à nouveau";
+            showStatus($("ia-copy-status"), "ok", "✅ Demande envoyée ! Dans ton IA, ajoute les photos de la leçon et envoie. Reviens ici avec sa réponse.");
+            revealNext();
+        }
+        // ---------- lecture de la réponse de l'IA ----------
+        const normTxt = t => String(t == null ? "" : t).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+        function extractJson(text) {
+            const t = String(text || "").replace(/```(?:json|JSON)?/g, "");
+            const tries = [];
+            const a = t.indexOf("{"), b = t.lastIndexOf("}");
+            if (a >= 0 && b > a) tries.push(t.slice(a, b + 1));
+            const c = t.indexOf("["), d = t.lastIndexOf("]");
+            if (c >= 0 && d > c) tries.push(t.slice(c, d + 1));
+            for (const raw of tries) {
+                for (const fix of [x => x, x => x.replace(/,\s*([}\]])/g, "$1"), x => x.replace(/,\s*([}\]])/g, "$1").replace(/[“”]/g, '"')]) {
+                    try { return JSON.parse(fix(raw)); } catch (e) { /* essai suivant */ }
+                }
+            }
+            return null;
+        }
+        const pick = (o, keys) => { for (const k of keys) if (o && o[k] != null && o[k] !== "") return o[k]; return null; };
+        function normalizeQuestion(q) {
+            if (!q || typeof q !== "object") return null;
+            const question = String(pick(q, ["question", "enonce", "énoncé", "q"]) || "").trim();
+            let options = pick(q, ["options", "choix", "reponses", "réponses", "propositions"]);
+            if (!question || !Array.isArray(options)) return null;
+            options = options.map(o => String(o == null ? "" : (typeof o === "object" ? (o.texte || o.text || "") : o)).trim()).filter(Boolean);
+            options = options.filter((o, i) => options.findIndex(x => normTxt(x) === normTxt(o)) === i);   // sans doublon
+            const ans = pick(q, ["bonne_reponse", "bonne_réponse", "bonneReponse", "reponse", "réponse", "correct", "answer"]);
+            let correct = -1;
+            if (typeof ans === "number" && ans >= 0 && ans < options.length) correct = ans;
+            else if (ans != null) {
+                const s = String(ans).trim();
+                correct = options.findIndex(o => o === s);
+                if (correct < 0) correct = options.findIndex(o => normTxt(o) === normTxt(s));
+                if (correct < 0) { const m = s.match(/^([A-Fa-f])(?:[).:\s]|$)/); if (m) correct = m[1].toUpperCase().charCodeAt(0) - 65; }
+                if (correct >= options.length) correct = -1;
+            }
+            if (correct < 0 || options.length < 2) return null;
+            if (options.length > OPTION_LETTERS.length) {   // 4 réponses au plus (comme le formulaire), la bonne toujours gardée
+                const good = options[correct];
+                options = options.filter((o, i) => i !== correct).slice(0, OPTION_LETTERS.length - 1).concat(good);
+                correct = options.length - 1;
+            }
+            const out = { question: question.slice(0, 300), options: options.map(o => o.slice(0, 150)), correct };
+            let rappel = pick(q, ["rappel", "reponses_courtes", "reponses_acceptees", "accepte"]);
+            if (typeof rappel === "string") rappel = rappel.split(/[|;]/);
+            if (Array.isArray(rappel)) { rappel = rappel.map(r => String(r).trim()).filter(Boolean).slice(0, 10); if (rappel.length) out.rappel = rappel; }
+            const expl = pick(q, ["explication", "explanation", "astuce"]);
+            if (expl) out.explication = String(expl).trim().slice(0, 400);
+            return out;
+        }
+        function parseAiQuiz(text) {
+            const data = extractJson(text);
+            if (!data) return null;
+            const obj = Array.isArray(data) ? { questions: data } : data;
+            const raw = Array.isArray(obj.questions) ? obj.questions : Array.isArray(obj.quiz) ? obj.quiz : null;
+            if (!raw) return null;
+            let questions = raw.map(normalizeQuestion).filter(Boolean);
+            const ignored = raw.length - questions.length;
+            const cut = Math.max(0, questions.length - 60);
+            questions = questions.slice(0, 60);
+            if (!questions.length) return { quiz: null, ignored, cut };
+            const str = (v, n) => String(v == null ? "" : v).trim().slice(0, n);
+            return {
+                quiz: { titre: str(obj.titre || obj.title, 120) || "Nouvelle leçon", matiere: str(obj.matiere || obj.matière || obj.subject, 40) || "Divers",
+                        emoji: str(obj.emoji, 8) || "📘", description: str(obj.description, 300), questions },
+                ignored, cut
+            };
+        }
+        function analyseAnswer() {
+            const text = $("ia-answer").value, st = $("ia-parse-status");
+            AI.quiz = null;
+            $("ia-next-2").disabled = true;
+            if (!text.trim()) { st.className = "status"; st.textContent = ""; return; }
+            const res = parseAiQuiz(text);
+            if (!res || !res.quiz) {
+                showStatus(st, "err", res && res.ignored
+                    ? "❌ Les questions sont là, mais aucune n'a une bonne réponse reconnaissable. Redemande à l'IA en recollant la demande."
+                    : "❌ Je ne trouve pas de quiz dans ce texte. Copie toute la réponse de l'IA (le bloc qui commence par { et finit par }).");
+                return;
+            }
+            AI.quiz = res.quiz; AI.ignored = res.ignored; AI.cut = res.cut;
+            $("ia-titre").value = res.quiz.titre;
+            showStatus(st, "ok", "✅ " + res.quiz.questions.length + " questions trouvées : « " + res.quiz.titre + " »" + (res.ignored ? " (" + res.ignored + " ignorée" + (res.ignored > 1 ? "s" : "") + ")" : "") + ".");
+            $("ia-next-2").disabled = false;
+        }
+        function renderAiReview() {
+            const q = AI.quiz, n = q.questions.length, withRecall = q.questions.filter(x => x.rappel).length;
+            const notes = [];
+            if (AI.ignored) notes.push("⚠️ " + AI.ignored + " question" + (AI.ignored > 1 ? "s" : "") + " ignorée" + (AI.ignored > 1 ? "s" : "") + " (bonne réponse introuvable dans les choix).");
+            if (AI.cut) notes.push("⚠️ " + AI.cut + " question" + (AI.cut > 1 ? "s" : "") + " en trop retirée" + (AI.cut > 1 ? "s" : "") + " (60 au maximum).");
+            if (n < AI.count && !AI.ignored) notes.push("ℹ️ L'IA a écrit " + n + " questions au lieu de " + AI.count + ".");
+            $("ia-summary").replaceChildren(h("div", { class: "ia-sum" },
+                h("strong", {}, q.emoji + " " + n + " questions"),
+                h("span", {}, q.matiere + " · " + withRecall + " avec une réponse à écrire de mémoire" + (q.description ? " · " + q.description : "")),
+                notes.map(t => h("p", { class: "hint warn" }, t))));
+            const keep = pourValues($("ia-pour"));
+            pourBoxes($("ia-pour"), keep.length ? keep : DATA.students.length === 1 ? [DATA.students[0].id] : []);
+            $("ia-exam").min = new Date(DATA.now || Date.now()).toISOString().slice(0, 10);
+            $("ia-preview-sum").textContent = "👀 Voir les " + n + " questions";
+            $("ia-questions").replaceChildren(...q.questions.map(x => h("li", {}, x.question, h("span", { class: "ok-ans" }, "✅ " + x.options[x.correct]))));
+            $("ia-status").className = "status";
+        }
+        async function saveAiQuiz() {
+            const st = $("ia-status"), btn = $("ia-save");
+            const pour = pourValues($("ia-pour")), exam = $("ia-exam").value;
+            const titre = $("ia-titre").value.trim();
+            if (!titre) { showStatus(st, "err", "Donne un titre à la leçon."); return; }
+            btn.disabled = true;
+            showStatus(st, "info", "Création de la leçon…");
+            try {
+                const res = await server("saveQuiz", pw(), { ...AI.quiz, titre, pour });
+                if (exam) for (const sid of pour) await server("setLessonPlanAdmin", pw(), sid, res.id, exam);
+                pour.forEach(id => setKidOpen(id, true));   // avant le rechargement : les fiches s'affichent ouvertes
+                await reload();
+                const names = pour.map(studentName).filter(Boolean);
+                const msg = "✅ Leçon « " + titre + " » créée (" + AI.quiz.questions.length + " questions)";
+                AI.quiz = null;
+                if (names.length) {
+                    go("programmes");
+                    showStatus($("prog-status"), "ok", msg + " et donnée à " + names.join(", ") + (exam ? " · contrôle " + dayFr(new Date(exam + "T00:00")) + " : le plan de révision est prêt" : "") + ".");
+                } else {
+                    go("quiz-liste");
+                    showStatus($("quizlist-status"), "ok", msg + ". Elle est cachée : coche un enfant dans « ⚙️ Gérer » pour la lui donner.");
+                }
+            } catch (e) {
+                showStatus(st, "err", e.message);
+            } finally { btn.disabled = false; }
+        }
+        // Retoucher : le quiz lu part dans le formulaire « à la main » (nouvelle leçon, rien n'est encore enregistré)
+        function editAiQuiz() {
+            loadQuiz({ ...AI.quiz, titre: $("ia-titre").value.trim() || AI.quiz.titre, pour: pourValues($("ia-pour")) });
+            editingQuizId = null;
+            $("quiz-form-title").textContent = "✍️ Nouvelle leçon (préparée par l'IA)";
+        }
+
+        // ================= FLASHCARDS =================
+        function collectDeck() {
+            const titre = $("deck-titre").value.trim();
+            if (!titre) throw new Error("Le titre est obligatoire.");
+            const lignes = $("deck-cartes").value.split("\n").map(l => l.trim()).filter(Boolean);
+            if (lignes.length === 0) throw new Error("Ajoute au moins une carte.");
+            const cartes = lignes.map((ligne, i) => {
+                const pos = ligne.indexOf("|");
+                const recto = pos < 0 ? "" : ligne.slice(0, pos).trim();
+                const verso = pos < 0 ? "" : ligne.slice(pos + 1).trim();
+                if (!recto || !verso) throw new Error("Ligne " + (i + 1) + " : écris le recto, puis |, puis le verso.");
+                return { recto, verso };
+            });
+            const deck = {
+                titre,
+                matiere: $("deck-matiere").value.trim() || "Divers",
+                emoji: $("deck-emoji").value.trim() || "🃏",
+                description: $("deck-description").value.trim(),
+                pour: pourValues($("deck-pour")),
+                cartes
+            };
+            if (editingDeckId) deck.id = editingDeckId;
+            return deck;
+        }
+        function resetDeckForm() {
+            editingDeckId = null;
+            $("deck-form-title").textContent = "➕ Nouveau paquet de flashcards";
+            ["deck-titre", "deck-matiere", "deck-emoji", "deck-description", "deck-cartes"].forEach(id => $(id).value = "");
+            pourBoxes($("deck-pour"), []);
+        }
+        function loadDeck(deck) {
+            editingDeckId = deck.id;
+            $("deck-form-title").textContent = "✏️ Modifier : " + deck.titre;
+            $("deck-titre").value = deck.titre;
+            $("deck-matiere").value = deck.matiere || "";
+            $("deck-emoji").value = deck.emoji || "";
+            $("deck-description").value = deck.description || "";
+            $("deck-cartes").value = deck.cartes.map(c => c.recto + " | " + c.verso).join("\n");
+            pourBoxes($("deck-pour"), deck.pour || []);
+            $("deck-status").className = "status";
+            go("fc-ajout");
+        }
+
+        // ================= LEÇONS ET PAQUETS : une ligne par élément, « ⚙️ Gérer » déplie les cases et les actions =================
+        function renderQuizList() {
+            $("my-lessons").hidden = DATA.quizzes.length === 0;
+            $("quiz-list").replaceChildren(...DATA.quizzes.map(q => accessRow(q, "quiz")));
+        }
+        function renderDeckList() {
+            $("deck-list").replaceChildren(...(DATA.decks.length ? DATA.decks.map(d => accessRow(d, "deck")) : [h("p", { class: "empty" }, "Aucun paquet en plus.")]));
+        }
+        function renderBuiltins() { $("builtin-list").replaceChildren(...DATA.builtins.map(q => accessRow(q, "builtin"))); }
+        const openBuiltins = new Set();   // « type:id » dont les réglages sont dépliés
+        function accessRow(it, kind) {
+            const key = kind + ":" + it.id, open = openBuiltins.has(key), owner = DATA.moi.owner;
+            const pour = it.pour || [];
+            const msg = h("span", { class: "access-msg", role: "status" });
+            const boxes = h("div", { class: "pour" });
+            if (!DATA.students.length) boxes.append(h("p", { class: "hint" }, "Ajoute d'abord un enfant (onglet « Enfants »)."));
+            DATA.students.forEach(s => {
+                const cb = h("input", { type: "checkbox", value: s.id });
+                cb.checked = pour.includes(s.id);
+                cb.addEventListener("change", () => setAccess(kind, it.id, [...boxes.querySelectorAll("input:checked")].map(i => i.value), msg, boxes));
+                boxes.append(h("label", { class: "pour-item" }, cb, s.pseudo));
+            });
+            const btn = (txt, cls, fn) => h("button", { class: "btn " + cls, type: "button", onclick: fn }, txt);
+            const actions = kind === "builtin"
+                ? [owner ? btn("✏️ Modifier", "secondary small", () => editBuiltin(it)) : null, owner && it.modifie ? btn("Rétablir l'original", "danger", () => restoreBuiltin(it)) : null]
+                : [btn("✏️ Modifier", "secondary small", () => kind === "quiz" ? loadQuiz(it) : loadDeck(it)), btn("Supprimer", "danger", () => removeItem(kind, it))];
+            const size = kind === "deck" ? it.cartes.length + " cartes" : (typeof it.questions === "number" ? it.questions : it.questions.length) + " questions";
+            const details = h("div", { class: "builtin-details" },
+                h("div", { class: "info" }, h("span", {}, it.titre + " · " + size)),
+                h("label", {}, "Qui l'a ?"), boxes, msg,
+                actions.some(Boolean) ? h("div", { class: "actions", style: "margin-top:8px" }, actions) : null);
+            details.hidden = !open;
+            const toggle = h("button", { class: "btn secondary small builtin-toggle", type: "button", "aria-expanded": String(open),
+                onclick: () => {
+                    const now = details.hidden;
+                    details.hidden = !now;
+                    toggle.setAttribute("aria-expanded", String(now));
+                    toggle.textContent = now ? "▲ Fermer" : "⚙️ Gérer";
+                    if (now) openBuiltins.add(key); else openBuiltins.delete(key);
+                } }, open ? "▲ Fermer" : "⚙️ Gérer");
+            const names = pour.map(studentName).filter(Boolean);
+            return h("div", { class: "builtin", "data-id": it.id },
+                h("div", { class: "builtin-head" },
+                    h("div", { class: "builtin-name" },
+                        h("strong", { title: it.titre }, (it.emoji || (kind === "deck" ? "🃏" : "📘")) + " " + shortTitle(it.titre), it.modifie ? h("span", { class: "badge-modifie" }, "✏️ modifié") : null),
+                        h("span", { class: "builtin-pour" + (names.length ? "" : " none") }, h("span", { class: "matiere" }, (it.matiere || "Divers") + " · "), names.length ? "👥 " + names.join(", ") : "Donnée à personne")),
+                    toggle),
+                details);
+        }
+        // Donner / retirer une leçon ou un paquet (cases à cocher) : enregistré tout de suite
+        async function setAccess(kind, id, pour, msgEl, lockEl) {
+            const inputs = lockEl ? [...lockEl.querySelectorAll("input")] : [];
+            inputs.forEach(i => { i.disabled = true; });
+            if (msgEl) msgEl.textContent = "Enregistrement…";
+            try {
+                await server("setAccess", pw(), kind, id, pour);
+                await reload();
+                return true;
+            } catch (e) {
+                inputs.forEach(i => { i.disabled = false; });
+                if (msgEl) { msgEl.textContent = e.message; msgEl.classList.add("warn"); }
+                return false;
+            }
+        }
+
+        async function removeItem(kind, it) {
+            const isQuiz = kind === "quiz";
+            if (!confirm("Supprimer définitivement « " + it.titre + " »" + (isQuiz ? " et la progression des élèves sur ce quiz" : "") + " ?")) return;
+            const status = isQuiz ? $("quizlist-status") : $("decklist-status");
+            try {
+                await server(isQuiz ? "deleteQuiz" : "deleteDeck", pw(), it.id);
+                if (isQuiz && editingQuizId === it.id) resetQuizForm();
+                if (!isQuiz && editingDeckId === it.id) resetDeckForm();
+                await reload();
+                showStatus(status, "ok", isQuiz ? "Leçon supprimée." : "Paquet supprimé.");
+            } catch (e) {
+                showStatus(status, "err", e.message);
+            }
+        }
+
+        // Retrouver une question dans un long quiz : on ne garde affichées que celles qui contiennent le texte cherché
+        function filterQuestions() {
+            const needle = $("q-search").value.trim().toLowerCase();
+            const blocks = [...qList.children];
+            let shown = 0;
+            blocks.forEach(blk => {
+                const text = (blk.querySelector(".q-text").value + " " + [...blk.querySelectorAll("input[type=text]")].map(i => i.value).join(" ")).toLowerCase();
+                const match = !needle || text.includes(needle);
+                blk.hidden = !match;
+                if (match) shown++;
+            });
+            $("q-count").textContent = needle ? shown + " sur " + blocks.length + " affichée" + (shown > 1 ? "s" : "") : blocks.length + " question" + (blocks.length > 1 ? "s" : "");
+        }
+        function setCollapsed(collapsed) {
+            [...qList.children].forEach(blk => {
+                blk.classList.toggle("collapsed", collapsed);
+                const t = blk.querySelector(".q-toggle");
+                if (t) t.textContent = collapsed ? "▸" : "▾";
+            });
+        }
+
+        // Enregistrement commun : collect() lit le formulaire, puis on appelle le serveur
+        async function saveItem(kind) {
+            const isQuiz = kind === "quiz";
+            const status = $(kind + "-status");
+            const btn = $("save-" + kind);
+            let payload;
+            try { payload = isQuiz ? collectQuiz() : collectDeck(); } catch (e) { showStatus(status, "err", e.message); return; }
+            btn.disabled = true;
+            showStatus(status, "info", "Enregistrement…");
+            try {
+                const builtinId = isQuiz ? editingBuiltinId : null;
+                if (builtinId) await server("saveBuiltin", pw(), builtinId, payload);
+                else await server(isQuiz ? "saveQuiz" : "saveDeck", pw(), payload);
+                const msg = builtinId
+                    ? "modifiée pour toutes les familles (l'original peut être rétabli). La progression des élèves est conservée."
+                    : payload.pour.length
+                    ? "enregistrée. Elle apparaît chez les enfants choisis."
+                    : "enregistrée, mais sans destinataire : elle reste cachée. Coche au moins un enfant pour la montrer.";
+                if (isQuiz) {
+                    resetQuizForm();
+                    status.className = "status";
+                    await reload();
+                    showStatus($("quizlist-status"), "ok", "Leçon « " + payload.titre + " » : " + msg);
+                    go("quiz-liste");
+                } else {
+                    resetDeckForm();
+                    status.className = "status";
+                    await reload();
+                    showStatus($("decklist-status"), "ok", "Paquet « " + payload.titre + " » : " + msg);
+                    go("quiz-liste");
+                }
+            } catch (e) {
+                showStatus(status, "err", e.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // ================= LEÇONS FOURNIES : modifier / rétablir (administrateur principal) =================
+        // Charge la version en vigueur d'un quiz intégré dans le formulaire (l'original reste intact côté serveur)
+        async function editBuiltin(q) {
+            const status = $("quizlist-status");
+            try {
+                const res = await server("getBuiltinForEdit", pw(), q.id);
+                loadQuiz({ ...res.quiz, pour: res.pour });
+                editingQuizId = null;
+                editingBuiltinId = q.id;
+                $("quiz-form-title").textContent = "✏️ Modifier la leçon fournie : " + res.quiz.titre;
+                $("builtin-note").hidden = false;
+            } catch (e) {
+                showStatus(status, "err", e.message);
+            }
+        }
+        async function restoreBuiltin(q) {
+            if (!confirm("Rétablir la version d'origine de « " + q.titre + " » ? Tes modifications seront perdues (la progression des élèves est conservée).")) return;
+            const status = $("quizlist-status");
+            try {
+                await server("restoreBuiltin", pw(), q.id);
+                await reload();
+                showStatus(status, "ok", "Version d'origine rétablie : « " + q.titre + " ».");
+            } catch (e) {
+                showStatus(status, "err", e.message);
+            }
+        }
+
+        // ================= ENFANTS : suivi en un coup d'œil =================
+        const openDetails = new Set();   // élèves dont le détail est déplié
+        // ---------- Suivi des révisions : par élève, l'état réel de chaque leçon ----------
+        const LEVELS = [["Nouvelle", "🌱"], ["Découverte", "🌿"], ["Rappelée", "🌳"], ["Ancrée", "⭐"], ["Maîtrisée", "🏆"]];
+        const dayFr = ts => new Date(ts).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+        const timeFr = ts => new Date(ts).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+        function levelBarAdmin(l) {
+            const n = l.total || 1;
+            return h("div", { class: "lvl-bar", role: "img", "aria-label": LEVELS.map((x, i) => x[0] + " : " + l.niveaux[i]).join(", ") },
+                l.niveaux.map((k, i) => k ? h("span", { class: "lvl l" + i, style: "width:" + (k / n * 100) + "%", title: LEVELS[i][1] + " " + LEVELS[i][0] + " : " + k }) : null));
+        }
+        function levelLegendAdmin(l) {
+            return h("div", { class: "lvl-legend" }, LEVELS.map((x, i) => h("span", { class: "leg" }, h("i", { class: "lvl-dot l" + i }), x[1] + " " + x[0] + " " + l.niveaux[i])));
+        }
+        // Prête pour le contrôle ? Part des questions au moins « Rappelée » (réussie sans choix)
+        function readiness(l) {
+            if (l.pret >= 90) return ["ok", "✅ Prête (" + l.pret + " %)"];
+            if (l.pret >= 60) return ["mid", "🟡 Presque (" + l.pret + " %)"];
+            return ["ko", "🔴 Pas encore (" + l.pret + " %)"];
+        }
+        function examText(l) {
+            if (l.mode === "archive") return "📦 Archivée";
+            if (l.mode === "entretien") return "🧠 En mémoire (rappels espacés)";
+            if (!l.exam) return "Pas de contrôle prévu";
+            const d = Math.round((new Date(l.exam + "T00:00").getTime() - new Date(new Date(DATA.now).toDateString()).getTime()) / 86400000);
+            if (d < 0) return "Contrôle passé (" + dayFr(new Date(l.exam + "T00:00")) + ")";
+            return (d <= 1 ? "🔥 " : "📅 ") + "Contrôle " + (d === 0 ? "aujourd'hui" : d === 1 ? "demain (révision express)" : dayFr(new Date(l.exam + "T00:00")));
+        }
+        function planText(l) {
+            if (!l.plan.length || !l.exam) return null;
+            const starts = l.seances.map(s => s.debut);
+            const done = l.plan.filter((s, i) => { const end = l.plan[i + 1] || s + 86400000; return starts.some(x => x >= s - 600000 && x < end); }).length;
+            const next = l.plan.find(s => s > DATA.now);
+            return "Plan : " + done + " / " + l.plan.length + " séances faites" + (next ? " · prochaine " + timeFr(next) : "");
+        }
+        function lessonsSummary(id) {
+            const all = DATA.progress[id] || [];
+            const l = all.filter(x => x.mode !== "archive");   // les leçons archivées ne comptent plus dans l'avancement
+            const total = l.reduce((n, x) => n + x.total, 0), sues = l.reduce((n, x) => n + x.niveaux[3] + x.niveaux[4], 0);
+            // avancement : chemin parcouru (découverte 1/3, rappelée 2/3, ancrée ou maîtrisée 3/3), pondéré par le nombre de questions
+            const pas = l.reduce((n, x) => n + x.niveaux[1] + 2 * x.niveaux[2] + 3 * (x.niveaux[3] + x.niveaux[4]), 0);
+            const avancement = total ? Math.round(pas / (3 * total) * 100) : 0;
+            const week = all.reduce((acc, x) => { x.seances.forEach(s => { if (s.debut > DATA.now - 7 * 86400000) { acc.n++; acc.t += s.duree; } }); return acc; }, { n: 0, t: 0 });
+            const last = all.reduce((m, x) => Math.max(m, x.maj || 0), 0);
+            const due = l.reduce((n, x) => n + x.aReviser, 0);
+            return { lecons: l.length, archivees: all.length - l.length, total, sues, pct: total ? Math.round(sues / total * 100) : 0, week, last, due, avancement };
+        }
+        function avBar(pct) { return h("div", { class: "bar av-bar", role: "progressbar", "aria-valuenow": String(pct), "aria-valuemin": "0", "aria-valuemax": "100" }, h("span", { style: "width:" + pct + "%" })); }
+        // Guide affiché tant que les premières étapes ne sont pas faites
+        function renderGuide() {
+            const hasStudent = DATA.students.length > 0;
+            const hasLesson = DATA.students.some(s => (DATA.progress[s.id] || []).length > 0);
+            const hasActivity = DATA.students.some(s => (DATA.progress[s.id] || []).some(l => l.maj));
+            const box = $("guide");
+            if (hasStudent && hasLesson && hasActivity) { box.replaceChildren(); return; }
+            const step = (done, n, title, txt, action) => h("li", { class: done ? "done" : "" },
+                h("span", { class: "g-dot" }, done ? "✓" : String(n)), h("div", {}, h("strong", {}, title), h("span", {}, txt), done ? null : action));
+            box.replaceChildren(h("div", { class: "guide" }, h("h3", {}, "🚀 Pour commencer"), h("ol", {},
+                step(hasStudent, 1, "Crée le compte de ton enfant", "Une classe, un pseudo et un code PIN.",
+                    h("button", { class: "btn small", type: "button", onclick: () => { resetStudentForm(); go("eleve-ajout"); } }, "➕ Ajouter un enfant")),
+                step(hasLesson, 2, "Choisis ses leçons", "Touche sa fiche ci-dessous, puis « 📚 Choisir ses leçons » et coche.",
+                    hasStudent ? h("button", { class: "btn small", type: "button", onclick: () => { const id = DATA.students[0].id; openPickers.add(id); setKidOpen(id, true); renderProgrammes(); } }, "📚 Choisir ses leçons") : null),
+                step(hasActivity, 3, "Il révise sur la page élève", "Il se connecte avec sa classe, son pseudo et son PIN. Sa progression s'affiche ici.",
+                    h("a", { class: "btn small secondary", href: $("to-student").getAttribute("href"), target: "_blank", rel: "noopener" }, "🎒 Ouvrir la page élève")))));
+        }
+        function renderProgrammes() {
+            renderGuide();
+            const kids = DATA.students.slice().sort((a, b) => a.pseudo.localeCompare(b.pseudo, "fr", { sensitivity: "base" }));
+            $("prog-list").replaceChildren(...kids.map((s, i) => studentCard(s, i)));
+        }
+        // ACCORDÉON : un enfant = une ligne (initiale, nom, nombre de leçons, prochain contrôle, %) ; on la touche pour déplier
+        // ses leçons (une ligne chacune, titre court). Une leçon touchée montre son détail (date du contrôle d'abord).
+        // Pied de fiche : « 📚 Choisir ses leçons » (cases enregistrées tout de suite) et « ⚙️ Compte » (modifier, PIN, supprimer).
+        const openLessons = new Set();   // « idÉlève|idLeçon » dépliées
+        const openArchived = new Set();  // élèves dont les leçons archivées sont affichées
+        const openPickers = new Set();   // élèves dont le choix des leçons est ouvert
+        // Fiches dépliées : retenues sur l'appareil ; au départ, ouvertes sur grand écran, repliées sur téléphone
+        const OPEN_KIDS_KEY = "revision-admin-enfants-ouverts";
+        let openKids = null;
+        try { const v = JSON.parse(localStorage.getItem(OPEN_KIDS_KEY)); if (Array.isArray(v)) openKids = new Set(v); } catch (e) { /* stockage indisponible */ }
+        const wideScreen = () => window.matchMedia("(min-width: 761px)").matches;
+        const kidOpen = id => openKids ? openKids.has(id) : (wideScreen() || DATA.students.length === 1);
+        function setKidOpen(id, open) {
+            if (!openKids) openKids = new Set(DATA.students.map(s => s.id).filter(kidOpen));
+            if (open) openKids.add(id); else openKids.delete(id);
+            try { localStorage.setItem(OPEN_KIDS_KEY, JSON.stringify([...openKids])); } catch (e) { /* stockage indisponible */ }
+        }
+        // Titre court : la partie après « : » (« Physique-chimie 5ᵉ (1/4) : corps purs… » → « Corps purs… »)
+        const shortTitle = t => { const i = t.indexOf(" : "); const x = i > 0 ? t.slice(i + 3) : t; return x.charAt(0).toUpperCase() + x.slice(1); };
+        const pctClass = p => p <= 0 ? "p0" : p < 40 ? "plow" : p < 80 ? "pmid" : "phigh";
+        const AVATAR_COLORS = ["#3b6fe0", "#785aff", "#ff6fa5", "#16a34a", "#f59e0b", "#0ea5e9"];
+        const daysTo = exam => Math.round((new Date(exam + "T00:00").getTime() - new Date(new Date(DATA.now).toDateString()).getTime()) / 86400000);
+        function studentCard(s, index) {
+            const open = kidOpen(s.id), acct = openDetails.has(s.id);
+            const r = lessonsSummary(s.id);
+            const lessons = (DATA.progress[s.id] || []).slice().sort((a, b) => (a.mode === "archive") - (b.mode === "archive") || a.titre.localeCompare(b.titre, "fr", { sensitivity: "base" }));
+            const active = lessons.filter(l => l.mode !== "archive");
+            // prochain contrôle de l'enfant (le plus proche, à venir)
+            const next = active.filter(l => l.exam && daysTo(l.exam) >= 0).sort((a, b) => a.exam.localeCompare(b.exam))[0];
+            const sub = (active.length ? active.length + " leçon" + (active.length > 1 ? "s" : "") : "aucune leçon") +
+                (next ? " · " + (daysTo(next.exam) <= 2 ? "🔥" : "📅") + " contrôle " + (daysTo(next.exam) === 0 ? "aujourd'hui" : daysTo(next.exam) === 1 ? "demain" : dayFr(new Date(next.exam + "T00:00"))) : "");
+            const card = h("div", { class: "prog-card kid" + (open ? " open" : ""), "data-student": s.id },
+                h("button", { class: "kid-head", type: "button", "aria-expanded": String(open), title: open ? "Replier" : "Voir ses leçons",
+                    onclick: () => { setKidOpen(s.id, !open); renderProgrammes(); } },
+                    h("span", { class: "avatar", style: "background:" + AVATAR_COLORS[index % AVATAR_COLORS.length], "aria-hidden": "true" }, s.pseudo.charAt(0).toUpperCase()),
+                    h("span", { class: "kid-who" }, h("strong", { class: "st-name" }, s.pseudo), h("span", { class: "kid-sub" }, sub)),
+                    r.lecons ? h("span", { class: "st-pct " + pctClass(r.avancement), title: "Avancement moyen sur ses " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") }, r.avancement + " %") : null,
+                    h("span", { class: "chev", "aria-hidden": "true" }, open ? "▴" : "▾")));
+            if (!open) return card;
+            const archived = lessons.filter(l => l.mode === "archive");
+            const showArch = openArchived.has(s.id);
+            const shown = lessons.filter(l => l.mode !== "archive" || showArch);
+            const rows = shown.map(l => {
+                const k = s.id + "|" + l.id, lo = openLessons.has(k);
+                const badge = examBadge(l);
+                return h("li", { class: "lesson-row" + (l.mode === "archive" ? " archived" : "") + (lo ? " open" : ""), "data-quiz": l.id },
+                    h("button", { class: "lr-main", type: "button", "aria-expanded": String(lo), title: l.titre,
+                        onclick: () => { if (lo) openLessons.delete(k); else openLessons.add(k); renderProgrammes(); } },
+                        h("span", { class: "lr-emoji", "aria-hidden": "true" }, l.emoji || "📘"),
+                        h("span", { class: "lr-name" }, shortTitle(l.titre)),
+                        badge ? h("span", { class: "lr-exam" + (badge.startsWith("🔥") ? " hot" : "") }, badge) : null,
+                        h("span", { class: "lr-bar", "aria-hidden": "true" }, h("span", { style: "width:" + l.avancement + "%" })),
+                        h("span", { class: "lr-pct " + pctClass(l.avancement), title: "Avancement de l'apprentissage" }, l.avancement + " %"),
+                        h("span", { class: "lr-go", "aria-hidden": "true" }, lo ? "▴" : "›")),
+                    lo ? lessonDetail(s, l) : null);
+            });
+            if (archived.length) {
+                const n = archived.length, label = "📦 " + n + " leçon" + (n > 1 ? "s" : "") + " archivée" + (n > 1 ? "s" : "");
+                rows.push(h("li", { class: "arch-row" }, h("button", { class: "archived-toggle", type: "button", "aria-expanded": String(showArch),
+                    onclick: () => { if (showArch) openArchived.delete(s.id); else openArchived.add(s.id); renderProgrammes(); } },
+                    label + (showArch ? " · masquer ▴" : " · afficher ▾"))));
+            }
+            if (rows.length) card.append(h("ul", { class: "lesson-list" }, rows));
+            else card.append(h("p", { class: "hint kid-empty" }, "Aucune leçon pour l'instant."));
+            // pied de fiche : choisir ses leçons (fréquent) et compte de l'enfant (rare)
+            const po = openPickers.has(s.id);
+            card.append(h("div", { class: "card-foot" },
+                h("button", { class: "link-btn pick-btn" + (lessons.length ? "" : " strong"), type: "button", "aria-expanded": String(po),
+                    onclick: () => { if (po) openPickers.delete(s.id); else openPickers.add(s.id); renderProgrammes(); } }, po ? "▲ Fermer le choix" : "📚 Choisir ses leçons"),
+                h("button", { class: "link-btn kid-acct", type: "button", "aria-expanded": String(acct),
+                    onclick: () => { if (acct) openDetails.delete(s.id); else openDetails.add(s.id); renderProgrammes(); } }, acct ? "▲ Fermer" : "⚙️ Compte")));
+            if (po) card.append(lessonPicker(s));
+            if (acct) card.append(studentExtra(s, r));
+            return card;
+        }
+        // Choix des leçons d'un enfant : une case par leçon (les siennes d'abord), enregistrée tout de suite
+        function lessonPicker(s) {
+            const msg = h("span", { class: "access-msg", role: "status" });
+            const box = h("div", { class: "picker" });
+            const item = (kind, q) => {
+                const cb = h("input", { type: "checkbox" });
+                const pour = q.pour || [];
+                cb.checked = pour.includes(s.id);
+                cb.addEventListener("change", async () => {
+                    const next = cb.checked ? pour.concat(s.id) : pour.filter(x => x !== s.id);
+                    if (await setAccess(kind, q.id, next, msg, box))
+                        showStatus($("prog-status"), "ok", "« " + q.titre + " » " + (cb.checked ? "donnée à " : "retirée à ") + s.pseudo + ".");
+                });
+                return h("label", { class: "pick-item", "data-quiz": q.id }, cb, (q.emoji || "📘") + " " + q.titre);
+            };
+            box.append(h("p", { class: "hint", style: "margin:0 0 4px" }, "Coche les leçons de " + s.pseudo + " (enregistré tout de suite) :"));
+            if (DATA.quizzes.length) box.append(h("div", { class: "pick-group" }, "✏️ Mes leçons"), ...DATA.quizzes.map(q => item("quiz", q)));
+            box.append(h("div", { class: "pick-group" }, "🏛️ Leçons fournies"), ...DATA.builtins.map(q => item("builtin", q)), msg);
+            return box;
+        }
+        // Badge court du contrôle (ou de l'état) d'une leçon, affiché sur sa ligne
+        function examBadge(l) {
+            if (l.mode === "archive") return "📦";
+            if (!l.exam) return null;
+            const d = daysTo(l.exam);
+            if (d < 0) return null;
+            return (d <= 2 ? "🔥 " : "📅 ") + (d === 0 ? "auj." : d === 1 ? "demain" : new Date(l.exam + "T00:00").toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }));
+        }
+        // « + » de l'enfant : son activité, sa connexion, ses actions (modifier, remise à zéro, supprimer)
+        function studentExtra(s, r) {
+            return h("div", { class: "prog-detail student-extra" },
+                h("p", { class: "student-sum" }, r.week.n + " séance" + (r.week.n > 1 ? "s" : "") + " cette semaine (" + Math.round(r.week.t / 60) + " min)" +
+                    (r.due ? " · " + r.due + " question" + (r.due > 1 ? "s" : "") + " à réviser" : "") + (r.last ? " · dernière activité " + timeFr(r.last) : "")),
+                r.lecons ? h("p", { class: "total" }, "Avancement " + r.avancement + " % sur " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") + " · " + r.sues + " / " + r.total + " questions ancrées") : null,
+                h("p", { class: "login-info" }, "🔑 Connexion : classe « " + s.classe + " », pseudo « " + s.pseudo + " » et son PIN."),
+                h("p", { class: "hint" }, "Avancement : 🌿 découverte = 1/3 du chemin, 🌳 rappelée sans choix = 2/3, ⭐ ancrée ou 🏆 maîtrisée = 3/3."),
+                h("div", { class: "extra-actions" },
+                    h("button", { class: "btn secondary small", type: "button", onclick: () => loadStudent(s) }, "✏️ Modifier (pseudo, classe, PIN)"),
+                    r.lecons || r.archivees ? h("button", { class: "btn danger small", type: "button", onclick: () => resetProgress(s.id, "all", "toute la progression de " + s.pseudo) }, "Tout remettre à zéro pour " + s.pseudo) : null,
+                    h("button", { class: "btn danger small", type: "button", onclick: () => removeStudent(s) }, "🗑️ Supprimer " + s.pseudo)));
+        }
+        // « + » d'une leçon : d'abord la date du contrôle (le plus utile), puis où il en est, puis les actions rares
+        function lessonDetail(s, l) {
+                const [cls, txt] = readiness(l);
+                const dateIn = h("input", { type: "date", class: "exam-input", value: l.exam || "", "aria-label": "Date du contrôle" });
+                const plan = planText(l);
+                return h("div", { class: "lesson", "data-quiz": l.id },
+                    h("div", { class: "ld-title" }, (l.emoji || "📘") + " " + l.titre),
+                    h("div", { class: "lesson-actions exam-row" },
+                        h("label", { class: "exam-label" }, "📅 Date du contrôle : ", dateIn),
+                        h("button", { class: "btn small", type: "button", onclick: () => setPlan(s, l, dateIn.value) }, "Enregistrer la date"),
+                        l.exam ? h("button", { class: "btn secondary small", type: "button", onclick: () => setPlan(s, l, "") }, "Pas de contrôle") : null),
+                    h("div", { class: "lesson-detail" },
+                        h("span", { class: "exam-txt" }, examText(l)),
+                        h("span", {}, l.aReviser ? l.aReviser + " question" + (l.aReviser > 1 ? "s" : "") + " à réviser maintenant" : "Rien à réviser maintenant"),
+                        h("span", {}, l.maj ? "Dernière activité : " + timeFr(l.maj) : "Jamais commencée")),
+                    plan ? h("div", { class: "lesson-detail plan-txt" }, plan) : null,
+                    h("div", { class: "lesson-title" },
+                        h("span", { class: "badges" }, h("span", { class: "avancement" }, "Avancement " + l.avancement + " %"), h("span", { class: "pret " + cls, title: "Prête pour le contrôle : part des questions au moins rappelées" }, txt))),
+                    levelBarAdmin(l), levelLegendAdmin(l),
+                    l.difficiles.length ? h("details", { class: "difficiles" }, h("summary", {}, "Questions difficiles (" + l.difficiles.length + ")"),
+                        h("ol", {}, l.difficiles.map(d => h("li", {}, d.question + " — " + d.erreurs + " erreur" + (d.erreurs > 1 ? "s" : "") + (d.sures ? " (dont " + d.sures + " en étant sûr·e)" : "") + " · " + LEVELS[d.niveau][1])))) : null,
+                    l.seances.length ? h("details", { class: "historique" }, h("summary", {}, "Historique (" + l.nbSeances + " séance" + (l.nbSeances > 1 ? "s" : "") + ")"),
+                        h("ul", {}, l.seances.map(x => h("li", {}, timeFr(x.debut) + " · " + Math.max(1, Math.round(x.duree / 60)) + " min · " + x.reussies + " / " + x.questions + " réussies du premier coup" + (x.bonus ? " · bonus" : ""))))) : null,
+                    h("div", { class: "lesson-actions" },
+                        l.mode === "archive"
+                            ? h("button", { class: "btn secondary small", type: "button", onclick: () => setMode(s, l, "entretien") }, "Réactiver")
+                            : h("button", { class: "btn secondary small", type: "button", onclick: () => setMode(s, l, "archive") }, "📦 Archiver"),
+                        h("button", { class: "btn secondary small", type: "button", onclick: () => resetProgress(s.id, l.id, "la leçon « " + l.titre + " » de " + s.pseudo) }, "Remettre cette leçon à zéro")));
+        }
+        async function setPlan(s, l, exam) {
+            const status = $("prog-status");
+            showStatus(status, "info", "Enregistrement…");
+            try {
+                await server("setLessonPlanAdmin", pw(), s.id, l.id, exam);
+                await reload();
+                showStatus(status, "ok", exam ? "Contrôle fixé au " + dayFr(new Date(exam + "T00:00")) + " pour « " + l.titre + " » (" + s.pseudo + ") : le plan de séances est recalculé." : "Plus de contrôle prévu pour « " + l.titre + " » (" + s.pseudo + ").");
+            } catch (e) { showStatus(status, "err", e.message); }
+        }
+        async function setMode(s, l, mode) {
+            const status = $("prog-status");
+            showStatus(status, "info", "Enregistrement…");
+            try {
+                await server("setLessonModeAdmin", pw(), s.id, l.id, mode);
+                await reload();
+                showStatus(status, "ok", mode === "archive"
+                    ? "Leçon archivée : « " + l.titre + " » (" + s.pseudo + "). Elle est rangée sous « 📦 leçons archivées »."
+                    : "Leçon réactivée : « " + l.titre + " » (" + s.pseudo + ").");
+            } catch (e) { showStatus(status, "err", e.message); }
+        }
+        async function resetProgress(studentId, quizId, label) {
+            if (!confirm("Remettre à zéro " + label + " ? Toutes les questions redeviennent « nouvelles » et l'historique des séances est effacé.")) return;
+            const status = $("prog-status");
+            showStatus(status, "info", "Remise à zéro…");
+            try {
+                const res = await server("resetProgress", pw(), studentId, quizId);
+                await reload();
+                showStatus(status, "ok", res.supprimes ? "Remise à zéro faite : " + label + "." : "Rien à remettre à zéro : " + label + " n'avait pas encore été révisée.");
+            } catch (e) {
+                showStatus(status, "err", e.message);
+            }
+        }
+
+        // ================= COMPTE : menu, changer le mot de passe =================
+        function closeMenu() { $("acct-menu").hidden = true; $("acct-btn").setAttribute("aria-expanded", "false"); }
+        function toggleMenu() {
+            const open = $("acct-menu").hidden;
+            $("acct-menu").hidden = !open;
+            $("acct-btn").setAttribute("aria-expanded", String(open));
+        }
+        // ---------- export de toutes les données (administrateur principal) ----------
+        let EXPORT = null;   // { name, text } : fichier prêt à enregistrer
+        function showExportPanel(open) {
+            $("export-panel").hidden = !open;
+            $("export-actions").hidden = true;
+            $("export-status").className = "status"; $("export-status").textContent = "";
+            if (!open) EXPORT = null;
+        }
+        const exportFile = () => new File([EXPORT.text], EXPORT.name, { type: "application/json" });
+        async function openExport() {
+            showPwPanel(false);
+            showExportPanel(true);
+            $("export-panel").scrollIntoView({ block: "start" });
+            showStatus($("export-status"), "info", "⏳ Préparation du fichier…");
+            try {
+                const data = await server("backupData", pw());
+                const d = new Date(data.date), two = n => String(n).padStart(2, "0");
+                const text = JSON.stringify(data);
+                EXPORT = { name: "quizy-export-" + d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate()) + "-" + two(d.getHours()) + "h" + two(d.getMinutes()) + ".json", text };
+                const keys = Object.keys(data.proprietes).filter(k => !/~\d+$/.test(k)), n = p => keys.filter(k => k.startsWith(p)).length;
+                const pl = (k, one, many) => k + " " + (k > 1 ? many : one);
+                showStatus($("export-status"), "ok", "✅ Fichier prêt (" + Math.max(1, Math.round(text.length / 1000)) + " Ko) : " + pl(n("student_"), "enfant", "enfants") + ", " +
+                    pl(n("parent_"), "famille invitée", "familles invitées") + ", " + pl(n("quiz_"), "leçon créée", "leçons créées") + ", " + pl(n("srs_"), "progression", "progressions") + ". Choisis comment l'enregistrer.");
+                $("export-actions").hidden = false;
+                let canShare = false;
+                try { canShare = !!(navigator.canShare && navigator.share && matchMedia("(pointer: coarse)").matches && navigator.canShare({ files: [exportFile()] })); } catch (e) { /* non pris en charge */ }
+                $("export-share").hidden = !canShare;
+            } catch (e) {
+                showStatus($("export-status"), "err", e.message);
+            }
+        }
+        function downloadExport() {
+            if (!EXPORT) return;
+            const url = URL.createObjectURL(new Blob([EXPORT.text], { type: "application/json" }));
+            const a = h("a", { href: url, download: EXPORT.name, hidden: "" });
+            document.body.append(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+            showStatus($("export-status"), "ok", "💾 Téléchargement lancé : « " + EXPORT.name + " » (dans le dossier Téléchargements). Rien ne s'est passé ? Essaie « 📋 Copier le contenu ».");
+        }
+        function shareExport() {
+            if (!EXPORT) return;
+            navigator.share({ files: [exportFile()], title: "Export QUIZy" })
+                .then(() => showStatus($("export-status"), "ok", "📤 Fichier « " + EXPORT.name + " » envoyé."))
+                .catch(e => { if (!e || e.name !== "AbortError") downloadExport(); });
+        }
+        function copyExport() {
+            if (!EXPORT) return;
+            const done = () => showStatus($("export-status"), "ok", "📋 Contenu copié : colle-le dans l'écran « Installer » de QUIZy (« ou coller le contenu du fichier »).");
+            const fallback = () => {
+                const t = h("textarea", { readonly: "", "aria-label": "Contenu du fichier exporté" }); t.value = EXPORT.text;
+                $("export-status").after(t); t.select();
+                let okCopy = false; try { okCopy = document.execCommand("copy"); } catch (e) { /* refusé */ }
+                if (okCopy) { t.remove(); done(); } else showStatus($("export-status"), "info", "Sélectionne tout le texte ci-dessous et copie-le.");
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(EXPORT.text).then(done, fallback); else fallback();
+        }
+        function showPwPanel(open) {
+            if (open) showExportPanel(false);
+            $("pw-panel").hidden = !open;
+            ["pw-old", "pw-new", "pw-new2"].forEach(id => { $(id).value = ""; });
+            $("pw-status").className = "status";
+            if (open) { $("pw-panel").scrollIntoView({ block: "start" }); $("pw-old").focus(); }
+        }
+        async function changePassword() {
+            const st = $("pw-status"), old = $("pw-old").value, n1 = $("pw-new").value, n2 = $("pw-new2").value;
+            if (!old) return showStatus(st, "err", "Saisis ton mot de passe actuel.");
+            if (n1.length < 8) return showStatus(st, "err", "Le nouveau mot de passe doit faire au moins 8 caractères.");
+            if (n1 !== n2) return showStatus(st, "err", "Les deux nouveaux mots de passe ne sont pas identiques.");
+            showStatus(st, "info", "Enregistrement…");
+            $("pw-save").disabled = true;
+            try {
+                await server("changePassword", { pseudo: pw().pseudo, password: old }, n1);
+                $("password").value = n1;   // la session continue avec le nouveau mot de passe
+                ["pw-old", "pw-new", "pw-new2"].forEach(id => { $(id).value = ""; });
+                showStatus(st, "ok", "✅ Mot de passe changé. Utilise le nouveau à ta prochaine connexion.");
+            } catch (e) {
+                showStatus(st, "err", /incorrect/.test(e.message) ? "Mot de passe actuel incorrect." : e.message);
+            } finally { $("pw-save").disabled = false; }
+        }
+
+        // ================= INSCRIPTION D'UNE FAMILLE (page de connexion) =================
+        function showSignup(open) {
+            $("signup").hidden = !open;
+            $("signup-open").setAttribute("aria-expanded", String(open));
+            if (open) { $("su-status").className = "status"; $("signup").scrollIntoView({ block: "start" }); $("su-code").focus(); }
+        }
+        async function createFamily() {
+            const st = $("su-status");
+            const info = { famille: $("su-famille").value.trim(), pseudo: $("su-pseudo").value.trim(), password: $("su-pw").value };
+            if (!$("su-code").value.trim()) return showStatus(st, "err", "Saisis le code d'invitation.");
+            if (info.password.length < 8) return showStatus(st, "err", "Le mot de passe doit faire au moins 8 caractères.");
+            if (info.password !== $("su-pw2").value) return showStatus(st, "err", "Les deux mots de passe ne sont pas identiques.");
+            showStatus(st, "info", "Création de ta famille…");
+            $("su-save").disabled = true;
+            try {
+                const res = await server("createFamily", $("su-code").value, info);
+                $("admin-pseudo").value = res.pseudo;
+                $("password").value = info.password;
+                ["su-code", "su-famille", "su-pseudo", "su-pw", "su-pw2"].forEach(id => { $(id).value = ""; });
+                showSignup(false);
+                await unlock();
+            } catch (e) {
+                showStatus(st, "err", e.message);
+            } finally { $("su-save").disabled = false; }
+        }
+
+        // ================= PARENTS (administrateur principal) =================
+        const adminUrl = () => $("to-student").getAttribute("href") + "?p=admin";
+        const ko = n => Math.round(n / 1000);
+        function renderParents() {
+            if (!DATA.moi.owner) return;
+            const parents = DATA.parents || [];
+            // code d'invitation
+            const box = $("invite-box");
+            const btn = (txt, cls, fn) => h("button", { class: "btn " + cls, type: "button", onclick: fn }, txt);
+            if (DATA.invitation) {
+                const url = h("input", { type: "text", readonly: "", value: adminUrl(), "aria-label": "Adresse de l'espace parents", onfocus: e => e.target.select() });
+                box.replaceChildren(
+                    h("p", {}, "Code d'invitation : ", h("strong", { class: "invite-code", id: "invite-code" }, DATA.invitation)),
+                    h("div", { class: "invite-url" }, h("label", {}, "Adresse de l'espace parents à donner :"), url),
+                    h("p", { class: "hint" }, "La famille ouvre cette adresse, touche « 👪 Créer ma famille » et saisit le code. Un nouveau code remplace l'ancien."),
+                    h("div", { class: "actions" }, btn("🎲 Nouveau code", "secondary small", () => inviteCode("new")), btn("🚫 Fermer les inscriptions", "danger", () => inviteCode("close"))));
+            } else {
+                box.replaceChildren(
+                    h("p", { class: "hint" }, "🚫 Inscriptions fermées : personne ne peut créer de famille."),
+                    h("div", { class: "actions" }, btn("🎟️ Créer un code d'invitation", "small", () => inviteCode("new"))));
+            }
+            // stockage
+            const st = DATA.stockage || { octets: 0, max: 500000 };
+            const pct = Math.min(100, Math.round(st.octets / st.max * 100));
+            $("stockage").replaceChildren(h("div", { class: "stockage" + (pct >= 80 ? " warn" : "") },
+                "💾 Stockage utilisé : " + ko(st.octets) + " Ko sur " + ko(st.max) + " Ko (" + pct + " %)", avBar(pct),
+                pct >= 80 ? h("p", { class: "hint warn" }, "Bientôt plein : au-delà de 85 %, plus aucune famille ne peut s'inscrire.") : null));
+            // familles
+            const mine = DATA.students.length;
+            const rows = [h("div", { class: "item", "data-parent": "" },
+                h("div", {}, "⭐"),
+                h("div", { class: "info" }, h("strong", {}, "Ta famille"),
+                    h("span", {}, "👤 " + DATA.moi.pseudo + " (toi, administrateur) · " + mine + " enfant" + (mine > 1 ? "s" : ""))))];
+            parents.forEach(p => rows.push(h("div", { class: "item", "data-parent": p.id },
+                h("div", {}, "👪"),
+                h("div", { class: "info" }, h("strong", {}, p.famille),
+                    h("span", {}, "👤 " + p.pseudo + " · " + p.enfants + " enfant" + (p.enfants > 1 ? "s" : "") + " · inscrite le " + new Date(p.ajoute).toLocaleDateString("fr-FR") +
+                        " · " + (p.vu ? "dernière connexion " + timeFr(p.vu) : "jamais connectée"))),
+                h("button", { class: "btn secondary small", type: "button", onclick: () => newParentPassword(p) }, "🔑 Nouveau mot de passe"),
+                h("button", { class: "btn danger", type: "button", onclick: () => removeFamily(p) }, "Supprimer"))));
+            if (!parents.length) rows.push(h("p", { class: "empty" }, "Aucune autre famille pour l'instant."));
+            $("parent-list").replaceChildren(...rows);
+        }
+        async function inviteCode(action) {
+            if (action === "close" && !confirm("Fermer les inscriptions ? Le code actuel ne marchera plus (les familles déjà inscrites ne sont pas touchées).")) return;
+            const status = $("parents-status");
+            try {
+                await server("setInviteCode", pw(), action);
+                await reload();
+                showStatus(status, "ok", action === "close" ? "Inscriptions fermées." : "Nouveau code d'invitation : " + DATA.invitation);
+            } catch (e) { showStatus(status, "err", e.message); }
+        }
+        async function newParentPassword(p) {
+            const np = prompt("Nouveau mot de passe pour « " + p.pseudo + " » (8 caractères minimum). Donne-le-lui : il pourra le changer ensuite depuis son menu.");
+            if (np == null) return;
+            const status = $("parents-status");
+            try {
+                await server("resetParentPassword", pw(), p.id, np);
+                showStatus(status, "ok", "Nouveau mot de passe enregistré pour « " + p.pseudo + " ».");
+            } catch (e) { showStatus(status, "err", e.message); }
+        }
+        async function removeFamily(p) {
+            if (!confirm("Supprimer la famille « " + p.famille + " » ? Le compte de " + p.pseudo + ", ses " + p.enfants + " enfant(s), leurs leçons, flashcards et progressions seront effacés définitivement.")) return;
+            const status = $("parents-status");
+            try {
+                await server("deleteFamily", pw(), p.id);
+                await reload();
+                showStatus(status, "ok", "Famille « " + p.famille + " » supprimée.");
+            } catch (e) { showStatus(status, "err", e.message); }
+        }
+
+        // ---------- événements ----------
+        NAV.forEach(t => $("tab-" + t).addEventListener("click", () => go(t)));
+        $("tab-eleve-ajout").addEventListener("click", () => { resetStudentForm(); $("student-status").className = "status"; go("eleve-ajout"); });
+        $("tab-quiz-ajout").addEventListener("click", () => go("quiz-new"));
+        $("mode-manual").addEventListener("click", () => { resetQuizForm(); $("quiz-status").className = "status"; go("quiz-ajout"); });
+        $("mode-ia").addEventListener("click", () => startAi());
+        $("ia-count").addEventListener("click", e => { const b = e.target.closest("button[data-n]"); if (b) { AI.count = Number(b.dataset.n); saveAiPrefs(); renderAiSettings(); } });
+        $("ia-classe").addEventListener("change", e => { AI.classe = e.target.value; saveAiPrefs(); renderAiSettings(); });
+        $("ia-copy").addEventListener("click", copyPrompt);
+        $("ia-share").addEventListener("click", sharePrompt);
+        $("ia-next-1").addEventListener("click", () => aiStep(2));
+        $("ia-answer").addEventListener("input", () => { clearTimeout(AI.timer); AI.timer = setTimeout(analyseAnswer, 250); });
+        $("ia-next-2").addEventListener("click", () => aiStep(3));
+        $("ia-back").addEventListener("click", () => AI.step > 1 ? aiStep(AI.step - 1) : go("quiz-new"));
+        $("ia-save").addEventListener("click", saveAiQuiz);
+        $("ia-edit").addEventListener("click", editAiQuiz);
+        $("new-deck").addEventListener("click", () => { resetDeckForm(); $("deck-status").className = "status"; go("fc-ajout"); });
+        document.querySelectorAll(".back-link[data-go]").forEach(b => b.addEventListener("click", () => go(b.dataset.go)));
+        $("unlock").addEventListener("click", unlock);
+        $("lock").addEventListener("click", () => { closeMenu(); lockAgain(); });
+        $("acct-btn").addEventListener("click", e => { e.stopPropagation(); toggleMenu(); });
+        $("change-pw").addEventListener("click", () => { closeMenu(); showPwPanel(true); });
+        document.addEventListener("click", e => { if (!$("acct").contains(e.target)) closeMenu(); });
+        document.addEventListener("keydown", e => { if (e.key === "Escape") closeMenu(); });
+        $("pw-close").addEventListener("click", () => showPwPanel(false));
+        $("pw-save").addEventListener("click", changePassword);
+        $("pw-new2").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); changePassword(); } });
+        $("signup-open").addEventListener("click", () => showSignup($("signup").hidden));
+        $("su-cancel").addEventListener("click", () => showSignup(false));
+        $("su-save").addEventListener("click", createFamily);
+        $("su-pw2").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); createFamily(); } });
+        $("password").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); unlock(); } });
+        $("admin-pseudo").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("password").focus(); } });
+        try { $("admin-pseudo").value = localStorage.getItem(ADMIN_PSEUDO_KEY) || ""; } catch (e) { /* stockage indisponible */ }
+        $("save-student").addEventListener("click", saveStudent);
+        $("reset-student-form").addEventListener("click", () => { resetStudentForm(); $("student-status").className = "status"; });
+        $("add-question").addEventListener("click", () => { addQuestion(); filterQuestions(); });
+        $("q-search").addEventListener("input", filterQuestions);
+        $("q-collapse").addEventListener("click", () => setCollapsed(true));
+        $("q-expand").addEventListener("click", () => setCollapsed(false));
+        $("reset-quiz").addEventListener("click", () => { resetQuizForm(); $("quiz-status").className = "status"; });
+        $("save-quiz").addEventListener("click", () => saveItem("quiz"));
+        $("reset-deck").addEventListener("click", () => { resetDeckForm(); $("deck-status").className = "status"; });
+        $("save-deck").addEventListener("click", () => saveItem("deck"));
+        $("menu-parents").addEventListener("click", () => { closeMenu(); go("parents"); });
+        $("menu-export").addEventListener("click", () => { closeMenu(); openExport(); });
+        $("export-close").addEventListener("click", () => showExportPanel(false));
+        $("export-download").addEventListener("click", downloadExport);
+        $("export-share").addEventListener("click", shareExport);
+        $("export-copy").addEventListener("click", copyExport);
+        // retour sur l'appli (téléphone) : les données se mettent à jour toutes seules
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible" && !$("admin-area").hidden && Date.now() - lastLoad > 60000) reload().catch(() => {});
+        });
+
+        // ---------- Profils mémorisés : écran « Qui es-tu ? » ----------
+        // Après chaque connexion réussie, le profil (pseudo, rôle, couleur — jamais le mot de passe) est mémorisé sur l'appareil.
+        // Au lancement : grille des profils ; toucher un profil ne demande plus que le mot de passe.
+        const PROFILS = window.QuizyProfils && window.QuizyProfils.actif() ? window.QuizyProfils : null;
+        let profilChoisi = null;
+        function afficherQuiEsTu() {
+            if (!PROFILS || !PROFILS.lire().length) { formulaireComplet(false); return; }
+            profilChoisi = null;
+            $("lockbar").hidden = true; $("locked-hint").hidden = true; $("who-retrait").hidden = true;
+            PROFILS.grille($("who"), {
+                onChoisir: p => {
+                    if (p.role === "eleve") { PROFILS.choisirPour(p); location.href = "/"; return; }   // rien dans l'URL
+                    utiliserProfil(p);
+                },
+                onAutre: () => formulaireComplet(true)
+            });
+            const premier = $("who").querySelector(".qp-profil"); if (premier) premier.focus();
+        }
+        function utiliserProfil(p) {
+            profilChoisi = p;
+            $("who").hidden = true; $("lockbar").hidden = false; $("locked-hint").hidden = false;
+            $("admin-pseudo").value = p.pseudo; $("password").value = "";
+            $("lock-status").className = "status inline"; $("lock-status").textContent = ""; $("who-retrait").hidden = true;
+            $("lockbar").classList.add("avec-profil");
+            PROFILS.puce($("who-chip"), p, afficherQuiEsTu);
+            $("password").focus();
+        }
+        // Formulaire complet (pseudo + mot de passe) ; vider = nouvelle connexion
+        function formulaireComplet(vider) {
+            profilChoisi = null;
+            $("who").hidden = true; $("lockbar").hidden = false;
+            if ($("admin-area").hidden) $("locked-hint").hidden = false;
+            $("lockbar").classList.remove("avec-profil");
+            $("who-chip").hidden = true; $("who-retrait").hidden = true;
+            if (vider) { $("admin-pseudo").value = ""; $("password").value = ""; $("lock-status").className = "status inline"; $("admin-pseudo").focus(); }
+        }
+        // Connexion réussie : profil mémorisé (ou mis à jour), retour à l'affichage normal de la barre
+        function profilConnecte() {
+            if (PROFILS && DATA.moi && DATA.moi.pseudo) PROFILS.memoriser({ role: "parent", id: PROFILS.norm(DATA.moi.pseudo), nom: DATA.moi.pseudo, pseudo: DATA.moi.pseudo, admin: !!DATA.moi.owner });
+            formulaireComplet(false);
+        }
+        // Connexion refusée avec un profil mémorisé : message clair, sans dire si c'est le mot de passe ou le profil (sécurité)
+        function echecProfil(message) {
+            if (!profilChoisi) return;
+            const p = profilChoisi, refus = message === "Pseudo ou mot de passe incorrect.";
+            if (refus) showStatus($("lock-status"), "err", "Mot de passe incorrect, ou ce profil n'existe plus.");
+            PROFILS.proposerRetrait($("who-retrait"), p, refus ? "Ce profil n'est plus valable ?" : "Un souci avec ce profil ?", afficherQuiEsTu);
+        }
+        $("lock").addEventListener("click", () => formulaireComplet(false));
+
+        resetQuizForm();
+        resetDeckForm();
+        go("programmes");
+        if (PROFILS) {
+            // profil touché sur la page élève ? sinon la grille, s'il y a des profils mémorisés
+            const choix = PROFILS.choixEnAttente();
+            if (choix && choix.role === "parent") utiliserProfil(choix); else afficherQuiEsTu();
+        }
+    </script>
+</body>
+</html>

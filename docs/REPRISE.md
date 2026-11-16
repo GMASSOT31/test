@@ -61,8 +61,19 @@ Une suite seule : `node tests/NN-nom.js` (Apps Script) ou `QUIZY_TARGET=cloudfla
 31 (bout en bout sur `wrangler dev`) pour Cloudflare (`// cible: cloudflare` en tête de fichier).
 Ancien mode d'emploi : `node tests/NN-nom.js` (un fichier par suite, tous verts). `tests/harness.js` fait tourner le vrai `Code.gs` + `Contenu.gs` dans `vm` (faux `PropertiesService`, `CacheService`, `LockService`, `Utilities` ; `world.advance(ms)` fait avancer l'horloge du serveur) et fournit un faux `google.script.run` pour les pages. Aides : `startLesson`, `answerCurrent`, `finishSession`. Suites clés : 02 (moteur), 12 (séances), 08 (suivi parent), 21 (téléphone), 25 (familles, serveur), 26 (familles, page admin), 27 (création de leçon avec une IA).
 
+## 5 ter. Règle depuis le 16/11/2026 : on ne travaille plus que sur QUIZy Cloudflare
+- Décision de l'utilisateur : toutes les évolutions se font sur la version Cloudflare. **Sources : `cloudflare/source/`**
+  (`Index.html`, `admin.html`, `Code.gs`, `Contenu.gs`, copiés depuis `apps-script/` le 16/11/2026, puis modifiés là seulement).
+- `apps-script/` = l'ancienne version, **figée** (déploiement Apps Script @40, toujours en ligne, jamais désactivé) : ne plus la
+  modifier ni la publier. Les suites `QUIZY_TARGET=apps-script` ne servent plus qu'à vérifier qu'elle n'a pas bougé.
+- Écran **« Qui es-tu ? »** (profils mémorisés sur l'appareil) : `cloudflare/static/profils.js` (chargé par les deux pages) +
+  branchement dans `source/Index.html` et `source/admin.html`. localStorage `profiles` (8 au plus, le plus récent en premier, sans
+  doublon ; rôle, id, nom, pseudo, classe, couleur, admin, maj — jamais de PIN, mot de passe ni jeton). Passage d'une page à
+  l'autre par sessionStorage `quizy-profil-choisi` (rien dans l'URL). Coupé dans les tests sauf `install(c, w, { profils: true })`
+  (`window.QUIZY_PROFILS = false`). Suite 32.
+
 ## 5 bis. QUIZy sur Cloudflare (`cloudflare/`, voir `docs/MIGRATION-CLOUDFLARE.md`)
-- **Une seule source** : `apps-script/` reste la référence. `cloudflare/build.cjs` emballe `Contenu.gs` + `Code.gs` **sans les modifier**
+- **Source** : `cloudflare/source/` (voir §5 ter). `cloudflare/build.cjs` emballe `Contenu.gs` + `Code.gs` **sans les modifier**
   dans `src/app.gen.js` (`createApp(services)`) et fabrique `public/` à partir de `Index.html` (→ `index.html`) et `admin.html`
   (→ `parents.html`) : liens `/` et `/parents`, manifeste, icônes, `<script src="/run.js">`. Fichiers générés : non suivis par git.
 - `src/core.js` : services Google réimplémentés (PropertiesService = table SQLite `props`, CacheService = table `cache`,
