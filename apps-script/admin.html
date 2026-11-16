@@ -4,22 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QUIZy · Parents</title>
+    <!-- Police de l'interface (arrondie, assortie au logo QUIZy) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --navy: #1e3a8a;
-            --blue: #3b6fe0;
-            --gold: #ffd166;
-            --pink: #ff8fb8;
-            --violet: #785aff;
-            --mint: #5dffb0;
-            --ink: #1f2a4d;
-            --muted: #6a7394;
-            --line: #e3e8f5;
-            --bg: #f4f6fb;
+            --navy: #102B52;
+            --blue: #414E98;
+            --gold: #FFD078;
+            --pink: #FFC9DA;
+            --violet: #9872C6;
+            --mint: #BFF2D6;
+            --ink: #1A2B4C;
+            --muted: #5F6B8A;
+            --line: #E1E6F3;
+            --bg: #F1F4FB;
             --green: #16a34a;
             --red: #dc2626;
-            --sticker: 0 3px 0 rgba(15,23,80,.35);
-            --soft: 0 5px 0 rgba(15,23,80,.12), 0 12px 28px rgba(30,58,138,.10);
+            --sticker: 0 3px 0 rgba(16,43,82,.35);
+            --soft: 0 5px 0 rgba(16,43,82,.12), 0 12px 28px rgba(16,43,82,.10);
         }
         * { box-sizing: border-box; }
         body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); background: var(--bg); }
@@ -28,11 +32,11 @@
         position: relative; overflow: hidden; color: #fff; text-align: center;
         padding: 14px 16px 0;
         background:
-          radial-gradient(circle at 12% 20%, rgba(255,95,162,.55), transparent 38%),
-          radial-gradient(circle at 88% 10%, rgba(255,209,102,.40), transparent 34%),
-          radial-gradient(circle at 70% 100%, rgba(120,90,255,.55), transparent 45%),
-          linear-gradient(135deg, #1e3a8a 0%, #3b6fe0 100%);
-        border-bottom: 3px solid #ffd166;
+          radial-gradient(circle at 12% 20%, rgba(152,114,198,.55), transparent 38%),
+          radial-gradient(circle at 88% 10%, rgba(255,208,120,.40), transparent 34%),
+          radial-gradient(circle at 70% 100%, rgba(152,114,198,.55), transparent 45%),
+          linear-gradient(135deg, #102B52 0%, #414E98 100%);
+        border-bottom: 3px solid #FFD078;
       }
       .rv-banner::before { /* motif points façon cahier */
         content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .18;
@@ -48,24 +52,24 @@
         padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .3px;
         transform: rotate(-2deg);
       }
-      .rv-dot { width: 9px; height: 9px; border-radius: 50%; background: #5dffb0; box-shadow: 0 0 0 0 rgba(93,255,176,.7); animation: rv-pulse 1.8s infinite; }
-      @keyframes rv-pulse { 70% { box-shadow: 0 0 0 10px rgba(93,255,176,0); } 100% { box-shadow: 0 0 0 0 rgba(93,255,176,0); } }
+      .rv-dot { width: 9px; height: 9px; border-radius: 50%; background: #A9C9FF; box-shadow: 0 0 0 0 rgba(169,201,255,.7); animation: rv-pulse 1.8s infinite; }
+      @keyframes rv-pulse { 70% { box-shadow: 0 0 0 10px rgba(169,201,255,0); } 100% { box-shadow: 0 0 0 0 rgba(169,201,255,0); } }
 
       .rv-title {
         margin: 8px 0 2px; font-size: clamp(24px, 4.6vw, 36px); line-height: 1.05; font-weight: 900; letter-spacing: -1px;
-        text-shadow: 0 3px 0 rgba(15,23,80,.35);
+        text-shadow: 0 3px 0 rgba(16,43,82,.35);
       }
       .rv-title .rv-hl {
-        background: linear-gradient(90deg, #ffd166, #ff8fb8); -webkit-background-clip: text; background-clip: text;
-        -webkit-text-fill-color: transparent; text-shadow: none; filter: drop-shadow(0 3px 0 rgba(15,23,80,.35));
+        background: linear-gradient(90deg, #FFD078, #C9A8EE); -webkit-background-clip: text; background-clip: text;
+        -webkit-text-fill-color: transparent; text-shadow: none; filter: drop-shadow(0 3px 0 rgba(16,43,82,.35));
       }
       .rv-sub { min-height: 20px; margin: 0 0 8px; font-size: clamp(13px, 2vw, 15px); font-weight: 600; opacity: .95; transition: opacity .35s, transform .35s; }
       .rv-sub.rv-out { opacity: 0; transform: translateY(6px); }
 
       .rv-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
       .rv-chip {
-        background: #fff; color: #1e3a8a; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 10px;
-        box-shadow: 0 3px 0 rgba(15,23,80,.35); transition: transform .15s;
+        background: #fff; color: #102B52; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 10px;
+        box-shadow: 0 3px 0 rgba(16,43,82,.35); transition: transform .15s;
       }
       .rv-chip:nth-child(odd) { transform: rotate(-2deg); }
       .rv-chip:nth-child(even) { transform: rotate(2deg); }
@@ -80,7 +84,7 @@
       @keyframes rv-bob { 0%,100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-12px) rotate(8deg); } }
 
       /* bandeau défilant */
-      .rv-ticker { position: relative; z-index: 2; margin: 0 -16px; background: #ffd166; color: #1e3a8a; overflow: hidden; white-space: nowrap; transform: rotate(-.6deg) scale(1.02); }
+      .rv-ticker { position: relative; z-index: 2; margin: 0 -16px; background: #FFD078; color: #102B52; overflow: hidden; white-space: nowrap; transform: rotate(-.6deg) scale(1.02); }
       .rv-track { display: inline-block; padding: 4px 0; font-size: 11px; font-weight: 900; letter-spacing: 1.2px; animation: rv-scroll 28s linear infinite; }
       @keyframes rv-scroll { to { transform: translateX(-50%); } }
 
@@ -113,7 +117,7 @@
             box-shadow: var(--sticker); transition: transform .12s, box-shadow .12s, background .15s;
         }
         .btn:hover:not(:disabled) { background: #2f5fd0; transform: translateY(-2px); }
-        .btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgba(15,23,80,.35); }
+        .btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgba(16,43,82,.35); }
         .btn:disabled { opacity: .6; cursor: default; box-shadow: none; }
         .btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
         .btn.secondary { background: #fff; color: var(--navy); }
@@ -227,7 +231,7 @@
 
         /* Progression */
         .bar { height: 12px; border-radius: 999px; background: #e8ecf8; overflow: hidden; margin: 8px 0 6px; }
-        .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--pink)); transition: width .4s; }
+        .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--violet)); transition: width .4s; }
         .prog-card { border: 2px solid var(--line); border-radius: 14px; padding: 14px; margin: 12px 0; background: #fafbff; }
         .prog-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
         .prog-head .info strong { display: block; font-size: 1.05rem; }
@@ -240,7 +244,7 @@
         @media (max-width: 760px) {
             .rv-banner { padding: 6px 12px; border-bottom-width: 2px; }
             .rv-sticker, .rv-sub, .rv-chips, .rv-ticker, .rv-float { display: none; }
-            .rv-title { margin: 0; font-size: 18px; letter-spacing: -.5px; text-shadow: 0 2px 0 rgba(15,23,80,.35); }
+            .rv-title { margin: 0; font-size: 18px; letter-spacing: -.5px; text-shadow: 0 2px 0 rgba(16,43,82,.35); }
             .lockbar { margin: 8px 12px 0; padding: 6px 8px; gap: 6px; border-radius: 12px; }
             .lockbar label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
             .lockbar input { flex: 1 1 120px; min-width: 0; padding: 8px 10px; }
@@ -266,7 +270,7 @@
         /* Suivi des révisions : niveaux, prête pour le contrôle */
         .lvl-bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: #eceff7; margin: 8px 0 4px; }
         .lvl, .lvl-dot { display: block; height: 100%; }
-        .l0 { background: #dfe3ee; } .l1 { background: #9be7c4; } .l2 { background: #2fbf7f; } .l3 { background: #ffd166; } .l4 { background: #785aff; }
+        .l0 { background: #dfe3ee; } .l1 { background: #9be7c4; } .l2 { background: #2fbf7f; } .l3 { background: #FFD078; } .l4 { background: #9872C6; }
         .lvl-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .8rem; font-weight: 700; color: var(--muted); }
         .leg { display: inline-flex; align-items: center; gap: 4px; }
         .lvl-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
@@ -452,19 +456,45 @@
             .lesson-row .lr-main { padding: 10px 12px; gap: 8px; }
             .kid-head { padding: 12px; }
         }
+
+        /* ===== Identité QUIZy (pack d'assets v1) : palette, police, logo, pictogrammes ===== */
+        :root { --quizy-gradient: linear-gradient(135deg, #174780, #414E98 52%, #9872C6); }
+        body, button, input, select, textarea { font-family: "Nunito", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .rv-banner {
+          background:
+            radial-gradient(circle at 85% 0%, rgba(152,114,198,.55), transparent 45%),
+            radial-gradient(circle at 10% 100%, rgba(169,201,255,.22), transparent 40%),
+            var(--quizy-gradient);
+          border-bottom: 3px solid #FFD078;
+        }
+        .rv-banner::before { opacity: .12; }
+        .rv-title { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 6px 0 4px; line-height: 1; text-shadow: none; }
+        .rv-logo { display: block; height: 64px; width: auto; filter: drop-shadow(0 3px 0 rgba(16,43,82,.35)); }
+        .rv-tag { font-size: 14px; font-weight: 900; letter-spacing: .3px; background: #FFD078; color: #102B52; padding: 3px 10px; border-radius: 999px; transform: rotate(-3deg); box-shadow: 0 3px 0 rgba(16,43,82,.35); }
+        .rv-float img { display: block; width: 34px; height: 34px; }
+        .rv-f2 img, .rv-f4 img { width: 28px; height: 28px; }
+        .rv-chip { color: #102B52; }
+        .rv-ticker { background: #FFD078; color: #102B52; }
+        .login-emoji img { display: block; width: 76px; height: 76px; margin: 0 auto; filter: drop-shadow(0 4px 10px rgba(65,78,152,.35)); }
+        .btn { letter-spacing: .1px; }
+        @media (max-width: 700px) {
+          .rv-title { margin: 0; gap: 8px; }
+          .rv-logo { height: 30px; filter: none; }
+          .rv-tag { font-size: 11px; padding: 2px 8px; box-shadow: none; }
+        }
     </style>
 </head>
 <body>
 
     <header class="rv-banner">
-      <span aria-hidden="true" class="rv-float rv-f1">📚</span>
-      <span aria-hidden="true" class="rv-float rv-f2">⚡</span>
-      <span aria-hidden="true" class="rv-float rv-f3">🧠</span>
-      <span aria-hidden="true" class="rv-float rv-f4">🎯</span>
+      <span aria-hidden="true" class="rv-float rv-f1"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='106' height='106' viewBox='0 0 106 106'%3E%3Cpath d='M 39 32 C 39 10 73 10 73 32 C 73 46 55 48 55 62' fill='none' stroke='white' stroke-width='10' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='55' cy='80' r='5.5' fill='white'/%3E%3C/svg%3E" alt=""></span>
+      <span aria-hidden="true" class="rv-float rv-f2"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='106' height='106' viewBox='0 0 106 106'%3E%3Cg transform='translate(6 21) scale(.9)'%3E%3Cpath d='M 34 44 C 14 17 38 2 50 2 C 72 2 85 23 67 44 L 63 56 H 38 Z' fill='%23FFD078'/%3E%3Cpath d='M 41 66 H 60' fill='none' stroke='%23FFD078' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M 50 -8 V -15 M 18 1 L 12 -5 M 82 1 L 88 -5 M 8 25 H 0 M 93 25 H 101' fill='none' stroke='%23FFD078' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E" alt=""></span>
+      <span aria-hidden="true" class="rv-float rv-f3"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='106' height='106' viewBox='0 0 106 106'%3E%3Cg transform='translate(8 14) scale(.85)'%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='%23A9C9FF' stroke-width='5'/%3E%3Cpath d='M 50 25 V 50 L 65 61' fill='none' stroke='%23A9C9FF' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='50.0' cy='18.0' r='2.2' fill='%23A9C9FF'/%3E%3Ccircle cx='82.0' cy='50.0' r='2.2' fill='%23A9C9FF'/%3E%3Ccircle cx='50.00000000000001' cy='82.0' r='2.2' fill='%23A9C9FF'/%3E%3Ccircle cx='18.0' cy='50.00000000000001' r='2.2' fill='%23A9C9FF'/%3E%3C/g%3E%3Cpath d='M 44 9 H 58 M 51 9 V 17 M 79 19 L 85 25' fill='none' stroke='%23A9C9FF' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" alt=""></span>
+      <span aria-hidden="true" class="rv-float rv-f4"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='106' height='106' viewBox='0 0 106 106'%3E%3Cpolygon points='53.00,9.00 64.63,36.00 93.90,38.71 71.81,58.11 78.27,86.79 53.00,71.78 27.73,86.79 34.19,58.11 12.10,38.71 41.37,36.00' fill='%23FFD078'/%3E%3C/svg%3E" alt=""></span>
     
       <div class="rv-inner">
         <span class="rv-sticker"><span class="rv-dot"></span> QUIZy · Espace parents</span>
-        <h1 class="rv-title">Espace <span class="rv-hl">admin</span> ⚙️</h1>
+        <h1 class="rv-title"><img class="rv-logo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='770' height='320' viewBox='0 0 770 320'%3E%3Cg transform='translate(-8 3) scale(.53)'%3E%3Ccircle cx='256' cy='274' r='113' fill='none' stroke='white' stroke-width='53'/%3E%3Cpath d='M 314 340 L 370 396' fill='none' stroke='white' stroke-width='53' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cg transform='translate(174 199) scale(1.5)'%3E%3Cpath d='M 39 32 C 39 10 73 10 73 32 C 73 46 55 48 55 62' fill='none' stroke='white' stroke-width='10' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='55' cy='80' r='5.5' fill='white'/%3E%3C/g%3E%3C/g%3E%3Cpath d='M 242 113 V 177 C 242 241 324 241 324 177 V 113' fill='none' stroke='white' stroke-width='33' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M 375 113 V 225' fill='none' stroke='white' stroke-width='33' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='375' cy='75' r='16' fill='white'/%3E%3Cpath d='M 426 113 H 503 L 426 225 H 510' fill='none' stroke='white' stroke-width='30' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M 554 115 L 603 218 M 535 274 C 581 297 604 235 628 174 C 654 109 664 80 696 83' fill='none' stroke='white' stroke-width='31' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" alt="QUIZy" width="154" height="64"><span class="rv-tag">Parents</span></h1>
         <p class="rv-sub" id="rvSub">Suis les révisions de tes enfants et donne-leur des leçons</p>
         <div class="rv-chips">
           <span class="rv-chip">👨‍👧 Enfants</span>
@@ -1836,7 +1866,7 @@
         // Titre court : la partie après « : » (« Physique-chimie 5ᵉ (1/4) : corps purs… » → « Corps purs… »)
         const shortTitle = t => { const i = t.indexOf(" : "); const x = i > 0 ? t.slice(i + 3) : t; return x.charAt(0).toUpperCase() + x.slice(1); };
         const pctClass = p => p <= 0 ? "p0" : p < 40 ? "plow" : p < 80 ? "pmid" : "phigh";
-        const AVATAR_COLORS = ["#3b6fe0", "#785aff", "#ff6fa5", "#16a34a", "#f59e0b", "#0ea5e9"];
+        const AVATAR_COLORS = ["#414E98", "#9872C6", "#ff6fa5", "#16a34a", "#f59e0b", "#0ea5e9"];
         const daysTo = exam => Math.round((new Date(exam + "T00:00").getTime() - new Date(new Date(DATA.now).toDateString()).getTime()) / 86400000);
         function studentCard(s, index) {
             const open = kidOpen(s.id), acct = openDetails.has(s.id);

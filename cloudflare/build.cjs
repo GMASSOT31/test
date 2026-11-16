@@ -52,8 +52,9 @@ function head(manifest, title) {
   return `<title>${title}</title>
     <!-- QUIZy sur Cloudflare : appli installable + pont google.script.run → /api -->
     <link rel="manifest" href="/${manifest}">
-    <meta name="theme-color" content="#3b6fe0">
+    <meta name="theme-color" content="#414E98">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="apple-touch-icon" href="/icon-180.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
@@ -76,10 +77,10 @@ for (const [n, t] of [['index.html', eleve], ['parents.html', parents]]) {
 console.log('QUIZy construit : src/app.gen.js (' + names.size + ' noms), public/ (' + fs.readdirSync(OUT).length + ' fichiers)');
 
 // ---------- fichiers servis, intégrés au Worker (pas de « Workers Assets » : un seul envoi au déploiement) ----------
-const MIME = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', webmanifest: 'application/manifest+json; charset=utf-8', svg: 'image/svg+xml', png: 'image/png' };
+const MIME = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', webmanifest: 'application/manifest+json; charset=utf-8', svg: 'image/svg+xml', png: 'image/png', ico: 'image/x-icon' };
 const files = {};
 for (const f of fs.readdirSync(OUT).sort()) {
-  const ext = f.split('.').pop(), buf = fs.readFileSync(path.join(OUT, f)), text = ext !== 'png';
+  const ext = f.split('.').pop(), buf = fs.readFileSync(path.join(OUT, f)), text = ext !== 'png' && ext !== 'ico';
   files['/' + f] = { type: MIME[ext] || 'application/octet-stream', text, body: text ? buf.toString('utf8') : buf.toString('base64') };
 }
 fs.writeFileSync(path.join(ROOT, 'src', 'files.gen.js'), '// FICHIER GÉNÉRÉ par build.cjs (contenu de public/) : ne pas modifier à la main.\nexport const FILES = ' + JSON.stringify(files) + ';\n');
