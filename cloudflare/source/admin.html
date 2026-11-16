@@ -173,6 +173,11 @@
         .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
         .lockbar input { width: auto; flex: 1; min-width: 150px; max-width: 260px; }
         .lockbar .btn { padding: 9px 20px; }
+        /* Créer une leçon avec une IA, étape 1 : le bouton est dans l'étape 1 de la liste */
+        .ia-etapes > li { margin-bottom: 10px; }
+        .ia-etapes .ia-send { flex-direction: column; align-items: stretch; gap: 6px; margin: 10px 0 4px; }
+        .ia-ou { margin: 6px 0 0; text-align: center; font-size: .9rem; color: var(--muted); font-weight: 600; }
+        .ia-copy-alt { align-self: center; min-height: 48px; }
         /* onglet Leçons : parties repliables avec leur nombre de leçons */
         section.ls { margin: 0 0 14px; padding: 0; background: transparent; box-shadow: none; border-radius: 0; }   /* le bouton fait office de carte */
         .ls-corps { background: #fff; border-radius: 0 0 16px 16px; margin-top: -10px; padding: 18px 14px 12px !important; box-shadow: var(--soft); }
@@ -841,15 +846,18 @@
                         <option>1re</option>
                         <option>Terminale</option>
                     </select>
-                    <div class="actions ia-send">
-                        <button class="btn big" id="ia-share" type="button" hidden>📤 Envoyer à mon IA</button>
-                        <button class="btn big" id="ia-copy" type="button">📋 Copier la demande</button>
-                    </div>
+                    <!-- 3 étapes ; le bouton est DANS l'étape 1 : téléphone = « Envoyer » (copier en secours), ordinateur = « Copier » -->
+                    <ol class="howto ia-etapes">
+                        <li><span id="ia-etape-1">Envoie la demande à ton IA (ChatGPT, Gemini, Le Chat, Claude…).</span>
+                            <div class="actions ia-send">
+                                <button class="btn big" id="ia-share" type="button" hidden>📤 Envoyer à mon IA</button>
+                                <p class="ia-ou" id="ia-ou" hidden>Ton IA n'est pas dans la liste ?</p>
+                                <button class="btn big" id="ia-copy" type="button">📋 Copier la demande</button>
+                            </div>
                     <div class="status" id="ia-copy-status" role="status"></div>
-                    <ol class="howto">
-                        <li>Envoie (ou colle) la demande dans ton IA : ChatGPT, Gemini, Le Chat, Claude…</li>
-                        <li><strong>Ajoute les photos ou le document de la leçon</strong>, puis envoie.</li>
-                        <li>Copie <strong>toute</strong> sa réponse (son bouton « Copier »).</li>
+                        </li>
+                        <li>Dans ton IA, <strong>ajoute les photos ou le document de la leçon</strong>, puis envoie.</li>
+                        <li>Quand elle a répondu, copie <strong>toute</strong> sa réponse (son bouton « Copier ») et reviens ici.</li>
                     </ol>
                     <details class="prompt-view" id="ia-prompt-box"><summary>👀 Voir la demande</summary><textarea id="ia-prompt" readonly rows="12" aria-label="Demande à donner à l'IA"></textarea></details>
                     <div class="actions"><button class="btn secondary" id="ia-next-1" type="button">J'ai la réponse de l'IA →</button></div>
@@ -1480,7 +1488,13 @@
             // téléphone : « Envoyer à mon IA » (menu de partage) en premier ; « Copier » à côté, en second
             const share = canShare();
             $("ia-share").hidden = !share; $("ia-share").className = "btn big"; $("ia-share").textContent = "📤 Envoyer à mon IA";
-            $("ia-copy").className = share ? "btn secondary big" : "btn big"; $("ia-copy").textContent = "📋 Copier la demande";
+            // téléphone : copier n'est qu'une solution de secours (petit, sous la question « Ton IA n'est pas dans la liste ? »)
+            $("ia-ou").hidden = !share;
+            $("ia-copy").className = share ? "btn secondary small ia-copy-alt" : "btn big";
+            $("ia-copy").textContent = share ? "📋 Copier la demande pour la coller" : "📋 Copier la demande";
+            $("ia-etape-1").textContent = share
+                ? "Touche le bouton ci-dessous et choisis ton appli d'IA (ChatGPT, Gemini, Le Chat, Claude…)."
+                : "Copie la demande, puis colle-la dans ton IA (ChatGPT, Gemini, Le Chat, Claude…).";
             $("ia-next-1").className = "btn secondary";
             renderAiSettings();
             go("quiz-ia");
@@ -1508,7 +1522,7 @@
                 const ta = $("ia-prompt"); ta.focus(); ta.select(); ta.setSelectionRange(0, text.length);
                 try { copied = document.execCommand("copy"); } catch (e) { copied = false; }
             }
-            promptSent(); $("ia-copy").textContent = "📋 Copier à nouveau";
+            promptSent(); $("ia-copy").textContent = "📋 Copier à nouveau";   // (téléphone : reste un petit bouton de secours)
             showStatus(st, copied ? "ok" : "info", copied
                 ? "✅ Demande copiée ! Colle-la dans ton IA, ajoute les photos de la leçon et envoie."
                 : "Le texte est sélectionné ci-dessous : copie-le (appui long → Copier), puis colle-le dans ton IA.");
@@ -1518,7 +1532,7 @@
         const canShare = () => typeof navigator.share === "function" && window.matchMedia("(pointer: coarse)").matches;
         function promptSent() {   // la demande est partie : l'étape suivante passe en avant
             $("ia-share").className = "btn secondary big";
-            $("ia-copy").className = "btn secondary big";
+            if (!$("ia-copy").classList.contains("ia-copy-alt")) $("ia-copy").className = "btn secondary big";
             $("ia-next-1").className = "btn";
         }
         // au retour de l'appli d'IA, l'étape suivante doit être sous le pouce (appelé après l'affichage du message)
