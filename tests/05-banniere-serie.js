@@ -9,7 +9,10 @@ const day = n => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
   let c = await b.newContext({ viewport: { width: 1100, height: 800 } }); await install(c, w);
 
   // bannière sur les 2 pages, ancienne retirée, page Byzance supprimée
-  for (const f of ['Index.html', 'admin.html']) { const p = await open(c, f); ok((await p.locator('.rv-banner').count()) === 1 && (await p.locator('.rv-float').count()) === 4 && (await p.locator('.rv-chip').count()) === 4, f + ' : bannière fournie présente (4 emojis, bandeau, 4 pastilles)'); await p.close(); }
+  for (const f of ['Index.html', 'admin.html']) { const p = await open(c, f); ok((await p.locator('.rv-banner').count()) === 1 && (await p.locator('.rv-float').count()) === 4 && (await p.locator('.rv-chip').count()) === 4, f + ' : bannière fournie présente (4 emojis, bandeau, 4 pastilles)');
+    if (TARGET === 'cloudflare') ok((await p.locator('h1.rv-title img.rv-logo[alt="QUIZy"]').count()) === 1 && (await p.locator('.rv-float img').count()) === 4 && await p.evaluate(() => document.querySelector('.rv-logo').naturalWidth > 0),
+      f + ' : identité QUIZy (pack, version Cloudflare) : logo dans le titre (texte de remplacement « QUIZy »), 4 pictogrammes décoratifs');
+    await p.close(); }
   ok(!require('fs').existsSync(SRC + 'byzance.html'), 'byzance.html supprimée (elle contenait un quiz accessible sans connexion)');
 
   const p = await open(c, 'Index.html');

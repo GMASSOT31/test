@@ -6,6 +6,7 @@
 const fs = require('fs'), path = require('path');
 const ROOT = __dirname, AS = path.join(ROOT, '..', 'apps-script');
 const read = f => fs.readFileSync(path.join(AS, f), 'utf8');
+const { applyTheme } = require('./theme/theme.cjs');   // identité visuelle QUIZy, propre à la version Cloudflare
 
 // ---------- serveur ----------
 const contenu = read('Contenu.gs'), code = read('Code.gs');
@@ -40,7 +41,7 @@ fs.writeFileSync(path.join(ROOT, 'src', 'app.gen.js'), app);
 const OUT = path.join(ROOT, 'public');
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
-for (const f of fs.readdirSync(path.join(ROOT, 'static'))) fs.copyFileSync(path.join(ROOT, 'static', f), path.join(OUT, f));
+for (const f of fs.readdirSync(path.join(ROOT, 'static')).filter(f => !fs.statSync(path.join(ROOT, 'static', f)).isDirectory())) fs.copyFileSync(path.join(ROOT, 'static', f), path.join(OUT, f));
 
 function replaceOnce(text, from, to, what) {
   const n = text.split(from).length - 1;
@@ -52,19 +53,20 @@ function head(manifest, title) {
   return `<title>${title}</title>
     <!-- QUIZy sur Cloudflare : appli installable + pont google.script.run → /api -->
     <link rel="manifest" href="/${manifest}">
-    <meta name="theme-color" content="#3b6fe0">
+    <meta name="theme-color" content="#414E98">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="apple-touch-icon" href="/icon-180.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="QUIZy">
     <script src="/run.js"></script>`;
 }
-let eleve = read('Index.html');
+let eleve = applyTheme(read('Index.html'), 'eleve');
 eleve = replaceOnce(eleve, '<title>QUIZy</title>', head('manifest.webmanifest', 'QUIZy'), 'titre de la page élève');
 eleve = eleve.replace(EXEC, m => '/exec').replace('href="/exec?p=admin"', 'href="/parents"');
 
-let parents = read('admin.html');
+let parents = applyTheme(read('admin.html'), 'parents');
 parents = replaceOnce(parents, '<title>QUIZy · Parents</title>', head('manifest-parents.webmanifest', 'QUIZy · Parents'), 'titre de l\'espace parents');
 parents = parents.replace(EXEC, '/exec').replace('href="/exec"', 'href="/"');
 parents = replaceOnce(parents, '$("to-student").getAttribute("href") + "?p=admin"', 'location.origin + "/parents"', 'adresse de l\'espace parents à donner');
@@ -76,10 +78,10 @@ for (const [n, t] of [['index.html', eleve], ['parents.html', parents]]) {
 console.log('QUIZy construit : src/app.gen.js (' + names.size + ' noms), public/ (' + fs.readdirSync(OUT).length + ' fichiers)');
 
 // ---------- fichiers servis, intégrés au Worker (pas de « Workers Assets » : un seul envoi au déploiement) ----------
-const MIME = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', webmanifest: 'application/manifest+json; charset=utf-8', svg: 'image/svg+xml', png: 'image/png' };
+const MIME = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', webmanifest: 'application/manifest+json; charset=utf-8', svg: 'image/svg+xml', png: 'image/png', ico: 'image/x-icon' };
 const files = {};
 for (const f of fs.readdirSync(OUT).sort()) {
-  const ext = f.split('.').pop(), buf = fs.readFileSync(path.join(OUT, f)), text = ext !== 'png';
+  const ext = f.split('.').pop(), buf = fs.readFileSync(path.join(OUT, f)), text = ext !== 'png' && ext !== 'ico';
   files['/' + f] = { type: MIME[ext] || 'application/octet-stream', text, body: text ? buf.toString('utf8') : buf.toString('base64') };
 }
 fs.writeFileSync(path.join(ROOT, 'src', 'files.gen.js'), '// FICHIER GÉNÉRÉ par build.cjs (contenu de public/) : ne pas modifier à la main.\nexport const FILES = ' + JSON.stringify(files) + ';\n');

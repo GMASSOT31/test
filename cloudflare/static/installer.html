@@ -4,14 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QUIZy · Installer</title>
-    <meta name="theme-color" content="#3b6fe0">
+    <meta name="theme-color" content="#414E98">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        :root { --bleu: #3b6fe0; --violet: #785aff; --or: #ffd166; --texte: #1f2a44; --doux: #5b6680; --fond: #f4f6fc; --carte: #fff; --bord: #dfe4f2; --ok: #1f8a4c; --ko: #c0392b; }
+        :root { --bleu: #414E98; --violet: #9872C6; --or: #FFD078; --texte: #1A2B4C; --doux: #5F6B8A; --fond: #F1F4FB; --carte: #fff; --bord: #dfe4f2; --ok: #1f8a4c; --ko: #c0392b; }
         * { box-sizing: border-box; }
         [hidden] { display: none !important; }
-        body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--texte); background: var(--fond); }
-        header { background: linear-gradient(135deg, var(--bleu), var(--violet)); color: #fff; padding: 18px 16px; text-align: center; }
+        body { margin: 0; font: 16px/1.5 "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--texte); background: var(--fond); }
+        header { background: linear-gradient(135deg, #174780, #414E98 52%, #9872C6); color: #fff; padding: 18px 16px; text-align: center; border-bottom: 3px solid var(--or); }
+        header img { display: block; height: 56px; width: auto; margin: 0 auto; }
         header h1 { margin: 0; font-size: 1.5rem; }
         header p { margin: 4px 0 0; opacity: .9; }
         main { max-width: 560px; margin: 0 auto; padding: 16px; }
@@ -38,7 +40,7 @@
     </style>
 </head>
 <body>
-    <header><h1>QUIZy</h1><p id="sous-titre">Installation</p></header>
+    <header><h1><img src="/logo-white.svg" alt="QUIZy" width="135" height="56"></h1><p id="sous-titre">Installation</p></header>
     <main>
         <section class="card" id="chargement"><p>Chargement…</p></section>
 

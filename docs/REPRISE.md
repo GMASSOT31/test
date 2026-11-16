@@ -80,6 +80,12 @@ Ancien mode d'emploi : `node tests/NN-nom.js` (un fichier par suite, tous verts)
   Adresse : https://quizy.gabriel-massot31.workers.dev (autorisée dans le réseau de l'environnement « Default »).
   Le jeton ne s'écrit jamais dans le chat : formulaire sécurisé de la session (réseau `api.cloudflare.com`).
 - Toute évolution de `apps-script/` doit être publiée **sur les deux** tant que les deux sites vivent (l'ancien n'est jamais désactivé).
+- **Design QUIZy (pack d'assets v1) : version Cloudflare SEULEMENT** (décision de l'utilisateur, 16/11/2026). `apps-script/` garde
+  l'ancien design (= appli Apps Script en ligne). `cloudflare/theme/theme.cjs` applique l'identité à la construction : palette
+  (#102B52, #414E98, #9872C6, #FFD078, #A9C9FF), police Nunito, logo blanc dans le bandeau (+ pastille « Parents »), pictogrammes
+  du pack (bandeau, révision du jour, trophée du bilan), icône Q sur la connexion ; juste/faux restent vert/rose. SVG du pack dans
+  `cloudflare/theme/`, icônes d'appli et favicon dans `cloudflare/static/`. Chaque remplacement doit trouver sa cible : si une
+  évolution de `apps-script/` touche ces passages, la construction échoue et `theme.cjs` est à ajuster.
 
 ## 6. Données réelles (ne pas toucher sans accord)
 Classe « Gaby » : « Jul » (id `mael`), « Mael » (id `mael-2`, quiz intégrés attribués dont Technologie 5ᵉ) et « test » (créé par l'utilisateur). Ids internes ≠ noms affichés. Progressions remises à zéro au passage au parcours v3.
