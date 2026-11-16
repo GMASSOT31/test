@@ -29,6 +29,10 @@
         .status { margin-top: 12px; font-weight: 600; }
         .status.ok { color: var(--ok); } .status.ko { color: var(--ko); }
         .resume { margin: 8px 0 0; padding-left: 20px; }
+        .rapport h3 { margin: 16px 0 6px; font-size: 1rem; }
+        .rapport ul { margin: 4px 0; padding-left: 20px; }
+        .rapport li { margin: 2px 0; }
+        .rapport .bilan { font-weight: 700; font-size: 1.05rem; }
         .check { display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; font-weight: 400; }
         details summary { cursor: pointer; color: var(--bleu); margin-top: 10px; }
     </style>
@@ -37,6 +41,22 @@
     <header><h1>QUIZy</h1><p id="sous-titre">Installation</p></header>
     <main>
         <section class="card" id="chargement"><p>Chargement…</p></section>
+
+        <!-- Vérification (lecture seule) : compare le fichier exporté de l'ancienne appli aux données de QUIZy -->
+        <form class="card" id="verif" hidden>
+            <h2>🔍 Vérifier les données</h2>
+            <p class="hint">Compare le fichier exporté de l'ancienne appli avec ce que contient QUIZy : enfants (et leurs PIN), familles, leçons, attributions, progressions. Rien n'est modifié.</p>
+            <label for="v-fichier">Fichier exporté de l'ancienne appli</label>
+            <input type="file" id="v-fichier" accept=".json,application/json">
+            <details><summary>ou coller le contenu du fichier</summary><textarea id="v-coller" spellcheck="false" aria-label="Contenu du fichier exporté"></textarea></details>
+            <label for="v-pseudo">Ton pseudo</label>
+            <input type="text" id="v-pseudo" maxlength="30" autocomplete="username">
+            <label for="v-password">Ton mot de passe QUIZy</label>
+            <input type="password" id="v-password" autocomplete="current-password">
+            <div class="actions"><button class="btn" id="v-go" type="submit">🔍 Vérifier</button></div>
+            <p class="status" id="v-status" role="status"></p>
+            <div id="v-resultat"></div>
+        </form>
 
         <form class="card" id="form" hidden>
             <h2 id="titre"></h2>
@@ -116,6 +136,7 @@
         function setMode(installed) {
             mode = installed ? 'import' : 'install';
             $('chargement').hidden = true; $('form').hidden = false;
+            $('verif').hidden = !installed;
             if (mode === 'install') {
                 $('sous-titre').textContent = 'Installation';
                 $('titre').textContent = '🚀 Installer QUIZy';
@@ -160,6 +181,99 @@
                 '📈 ' + plural(v.progressions, 'progression')
             ].map(t => { const li = document.createElement('li'); li.textContent = t; return li; }));
         });
+        // ---------- 🔍 Vérifier (lecture seule : backupData + adminData, comme l'espace parents) ----------
+        const api = (fn, ...args) => fetch('/api/' + fn, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(args) })
+            .then(r => r.json()).catch(() => ({ error: 'Connexion impossible. Vérifie le réseau et réessaie.' }));
+        let vData = null;
+        function vUse(text) {
+            vData = null; $('v-status').className = 'status'; $('v-status').textContent = '';
+            if (!text.trim()) return;
+            try { vData = readData(text); $('v-status').textContent = '📄 ' + describe(vData); }
+            catch (e) { $('v-status').className = 'status ko'; $('v-status').textContent = "⚠️ Ce n'est pas un fichier exporté de QUIZy."; }
+        }
+        $('v-fichier').addEventListener('change', () => { const f = $('v-fichier').files[0]; if (!f) return vUse(''); const rd = new FileReader(); rd.onload = () => vUse(String(rd.result)); rd.readAsText(f); });
+        $('v-coller').addEventListener('input', () => vUse($('v-coller').value));
+        const li = (t, cls) => { const e = document.createElement('li'); e.textContent = t; if (cls) e.className = cls; return e; };
+        const el = (tag, t, cls) => { const e = document.createElement(tag); if (t != null) e.textContent = t; if (cls) e.className = cls; return e; };
+        const parse = t => { try { return JSON.parse(t); } catch (e) { return null; } };
+        // Recolle les éléments découpés (<clé>~0, ~1…) pour comparer les contenus, quel que soit le découpage
+        function items(props) {
+            const out = {};
+            Object.keys(props).filter(k => !/~\d+$/.test(k)).forEach(k => {
+                const h = parse(props[k]);
+                if (h && h._chunks) { let t = ''; for (let i = 0; i < h._chunks; i++) t += props[k + '~' + i] || ''; out[k] = t; }
+                else out[k] = props[k];
+            });
+            return out;
+        }
+        $('verif').addEventListener('submit', async e => {
+            e.preventDefault();
+            const res = $('v-resultat'); res.replaceChildren();
+            if (!vData) { $('v-status').className = 'status ko'; $('v-status').textContent = 'Choisis le fichier exporté.'; return; }
+            const cred = { pseudo: $('v-pseudo').value.trim(), password: $('v-password').value };
+            $('v-go').disabled = true; $('v-status').className = 'status'; $('v-status').textContent = '⏳ Vérification…';
+            const [b, a] = [await api('backupData', cred), await api('adminData', cred)];
+            $('v-go').disabled = false;
+            if (b.error || a.error) { $('v-status').className = 'status ko'; $('v-status').textContent = b.error || a.error; return; }
+            $('v-password').value = '';
+            const F = items(vData.proprietes), S = items(b.value.proprietes);
+            delete F.ADMIN_PASSWORD; delete F.ADMIN_PASS_HASH;
+            const keys = [...new Set([...Object.keys(F), ...Object.keys(S)])].sort();
+            const same = keys.filter(k => F[k] === S[k]);
+            // noms lisibles
+            const kids = {}; Object.keys(S).concat(Object.keys(F)).filter(k => k.startsWith('student_')).forEach(k => { const s = parse(S[k] || F[k]); if (s) kids[s.id] = s.pseudo + ' (' + s.classe + ')'; });
+            const titles = {};
+            Object.values(a.value.progress || {}).forEach(list => list.forEach(l => { titles[l.id] = l.titre; }));
+            Object.keys(S).concat(Object.keys(F)).filter(k => /^(quiz|deck)_/.test(k)).forEach(k => { const q = parse(S[k] || F[k]); if (q && q.titre) titles[q.id] = q.titre; });
+            const name = k => {
+                let m;
+                if ((m = /^srs_(.+?)__(.+)$/.exec(k))) return 'progression de ' + (kids[m[1]] || m[1]) + ' sur « ' + (titles[m[2]] || m[2]) + ' »';
+                if ((m = /^student_(.+)$/.exec(k))) return 'compte de ' + (kids[m[1]] || m[1]) + ' (classe, pseudo, PIN)';
+                if ((m = /^parent_(.+)$/.exec(k))) { const p = parse(S[k] || F[k]); return 'famille ' + (p ? p.famille + ' (' + p.pseudo + ')' : m[1]); }
+                if ((m = /^quiz_(.+)$/.exec(k))) return 'leçon « ' + (titles[m[1]] || m[1]) + ' »';
+                if ((m = /^deck_(.+)$/.exec(k))) return 'paquet de cartes « ' + (titles[m[1]] || m[1]) + ' »';
+                if ((m = /^override_(.+)$/.exec(k))) return 'leçon fournie modifiée « ' + (titles[m[1]] || m[1]) + ' »';
+                return { builtin_assign: 'attribution des leçons fournies', INVITE_CODE: "code d'invitation", ADMIN_PSEUDO: 'pseudo administrateur', schema_version: 'version des données' }[k] || k;
+            };
+            const lost = [], newer = [], other = [], added = [];
+            keys.filter(k => F[k] !== S[k]).forEach(k => {
+                if (S[k] == null) return lost.push(name(k));
+                if (F[k] == null) return added.push(name(k));
+                if (k.startsWith('srs_')) {
+                    const f = parse(F[k]) || {}, s = parse(S[k]) || {};
+                    if ((s.maj || 0) > (f.maj || 0)) return newer.push(name(k) + ' : révisée sur QUIZy depuis l\'export (' + new Date(s.maj).toLocaleString('fr-FR') + ')');
+                    if ((f.maj || 0) > (s.maj || 0)) return lost.push(name(k) + ' : plus récente dans le fichier (' + new Date(f.maj).toLocaleString('fr-FR') + ')');
+                }
+                other.push(name(k));
+            });
+            const ok = !lost.length && !other.length;
+            const n = p => Object.keys(S).filter(k => k.startsWith(p)).length;
+            $('v-status').className = 'status ' + (ok ? 'ok' : 'ko');
+            $('v-status').textContent = ok ? '✅ Tout correspond.' : '⚠️ Des différences à regarder.';
+            const box = el('div', null, 'rapport');
+            box.append(el('p', same.length + ' éléments identiques sur ' + keys.length + ' (fichier du ' + new Date(vData.date).toLocaleString('fr-FR') + ').', 'bilan'));
+            const ul = el('ul');
+            ul.append(li('🎒 ' + plural(n('student_'), 'enfant') + ' — PIN inchangés : ' + (Object.keys(F).filter(k => k.startsWith('student_')).every(k => F[k] === S[k]) ? 'oui ✅' : 'non ⚠️')),
+                li('👪 ' + plural(n('parent_'), 'famille invitée', 'familles invitées') + ' — mots de passe inchangés : ' + (Object.keys(F).filter(k => k.startsWith('parent_')).every(k => F[k] === S[k]) ? 'oui ✅' : 'non ⚠️')),
+                li('📚 ' + plural(n('quiz_'), 'leçon créée', 'leçons créées') + ', ' + plural(n('deck_'), 'paquet') + ', attributions des leçons fournies : ' + (F.builtin_assign === S.builtin_assign ? 'identiques ✅' : 'différentes ⚠️')),
+                li('📈 ' + plural(n('srs_'), 'progression')));
+            box.append(ul);
+            const section = (titre, list) => { if (!list.length) return; box.append(el('h3', titre)); const u = el('ul'); list.forEach(t => u.append(li(t))); box.append(u); };
+            section('⚠️ Dans le fichier mais absent ou plus ancien dans QUIZy', lost);
+            section('⚠️ Différent', other);
+            section('🆕 Révisé sur QUIZy depuis l\'export (normal)', newer);
+            section('🆕 Ajouté sur QUIZy depuis l\'export', added);
+            // ce que voit l'espace parents, enfant par enfant
+            box.append(el('h3', '👨‍👧 Ta famille, comme dans l\'espace parents'));
+            const u = el('ul');
+            (a.value.students || []).forEach(s => {
+                const lessons = (a.value.progress[s.id] || []).filter(l => l.mode !== 'archive');
+                u.append(li(s.pseudo + ' (' + s.classe + ') : ' + (lessons.length ? lessons.map(l => l.titre.split(' : ').pop() + ' ' + l.avancement + ' %').join(', ') : 'aucune leçon')));
+            });
+            box.append(u);
+            res.replaceChildren(box);
+        });
+
         fetch('/setup/status', { cache: 'no-store' }).then(r => r.json()).then(s => setMode(s.installed))
             .catch(() => { $('chargement').textContent = 'Connexion impossible. Recharge la page.'; });
     </script>

@@ -19,7 +19,9 @@ sans son accord explicite.
 - Pages et icônes sont **intégrées au Worker** (`src/files.gen.js`, servies par `src/assets.js`) au lieu des « Workers Assets » :
   l'envoi des assets utilise un jeton temporaire que le proxy de la session remplacerait par le jeton d'API.
 - ✅ Bouton d'export publié sur l'appli Apps Script (même déploiement, version @40, 16/11/2026) ; l'appli reste en ligne et inchangée par ailleurs.
-- ⏳ Transfert des données par l'utilisateur : export (ancienne appli) → `/installer` (lien avec le code d'installation donné dans la session).
+- ✅ Données installées par l'utilisateur (export → `/installer`).
+- `/installer` une fois installé : **🔍 Vérifier** (lecture seule : compare le fichier exporté aux données de QUIZy via `backupData` +
+  `adminData`, avec le mot de passe administrateur saisi sur la page) et **📥 Importer** (remplace les données).
 
 ---
 
