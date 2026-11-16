@@ -1615,6 +1615,8 @@
             // profil mémorisé (mis à jour si le prénom a changé) — jamais le PIN
             if (PROFILS) PROFILS.memoriser({ role: "eleve", id: me.id, nom: me.pseudo, pseudo: me.pseudo, classe: me.classe });
             formulaireComplet(false);
+            // invitation discrète à installer l'appli (static/installation.js) : jamais si déjà installée ou reportée
+            if (window.QuizyInstallation) window.QuizyInstallation.proposer();
         }
 
         function connect(creds, silent) {

@@ -203,6 +203,23 @@ définitives : PIN incorrect, leçon inaccessible…). Indicateur « ⏳ Sauvega
 - Renommage d'un enfant depuis l'espace parents sur le même appareil : son profil suit. Déconnexion : formulaire normal.
 - Stockage bloqué (navigation privée) : pas d'écran « Qui es-tu ? », le reste marche normalement.
 
+### 5 quater. Installer QUIZy comme une appli (QUIZy Cloudflare, depuis le 16/11/2026)
+- QUIZy est une appli web installable (PWA) : manifeste (`/manifest.webmanifest`, `/manifest-parents.webmanifest` pour
+  l'espace parents), icônes 180/192/512/maskable, affichage `standalone` → une fois installée, elle s'ouvre dans sa propre
+  fenêtre, sans barre d'adresse. Petit service worker (`/sw.js`) : rend l'appli installable et montre une page « Pas de
+  connexion internet » (`/hors-ligne`) si le réseau manque. Il ne met **jamais** en cache les données (/api, /setup).
+- Invitation **après une connexion réussie seulement** (jamais sur l'écran de connexion), en bas de l'écran (au-dessus de la
+  barre d'onglets sur téléphone), avec l'icône et le nom « Installer QUIZy » ; l'appli reste utilisable derrière.
+  - Chrome, Edge, Android… : bouton « Installer » = fenêtre d'installation du navigateur en un clic (`beforeinstallprompt`).
+  - iPhone / iPad : bouton « Comment faire ? » = tutoriel en 3 étapes (Partager — en bas sur iPhone, en haut à droite sur
+    iPad — → « Sur l'écran d'accueil » → « Ajouter »).
+  - Firefox ordinateur, Safari Mac, navigateurs intégrés (Instagram…) : rien n'est proposé.
+- Jamais proposé si l'appli est déjà installée (ouverte en fenêtre indépendante, ou installée depuis cette page).
+- « Plus tard » (ou refus dans la fenêtre du navigateur, ou « J'ai compris » du tutoriel) : pas de nouvelle proposition avant
+  **7 jours** ; « Non merci » : pas avant **90 jours**. Mémorisé sur l'appareil (localStorage `quizy-installation`, aucune donnée
+  personnelle). Stockage bloqué : au plus une proposition par visite. Espace parents : menu 👤 → « 📲 Installer l'appli »
+  (visible seulement quand l'installation est possible), même après « Plus tard ».
+
 ---
 
 ## 6. L'espace parents

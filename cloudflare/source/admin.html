@@ -541,6 +541,7 @@
                 <button class="menu-item" id="menu-export" type="button" hidden>💾 Exporter toutes les données</button>
                 <button class="menu-item" id="change-pw" type="button">🔑 Changer le mot de passe</button>
                 <button class="menu-item" id="menu-ux" type="button" hidden>🧭 Parcours UX</button>
+                <button class="menu-item" id="menu-install" type="button" hidden>📲 Installer l'appli</button>
                 <button class="menu-item" id="lock" type="button">🔒 Se déconnecter</button>
             </div>
         </div>
@@ -1084,6 +1085,8 @@
                 showStatus($("lock-status"), "ok", "Connecté.");
                 try { localStorage.setItem(ADMIN_PSEUDO_KEY, pw().pseudo); } catch (e) { /* stockage indisponible */ }
                 profilConnecte();
+                // invitation discrète à installer l'appli (static/installation.js) : jamais si déjà installée ou reportée
+                if (window.QuizyInstallation) window.QuizyInstallation.proposer();
                 if (firstUnlock) { firstUnlock = false; go("programmes"); }
             } catch (e) {
                 $("admin-area").hidden = true;
@@ -2695,6 +2698,11 @@ ${UX_STYLES}` }
         $("menu-parents").addEventListener("click", () => { closeMenu(); go("parents"); });
         $("menu-export").addEventListener("click", () => { closeMenu(); openExport(); });
         $("menu-ux").addEventListener("click", () => { closeMenu(); openUx(); });
+        // « 📲 Installer l'appli » : visible seulement si ce navigateur sait installer et que l'appli ne l'est pas encore
+        function majMenuInstall() { $("menu-install").hidden = !(window.QuizyInstallation && window.QuizyInstallation.peutInstaller()); }
+        window.addEventListener("quizy-installation", majMenuInstall);
+        majMenuInstall();
+        $("menu-install").addEventListener("click", () => { closeMenu(); if (window.QuizyInstallation) window.QuizyInstallation.ouvrir(); });
         $("ux-close").addEventListener("click", () => showUxPanel(false));
         $("ux-enfant").addEventListener("click", () => montrerParcours("enfant"));
         $("ux-parent").addEventListener("click", () => montrerParcours("parent"));
