@@ -1,6 +1,6 @@
 // Routage du Worker « quizy », partagé avec les tests (qui fournissent leurs propres store et assets).
 //   /api/<fonction>, /setup/…  → Durable Object (store)      autres adresses → fichiers de public/ (assets)
-const PAGES = new Set(['/', '/index.html', '/parents', '/parents.html']);
+const PAGES = new Set(['/', '/parents']);
 const json = (o, status) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8' } });
 
 export async function route(request, { store, assets }) {

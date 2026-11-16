@@ -3,3 +3,4 @@ public/
 src/app.gen.js
 .wrangler/
 .dev.vars
+src/files.gen.js

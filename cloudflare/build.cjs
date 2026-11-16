@@ -74,3 +74,12 @@ for (const [n, t] of [['index.html', eleve], ['parents.html', parents]]) {
   fs.writeFileSync(path.join(OUT, n), t);
 }
 console.log('QUIZy construit : src/app.gen.js (' + names.size + ' noms), public/ (' + fs.readdirSync(OUT).length + ' fichiers)');
+
+// ---------- fichiers servis, intégrés au Worker (pas de « Workers Assets » : un seul envoi au déploiement) ----------
+const MIME = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', webmanifest: 'application/manifest+json; charset=utf-8', svg: 'image/svg+xml', png: 'image/png' };
+const files = {};
+for (const f of fs.readdirSync(OUT).sort()) {
+  const ext = f.split('.').pop(), buf = fs.readFileSync(path.join(OUT, f)), text = ext !== 'png';
+  files['/' + f] = { type: MIME[ext] || 'application/octet-stream', text, body: text ? buf.toString('utf8') : buf.toString('base64') };
+}
+fs.writeFileSync(path.join(ROOT, 'src', 'files.gen.js'), '// FICHIER GÉNÉRÉ par build.cjs (contenu de public/) : ne pas modifier à la main.\nexport const FILES = ' + JSON.stringify(files) + ';\n');

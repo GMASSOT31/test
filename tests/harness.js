@@ -63,21 +63,14 @@ function cfLoad() {
   require('child_process').execFileSync(process.execPath, [CF + 'build.cjs'], { stdio: 'ignore' });
   const emit = process.emitWarning; process.emitWarning = (w, ...a) => (/SQLite|require\(\) of ES|CommonJS/.test(String(w)) ? undefined : emit.call(process, w, ...a));
   const { DatabaseSync } = require('node:sqlite');
-  cfMods = { DatabaseSync, core: require(CF + 'src/core.js'), router: require(CF + 'src/router.js') };
+  cfMods = { DatabaseSync, core: require(CF + 'src/core.js'), router: require(CF + 'src/router.js'), assets: require(CF + 'src/assets.js'), files: require(CF + 'src/files.gen.js') };
   return cfMods;
 }
 function sqlOf(db) {
   return { exec(q, ...b) { const st = db.prepare(q); const rows = /^\s*select/i.test(q) ? st.all(...b) : (st.run(...b), []); return { toArray: () => rows }; } };
 }
-const MIME = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', webmanifest: 'application/manifest+json', svg: 'image/svg+xml', png: 'image/png' };
-// comme les « assets » de Cloudflare (html_handling auto-trailing-slash) : / → index.html, /parents → parents.html
-function assetCf(request) {
-  let p = decodeURIComponent(new URL(request.url).pathname);
-  if (p === '/') p = '/index.html'; else if (!/\.[a-z0-9]+$/i.test(p)) p += '.html';
-  const f = require('path').join(CF, 'public', p);
-  if (!f.startsWith(CF + 'public/') || !fs.existsSync(f)) return new Response('Introuvable', { status: 404 });
-  return new Response(fs.readFileSync(f), { headers: { 'content-type': MIME[f.split('.').pop()] || 'application/octet-stream' } });
-}
+// comme le Worker : fichiers de public/ intégrés (src/files.gen.js) servis par src/assets.js
+const assetCf = request => cfMods.assets.serveAsset(request, cfMods.files.FILES);
 function startServer() {
   if (PORT) return;
   PORT = 30000 + (process.pid % 25000);

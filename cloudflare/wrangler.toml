@@ -4,17 +4,12 @@ main = "src/worker.js"
 compatibility_date = "2025-09-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
+preview_urls = false
 
 [build]
 command = "node build.cjs"
 watch_dir = ["../apps-script", "static"]
 
-[assets]
-directory = "./public"
-binding = "ASSETS"
-run_worker_first = true
-html_handling = "auto-trailing-slash"
-not_found_handling = "none"
 
 [[durable_objects.bindings]]
 name = "STORE"

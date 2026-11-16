@@ -69,13 +69,15 @@ Ancien mode d'emploi : `node tests/NN-nom.js` (un fichier par suite, tous verts)
   LockService = rien (le Durable Object traite une requête à la fois), SHA-256 `node:crypto`, fuseau Europe/Paris via `Intl`),
   API `POST /api/<fonction>` (corps = arguments) → `{ ok, value }` | `{ error }` (fonctions finissant par `_` et `doGet` refusées),
   installation/import (`/setup/status`, `/setup/install`, `/setup/import`). `src/router.js` : routage (partagé avec les tests).
-  `src/worker.js` : Worker `quizy` + Durable Object `Store` (instance unique « main »). `static/run.js` : remplace `google.script.run`.
+  `src/assets.js` + `src/files.gen.js` : pages et icônes intégrées au Worker. `src/worker.js` : Worker `quizy` + Durable Object `Store` (instance unique « quizy-eu », en Europe de l'Ouest). `static/run.js` : remplace `google.script.run`.
 - Écran **/installer** : base vide → code d'installation (secret `INSTALL_CODE` du Worker) + fichier exporté (menu 👤 →
   « 💾 Exporter toutes les données ») + pseudo et mot de passe administrateur (stocké haché dans `ADMIN_PASS_HASH`).
   Une fois installé : « Importer » (administrateur principal) remplace les données, garde son pseudo et son mot de passe.
 - **Mot de passe administrateur oublié** : `wrangler secret put ADMIN_PASSWORD` (joue le rôle de la propriété `ADMIN_PASSWORD`),
   se connecter, le changer dans l'appli, puis `wrangler secret delete ADMIN_PASSWORD`.
-- Publier : `cd cloudflare && npm ci && CLOUDFLARE_API_TOKEN=… npx wrangler deploy` (la construction est lancée par wrangler).
+- Publier : `cd cloudflare && npm ci && CLOUDFLARE_API_TOKEN=proxy-injected CLOUDFLARE_ACCOUNT_ID=f4ec7fb04d7a99f9e990a5396cf4319d npx wrangler deploy`
+  (le vrai jeton est injecté par le proxy de la session, enregistré sur l'environnement « Default » ; la construction est lancée par wrangler).
+  Adresse : https://quizy.gabriel-massot31.workers.dev (autorisée dans le réseau de l'environnement « Default »).
   Le jeton ne s'écrit jamais dans le chat : formulaire sécurisé de la session (réseau `api.cloudflare.com`).
 - Toute évolution de `apps-script/` doit être publiée **sur les deux** tant que les deux sites vivent (l'ancien n'est jamais désactivé).
 

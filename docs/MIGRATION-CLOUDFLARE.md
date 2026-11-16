@@ -14,7 +14,11 @@ sans son accord explicite.
 - ✅ Version Cloudflare construite et testée en local (branche `cloudflare-migration`) : les 24 suites passent sur les deux versions,
   + export (28), import (29), fuseau (30), bout en bout sur `wrangler dev` (31). Détails techniques : `docs/REPRISE.md` §5 bis.
 - ✅ Bouton « 💾 Exporter toutes les données » (menu 👤, administrateur principal) ajouté à l'espace parents.
-- ⏳ Mise en ligne (jeton Cloudflare), publication du bouton d'export sur l'appli Apps Script, transfert des données.
+- ✅ En ligne : **https://quizy.gabriel-massot31.workers.dev** (compte `f4ec7fb04d7a99f9e990a5396cf4319d`, Durable Object créé en
+  Europe de l'Ouest). Base vide : toutes les pages mènent à `/installer`. Code d'installation = secret `INSTALL_CODE` du Worker.
+- Pages et icônes sont **intégrées au Worker** (`src/files.gen.js`, servies par `src/assets.js`) au lieu des « Workers Assets » :
+  l'envoi des assets utilise un jeton temporaire que le proxy de la session remplacerait par le jeton d'API.
+- ⏳ Publication du bouton d'export sur l'appli Apps Script, puis transfert des données (export → installer).
 
 ---
 
@@ -31,7 +35,7 @@ Worker « quizy »
    └─ API : POST /api/<fonction>  corps = [arguments]  → { ok, value } | { error }
           │
           ▼
-   Durable Object « Store » (stockage SQLite, une seule instance « main »)
+   Durable Object « Store » (stockage SQLite, une seule instance « quizy-eu »)
       - exécute la logique de Code.gs, UNE requête à la fois (= LockService)
       - table props(key, value)      = PropertiesService (mêmes clés, mêmes valeurs)
       - table cache(key, value, exp) = CacheService (compteurs anti-essais)

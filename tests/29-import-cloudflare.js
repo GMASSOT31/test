@@ -108,7 +108,7 @@ const same = (a, b) => JSON.stringify(clean(a)) === JSON.stringify(clean(b));
   ok(new URL(p.url()).pathname === '/installer', 'base vide : l\'espace parents aussi');
   await p.goto(page('installer', 'cloudflare') + '#code=QZ7K-M2PA');
   await p.waitForSelector('#form:not([hidden])');
-  ok((await p.locator('#titre').innerText()).includes('Installer QUIZy') && (await p.locator('#code').inputValue()) === 'QZ7K-M2PA', 'mode installation, code prérempli depuis le lien');
+  ok((await p.locator('#titre').innerText()).includes('Installer QUIZy') && (await p.locator('#code').inputValue()) === 'QZ7K-M2PA' && await p.locator('#zone-remplacer').isHidden(), 'mode installation, code prérempli depuis le lien, pas de case « remplacer »');
   await p.setInputFiles('#fichier', { name: 'quizy-export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exported)) });
   await p.waitForFunction(() => document.querySelector('#resume-fichier').textContent.includes('Fichier du'));
   ok(/3 enfants, 1 famille invitée, 2 leçons créées, 3 progressions/.test(await p.locator('#resume-fichier').innerText()) && (await p.locator('#pseudo').inputValue()) === 'Papa', 'fichier lu : ' + await p.locator('#resume-fichier').innerText() + ' ; pseudo prérempli');
