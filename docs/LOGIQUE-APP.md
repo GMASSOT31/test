@@ -166,6 +166,19 @@ définitives : PIN incorrect, leçon inaccessible…). Indicateur « ⏳ Sauvega
   Hésité reviennent jusqu'à Trouvé. **N'influence jamais la révision espacée.**
 - Téléphone : bandeau fin, barre d'onglets en bas (Mes leçons, Mes progrès, Flashcards, Se déconnecter).
 
+### 5 ter. Partage des leçons entre familles (QUIZy Cloudflare, depuis le 16/11/2026)
+- Clé `shares` = `{ 'b:<idLeçonFournie>' | 'q:<idLeçonCréée>' : [idFamille…] }`. Une famille invitée ne voit dans « Leçons fournies »
+  que ce que l'administrateur lui partage (leçons fournies, leçons de l'administrateur, leçons d'autres familles). Tant que la clé
+  n'existe pas, chaque famille garde les leçons fournies déjà données à ses enfants (calculé, écrit au premier partage modifié).
+- L'administrateur voit une 3e partie « 👪 Leçons créées par les familles » (famille auteure, partages) : il les donne à ses
+  enfants, les partage avec d'autres familles (jamais avec l'auteure), ou les supprime (pour tout le monde).
+- Une famille donne une leçon partagée à ses enfants (`setAccess`, sans toucher aux enfants des autres familles), ne la modifie pas
+  et ne voit ni l'auteure ni les autres destinataires. L'auteure corrige sa leçon pour tous ; une fois partagée (ou donnée à
+  d'autres enfants), elle ne peut plus la supprimer : « demande à l'administrateur ».
+- Retirer un partage : les enfants de la famille n'ont plus la leçon ; leur progression est gardée (elle revient si on repartage).
+- Onglet « Leçons » : parties repliables avec leur nombre (repliées sur téléphone, ouvertes sur ordinateur, état retenu sur
+  l'appareil, localStorage `quizy-lecons-ouvertes`). Fonction serveur `setShare(cred, kind, id, familles)` (administrateur).
+
 ### 5 bis. Écran « Qui es-tu ? » (QUIZy Cloudflare, depuis le 16/11/2026)
 - Après chaque connexion réussie (élève ou parent), le profil est mémorisé **sur l'appareil** (localStorage `profiles`, 8 au plus,
   le plus récent en premier, sans doublon) : nom, rôle, identifiant de connexion (classe + pseudo, ou pseudo), couleur d'avatar.

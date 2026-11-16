@@ -173,6 +173,21 @@
         .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
         .lockbar input { width: auto; flex: 1; min-width: 150px; max-width: 260px; }
         .lockbar .btn { padding: 9px 20px; }
+        /* onglet Leçons : parties repliables avec leur nombre de leçons */
+        section.ls { margin: 0 0 14px; padding: 0; background: transparent; box-shadow: none; border-radius: 0; }   /* le bouton fait office de carte */
+        .ls-corps { background: #fff; border-radius: 0 0 16px 16px; margin-top: -10px; padding: 18px 14px 12px !important; box-shadow: var(--soft); }
+        .ls-h { margin: 0; }
+        .ls-toggle { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 10px 16px; border: 0; border-radius: 16px;
+                     background: #fff; box-shadow: var(--soft); font: inherit; font-size: 1.15rem; font-weight: 900; color: var(--navy); text-align: left; cursor: pointer; }
+        .ls-toggle:focus-visible { outline: 3px solid var(--navy); outline-offset: 3px; }
+        .ls-titre { flex: 1; }
+        .ls-nb { min-width: 34px; padding: 3px 10px; border-radius: 999px; background: var(--gold); color: var(--navy); font-size: .95rem; text-align: center; }
+        .ls-chev { transition: transform .2s; }
+        .ls-toggle[aria-expanded="true"] .ls-chev { transform: rotate(180deg); }
+
+        .ls-corps[hidden], .ls[hidden] { display: none; }
+        .pour-familles { margin-top: 10px; }
+        .builtin-auteur { font-weight: 700; color: var(--violet); }
         /* profil mémorisé : la puce (avatar + nom + « Autre profil ») remplace le champ pseudo */
         .lockbar .qp-puce { flex: 1 1 100%; margin: 0; }
         .lockbar.avec-profil label[for="admin-pseudo"], .lockbar.avec-profil #admin-pseudo { display: none; }
@@ -627,24 +642,41 @@
                 <h2>📚 Leçons</h2>
                 <button class="btn small" id="tab-quiz-ajout" type="button">➕ Créer une leçon</button>
             </div>
-            <p class="hint" id="builtin-hint">« ⚙️ Gérer » : coche qui a la leçon (enregistré tout de suite). Les cartes de chaque leçon sont créées toutes seules.</p>
             <div class="status" id="quizlist-status" role="status"></div>
-            <section id="my-lessons">
-                <h2>✏️ Mes leçons</h2>
-                <div id="quiz-list"></div>
-            </section>
-            <section>
-                <h2>🏛️ Leçons fournies</h2>
-                <div id="builtin-list"></div>
-            </section>
-            <section>
-                <div class="pane-head">
-                    <h2>🃏 Cartes en plus</h2>
-                    <button class="btn small secondary" id="new-deck" type="button">➕ Créer un paquet</button>
+            <!-- Parties repliables (repliées sur téléphone, ouvertes sur ordinateur, état retenu sur l'appareil) -->
+            <section class="ls" id="my-lessons" data-ls="mes">
+                <h2 class="ls-h"><button class="ls-toggle" type="button" aria-expanded="true" aria-controls="ls-mes"><span class="ls-titre">✏️ Mes leçons</span><span class="ls-nb" id="nb-mes"></span><span class="ls-chev" aria-hidden="true">▾</span></button></h2>
+                <div class="ls-corps" id="ls-mes">
+                    <p class="hint">« ⚙️ Gérer » : coche qui a la leçon (enregistré tout de suite). Les cartes de chaque leçon sont créées toutes seules.</p>
+                    <div id="quiz-list"></div>
                 </div>
-                <p class="hint">Des paquets de flashcards en plus des leçons (par exemple du vocabulaire).</p>
-                <div class="status" id="decklist-status" role="status"></div>
-                <div id="deck-list"></div>
+            </section>
+            <section class="ls" id="provided-lessons" data-ls="fournies">
+                <h2 class="ls-h"><button class="ls-toggle" type="button" aria-expanded="true" aria-controls="ls-fournies"><span class="ls-titre">🏛️ Leçons fournies</span><span class="ls-nb" id="nb-fournies"></span><span class="ls-chev" aria-hidden="true">▾</span></button></h2>
+                <div class="ls-corps" id="ls-fournies">
+                    <p class="hint" id="builtin-hint"></p>
+                    <div id="builtin-list"></div>
+                    <div id="shared-list"></div>
+                </div>
+            </section>
+            <!-- administrateur principal seulement : les leçons créées par les familles invitées -->
+            <section class="ls" id="family-lessons" data-ls="familles" hidden>
+                <h2 class="ls-h"><button class="ls-toggle" type="button" aria-expanded="true" aria-controls="ls-familles"><span class="ls-titre">👪 Leçons créées par les familles</span><span class="ls-nb" id="nb-familles"></span><span class="ls-chev" aria-hidden="true">▾</span></button></h2>
+                <div class="ls-corps" id="ls-familles">
+                    <p class="hint">Les leçons que les familles invitées ont créées. Donne-les à tes enfants ou partage-les avec d'autres familles (« ⚙️ Gérer »).</p>
+                    <div id="family-list"></div>
+                </div>
+            </section>
+            <section class="ls" id="deck-lessons" data-ls="cartes">
+                <h2 class="ls-h"><button class="ls-toggle" type="button" aria-expanded="true" aria-controls="ls-cartes"><span class="ls-titre">🃏 Cartes en plus</span><span class="ls-nb" id="nb-cartes"></span><span class="ls-chev" aria-hidden="true">▾</span></button></h2>
+                <div class="ls-corps" id="ls-cartes">
+                    <div class="pane-head">
+                        <p class="hint">Des paquets de flashcards en plus des leçons (par exemple du vocabulaire).</p>
+                        <button class="btn small secondary" id="new-deck" type="button">➕ Créer un paquet</button>
+                    </div>
+                    <div class="status" id="decklist-status" role="status"></div>
+                    <div id="deck-list"></div>
+                </div>
             </section>
         </div>
 
@@ -1595,15 +1627,55 @@
 
         // ================= LEÇONS ET PAQUETS : une ligne par élément, « ⚙️ Gérer » déplie les cases et les actions =================
         function renderQuizList() {
-            $("my-lessons").hidden = DATA.quizzes.length === 0;
-            $("quiz-list").replaceChildren(...DATA.quizzes.map(q => accessRow(q, "quiz")));
+            $("quiz-list").replaceChildren(...(DATA.quizzes.length ? DATA.quizzes.map(q => accessRow(q, "quiz"))
+                : [h("p", { class: "empty" }, "Aucune leçon créée pour l'instant : « ➕ Créer une leçon ».")]));
+            $("nb-mes").textContent = DATA.quizzes.length;
+            // 3e partie : seulement pour l'administrateur principal
+            const fam = DATA.moi.owner ? (DATA.leconsFamilles || []) : [];
+            $("family-lessons").hidden = !DATA.moi.owner;
+            $("family-list").replaceChildren(...(fam.length ? fam.map(q => accessRow(q, "quiz", { famille: true }))
+                : [h("p", { class: "empty" }, "Aucune famille n'a encore créé de leçon.")]));
+            $("nb-familles").textContent = fam.length;
         }
         function renderDeckList() {
             $("deck-list").replaceChildren(...(DATA.decks.length ? DATA.decks.map(d => accessRow(d, "deck")) : [h("p", { class: "empty" }, "Aucun paquet en plus.")]));
+            $("nb-cartes").textContent = DATA.decks.length;
         }
-        function renderBuiltins() { $("builtin-list").replaceChildren(...DATA.builtins.map(q => accessRow(q, "builtin"))); }
+        // Leçons fournies : pour une famille, celles que l'administrateur lui a partagées (fournies + leçons créées par d'autres)
+        function renderBuiltins() {
+            const shared = DATA.partagees || [];
+            $("builtin-list").replaceChildren(...DATA.builtins.map(q => accessRow(q, "builtin")));
+            $("shared-list").replaceChildren(...shared.map(q => accessRow(q, "quiz", { partagee: true })));
+            const n = DATA.builtins.length + shared.length;
+            $("nb-fournies").textContent = n;
+            $("builtin-hint").textContent = DATA.moi.owner
+                ? "Les leçons de QUIZy. « ⚙️ Gérer » : coche tes enfants et les familles avec qui la partager."
+                : (n ? "Les leçons que l'administrateur a partagées avec ta famille : coche ceux de tes enfants qui les ont."
+                    : "L'administrateur ne t'a encore partagé aucune leçon. Tu peux créer les tiennes : « ➕ Créer une leçon ».");
+        }
+        // Parties repliables : repliées sur téléphone, ouvertes sur ordinateur ; le choix est retenu sur l'appareil
+        const LS_KEY = "quizy-lecons-ouvertes";
+        const phoneLs = window.matchMedia("(max-width: 700px)");
+        function lsState() { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch (e) { return {}; } }
+        function lsApply() {
+            const st = lsState();
+            document.querySelectorAll(".ls").forEach(sec => {
+                const k = sec.dataset.ls, open = k in st ? !!st[k] : !phoneLs.matches;
+                sec.querySelector(".ls-toggle").setAttribute("aria-expanded", String(open));
+                sec.querySelector(".ls-corps").hidden = !open;
+            });
+        }
+        document.querySelectorAll(".ls .ls-toggle").forEach(btn => btn.addEventListener("click", () => {
+            const sec = btn.closest(".ls"), open = btn.getAttribute("aria-expanded") !== "true";
+            btn.setAttribute("aria-expanded", String(open));
+            sec.querySelector(".ls-corps").hidden = !open;
+            const st = lsState(); st[sec.dataset.ls] = open;
+            try { localStorage.setItem(LS_KEY, JSON.stringify(st)); } catch (e) { /* stockage indisponible : l'état n'est pas retenu */ }
+        }));
+        lsApply();
         const openBuiltins = new Set();   // « type:id » dont les réglages sont dépliés
-        function accessRow(it, kind) {
+        // opts.partagee : leçon d'un autre, partagée avec ma famille (pas de modification) ; opts.famille : leçon d'une famille (admin)
+        function accessRow(it, kind, opts = {}) {
             const key = kind + ":" + it.id, open = openBuiltins.has(key), owner = DATA.moi.owner;
             const pour = it.pour || [];
             const msg = h("span", { class: "access-msg", role: "status" });
@@ -1618,11 +1690,29 @@
             const btn = (txt, cls, fn) => h("button", { class: "btn " + cls, type: "button", onclick: fn }, txt);
             const actions = kind === "builtin"
                 ? [owner ? btn("✏️ Modifier", "secondary small", () => editBuiltin(it)) : null, owner && it.modifie ? btn("Rétablir l'original", "danger", () => restoreBuiltin(it)) : null]
+                : opts.partagee ? []
+                : opts.famille ? [btn("Supprimer", "danger", () => removeItem(kind, it))]
                 : [btn("✏️ Modifier", "secondary small", () => kind === "quiz" ? loadQuiz(it) : loadDeck(it)), btn("Supprimer", "danger", () => removeItem(kind, it))];
-            const size = kind === "deck" ? it.cartes.length + " cartes" : (typeof it.questions === "number" ? it.questions : it.questions.length) + " questions";
+            // administrateur : avec quelles familles partager (leçons fournies et leçons créées ; jamais avec la famille auteure)
+            let familles = null;
+            if (owner && kind !== "deck") {
+                const parents = (DATA.parents || []).filter(p => p.id !== it.auteur), shared = it.familles || [];
+                const fbox = h("div", { class: "pour pour-familles" });
+                if (!parents.length) fbox.append(h("p", { class: "hint" }, opts.famille ? "Aucune autre famille pour l'instant." : "Aucune famille invitée pour l'instant (menu 👤 → Familles invitées)."));
+                parents.forEach(p => {
+                    const cb = h("input", { type: "checkbox", value: p.id, "data-famille": p.id });
+                    cb.checked = shared.includes(p.id);
+                    cb.addEventListener("change", () => setShare(kind, it.id, [...fbox.querySelectorAll("input:checked")].map(i => i.value), msg, fbox));
+                    fbox.append(h("label", { class: "pour-item" }, cb, "👪 " + p.famille));
+                });
+                familles = [h("label", {}, "Partager avec les familles"), fbox];
+            }
+            const nb = kind === "deck" ? it.cartes.length : (typeof it.questions === "number" ? it.questions : it.questions.length);
+            const size = nb + (kind === "deck" ? " carte" : " question") + (nb > 1 ? "s" : "");
             const details = h("div", { class: "builtin-details" },
                 h("div", { class: "info" }, h("span", {}, it.titre + " · " + size)),
-                h("label", {}, "Qui l'a ?"), boxes, msg,
+                h("label", {}, "Qui l'a ?"), boxes, familles, msg,
+                opts.partagee ? h("p", { class: "hint" }, "Leçon partagée par l'administrateur : tu ne peux pas la modifier.") : null,
                 actions.some(Boolean) ? h("div", { class: "actions", style: "margin-top:8px" }, actions) : null);
             details.hidden = !open;
             const toggle = h("button", { class: "btn secondary small builtin-toggle", type: "button", "aria-expanded": String(open),
@@ -1638,9 +1728,26 @@
                 h("div", { class: "builtin-head" },
                     h("div", { class: "builtin-name" },
                         h("strong", { title: it.titre }, (it.emoji || (kind === "deck" ? "🃏" : "📘")) + " " + shortTitle(it.titre), it.modifie ? h("span", { class: "badge-modifie" }, "✏️ modifié") : null),
-                        h("span", { class: "builtin-pour" + (names.length ? "" : " none") }, h("span", { class: "matiere" }, (it.matiere || "Divers") + " · "), names.length ? "👥 " + names.join(", ") : "Donnée à personne")),
+                        opts.famille ? h("span", { class: "builtin-auteur" }, "👪 Créée par la famille " + it.famille) : null,
+                        h("span", { class: "builtin-pour" + (names.length ? "" : " none") }, h("span", { class: "matiere" }, (it.matiere || "Divers") + " · "), names.length ? "👥 " + names.join(", ") : "Donnée à personne"),
+                        owner && (it.familles || []).length ? h("span", { class: "builtin-pour" }, "👪 Partagée : " + it.familles.map(f => ((DATA.parents || []).find(p => p.id === f) || {}).famille || f).join(", ")) : null),
                     toggle),
                 details);
+        }
+        // Administrateur : partager / ne plus partager une leçon avec des familles (cases à cocher) : enregistré tout de suite
+        async function setShare(kind, id, familles, msgEl, lockEl) {
+            const inputs = lockEl ? [...lockEl.querySelectorAll("input")] : [];
+            inputs.forEach(i => { i.disabled = true; });
+            if (msgEl) msgEl.textContent = "Enregistrement…";
+            try {
+                await server("setShare", pw(), kind, id, familles);
+                await reload();
+                return true;
+            } catch (e) {
+                inputs.forEach(i => { i.disabled = false; });
+                if (msgEl) { msgEl.textContent = e.message; msgEl.classList.add("warn"); }
+                return false;
+            }
         }
         // Donner / retirer une leçon ou un paquet (cases à cocher) : enregistré tout de suite
         async function setAccess(kind, id, pour, msgEl, lockEl) {
@@ -1660,7 +1767,8 @@
 
         async function removeItem(kind, it) {
             const isQuiz = kind === "quiz";
-            if (!confirm("Supprimer définitivement « " + it.titre + " »" + (isQuiz ? " et la progression des élèves sur ce quiz" : "") + " ?")) return;
+            const partout = isQuiz && (it.auteur || (it.familles || []).length) ? " pour toutes les familles" + (it.famille ? " (créée par la famille " + it.famille + ")" : "") : "";
+            if (!confirm("Supprimer définitivement « " + it.titre + " »" + partout + (isQuiz ? " et la progression des élèves sur ce quiz" : "") + " ?")) return;
             const status = isQuiz ? $("quizlist-status") : $("decklist-status");
             try {
                 await server(isQuiz ? "deleteQuiz" : "deleteDeck", pw(), it.id);
