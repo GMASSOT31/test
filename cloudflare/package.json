@@ -1,0 +1,15 @@
+{
+  "name": "quizy",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "node build.cjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node ../tests/run-all.cjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.162.0"
+  },
+  "private": true,
+  "type": "module"
+}

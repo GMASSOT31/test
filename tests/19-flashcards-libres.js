@@ -1,6 +1,7 @@
 // Flashcards libres (retournement obligatoire, Oublié / Hésité / Trouvé), doubles clics, clavier, « Voir les cartes » d'une leçon
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 const w = makeWorld();
 w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' });
 w.run('saveDeck', PW, { titre: 'Quatre', matiere: 'Test', emoji: '4️⃣', cartes: ['A', 'B', 'C', 'D'].map(x => ({ recto: 'Carte ' + x, verso: 'Réponse ' + x })), pour: ['leo'] });
@@ -16,7 +17,7 @@ const mixQ = w.run('adminData', PW).quizzes.find(q => q.titre === 'Mixte').quest
 (async () => {
   const b = await chromium.launch();
   const c = await b.newContext({ viewport: { width: 390, height: 800 } }); await install(c, w);
-  const errs = []; const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.goto('file://' + SRC + 'Index.html'); await login(p, LEO);
+  const errs = []; const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.goto(page('Index.html')); await login(p, LEO);
   const sync = () => p.evaluate(() => revisionFlush());
   const face = async () => (await p.locator('.flashcard .face-text').innerText()).trim();
   const nextBtn = () => p.locator('.panel .btn', { hasText: /suivante|résultat/ });

@@ -55,7 +55,31 @@ Attends ma prochaine consigne.
 **Connexion clasp** (si `~/.clasprc.json` absent) : le script de connexion n'est volontairement pas dans le dépôt. Utiliser `clasp login --no-localhost` : afficher le lien Google, demander à l'utilisateur par AskUserQuestion (choix « Other ») de coller l'adresse `http://localhost…?code=…` obtenue, puis la fournir à clasp. Ne jamais demander de jeton ni de mot de passe. Accès révocable sur myaccount.google.com/permissions (ligne « clasp »).
 
 ## 5. Tests
-`node tests/NN-nom.js` (un fichier par suite, 668 contrôles, tous verts). `tests/harness.js` fait tourner le vrai `Code.gs` + `Contenu.gs` dans `vm` (faux `PropertiesService`, `CacheService`, `LockService`, `Utilities` ; `world.advance(ms)` fait avancer l'horloge du serveur) et fournit un faux `google.script.run` pour les pages. Aides : `startLesson`, `answerCurrent`, `finishSession`. Suites clés : 02 (moteur), 12 (séances), 08 (suivi parent), 21 (téléphone), 25 (familles, serveur), 26 (familles, page admin), 27 (création de leçon avec une IA).
+`node tests/run-all.cjs` lance tout, sur les deux versions (`apps-script`, `cloudflare` ou `tout`, par défaut `tout`).
+Une suite seule : `node tests/NN-nom.js` (Apps Script) ou `QUIZY_TARGET=cloudflare node tests/NN-nom.js` (Cloudflare).
+24 suites historiques (668 contrôles, sur les deux versions) + 28 (export, deux versions) + 29 (import), 30 (fuseau Europe/Paris),
+31 (bout en bout sur `wrangler dev`) pour Cloudflare (`// cible: cloudflare` en tête de fichier).
+Ancien mode d'emploi : `node tests/NN-nom.js` (un fichier par suite, tous verts). `tests/harness.js` fait tourner le vrai `Code.gs` + `Contenu.gs` dans `vm` (faux `PropertiesService`, `CacheService`, `LockService`, `Utilities` ; `world.advance(ms)` fait avancer l'horloge du serveur) et fournit un faux `google.script.run` pour les pages. Aides : `startLesson`, `answerCurrent`, `finishSession`. Suites clés : 02 (moteur), 12 (séances), 08 (suivi parent), 21 (téléphone), 25 (familles, serveur), 26 (familles, page admin), 27 (création de leçon avec une IA).
+
+## 5 bis. QUIZy sur Cloudflare (`cloudflare/`, voir `docs/MIGRATION-CLOUDFLARE.md`)
+- **Une seule source** : `apps-script/` reste la référence. `cloudflare/build.cjs` emballe `Contenu.gs` + `Code.gs` **sans les modifier**
+  dans `src/app.gen.js` (`createApp(services)`) et fabrique `public/` à partir de `Index.html` (→ `index.html`) et `admin.html`
+  (→ `parents.html`) : liens `/` et `/parents`, manifeste, icônes, `<script src="/run.js">`. Fichiers générés : non suivis par git.
+- `src/core.js` : services Google réimplémentés (PropertiesService = table SQLite `props`, CacheService = table `cache`,
+  LockService = rien (le Durable Object traite une requête à la fois), SHA-256 `node:crypto`, fuseau Europe/Paris via `Intl`),
+  API `POST /api/<fonction>` (corps = arguments) → `{ ok, value }` | `{ error }` (fonctions finissant par `_` et `doGet` refusées),
+  installation/import (`/setup/status`, `/setup/install`, `/setup/import`). `src/router.js` : routage (partagé avec les tests).
+  `src/assets.js` + `src/files.gen.js` : pages et icônes intégrées au Worker. `src/worker.js` : Worker `quizy` + Durable Object `Store` (instance unique « quizy-eu », en Europe de l'Ouest). `static/run.js` : remplace `google.script.run`.
+- Écran **/installer** : base vide → code d'installation (secret `INSTALL_CODE` du Worker) + fichier exporté (menu 👤 →
+  « 💾 Exporter toutes les données ») + pseudo et mot de passe administrateur (stocké haché dans `ADMIN_PASS_HASH`).
+  Une fois installé : « Importer » (administrateur principal) remplace les données, garde son pseudo et son mot de passe.
+- **Mot de passe administrateur oublié** : `wrangler secret put ADMIN_PASSWORD` (joue le rôle de la propriété `ADMIN_PASSWORD`),
+  se connecter, le changer dans l'appli, puis `wrangler secret delete ADMIN_PASSWORD`.
+- Publier : `cd cloudflare && npm ci && CLOUDFLARE_API_TOKEN=proxy-injected CLOUDFLARE_ACCOUNT_ID=f4ec7fb04d7a99f9e990a5396cf4319d npx wrangler deploy`
+  (le vrai jeton est injecté par le proxy de la session, enregistré sur l'environnement « Default » ; la construction est lancée par wrangler).
+  Adresse : https://quizy.gabriel-massot31.workers.dev (autorisée dans le réseau de l'environnement « Default »).
+  Le jeton ne s'écrit jamais dans le chat : formulaire sécurisé de la session (réseau `api.cloudflare.com`).
+- Toute évolution de `apps-script/` doit être publiée **sur les deux** tant que les deux sites vivent (l'ancien n'est jamais désactivé).
 
 ## 6. Données réelles (ne pas toucher sans accord)
 Classe « Gaby » : « Jul » (id `mael`), « Mael » (id `mael-2`, quiz intégrés attribués dont Technologie 5ᵉ) et « test » (créé par l'utilisateur). Ids internes ≠ noms affichés. Progressions remises à zéro au passage au parcours v3.

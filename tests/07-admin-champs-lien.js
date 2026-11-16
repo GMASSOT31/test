@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, login, LEO, PW, ADM, SRC } = require('./harness'); const { startLesson } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 const w = makeWorld(); w.run('saveStudent', ADM, { classe: '5B', pseudo: 'Léo', pin: '1234' });
 const Q = (extra) => ({ titre: 'T', questions: [{ question: 'q ?', ...extra }] });
 const err = q => w.try('saveQuiz', ADM, q).err;
@@ -29,7 +30,7 @@ const err = q => w.try('saveQuiz', ADM, q).err;
   const c = await b.newContext({ viewport: { width: 1100, height: 1000 } }); await install(c, w);
   const errs = [];
   const a = await c.newPage(); a.on('pageerror', e => errs.push(e.message)); a.on('dialog', d => d.accept());
-  await a.goto('file://' + SRC + 'admin.html'); await a.fill('#admin-pseudo', 'Papa'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])');
+  await a.goto(page('admin.html')); await a.fill('#admin-pseudo', 'Papa'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])');
   // on repart d'un site propre : on retire le quiz « Champs » créé pour le test serveur
   w.run('deleteQuiz', ADM, good.id); await a.click('#unlock'); await a.waitForSelector('#lock-status.ok');
 
@@ -79,7 +80,7 @@ const err = q => w.try('saveQuiz', ADM, q).err;
 
   // ---- côté élève : il voit le quiz, le lien, et joue les deux questions ----
   const s = await c.newPage(); s.on('pageerror', e => errs.push('élève : ' + e.message));
-  await s.goto('file://' + SRC + 'Index.html'); await login(s, LEO);
+  await s.goto(page('Index.html')); await login(s, LEO);
   await startLesson(s, 'Analyse musicale');
   ok((await s.locator('.quiz-link').getAttribute('href')) === saved.lien.url && (await s.locator('.quiz-link').innerText()) === '🔗 Écouter les extraits', 'ÉLÈVE : bouton « ' + await s.locator('.quiz-link').innerText() + ' » (icône par défaut 🔗)');
   const ins = s.locator('.saisie.champ'); await ins.nth(0).fill('très grave'); await ins.nth(1).fill('MP<F>MP'); await ins.nth(2).fill('Legato'); await s.locator('.panel .btn', { hasText: 'Valider' }).click();

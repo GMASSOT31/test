@@ -2,6 +2,7 @@
 // révision du jour (mélange des leçons), révision express, séance bonus, après le contrôle, archivage
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, login, LEO, PW, SRC, answerCurrent, finishSession } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 const DAY = 86400000, HOUR = 3600000;
 const w = makeWorld();
 w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' });
@@ -15,7 +16,7 @@ w.advance(Math.floor(w.now() / DAY) * DAY + DAY + 10 * HOUR - w.now());
   const b = await chromium.launch();
   const c = await b.newContext({ viewport: { width: 1000, height: 1000 }, timezoneId: 'UTC' }); await install(c, w);
   const errs = []; const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + SRC + 'Index.html'); await login(p, LEO);
+  await p.goto(page('Index.html')); await login(p, LEO);
   const card = t => p.locator('.card.lecon', { hasText: t });
   const reload = async () => { await p.evaluate(() => revisionFlush()); await p.reload(); await p.waitForSelector('#app:not([hidden])'); };
   const chip = () => p.locator('.stage-chip').innerText();

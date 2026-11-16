@@ -2,6 +2,7 @@
 // suivi parent lisible sur téléphone
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, login, LEO, PW, ADM, SRC, answerCurrent } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 const w = makeWorld();
 w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' }); w.run('setBuiltinAssign', PW, 'zootopia', ['leo']); w.run('setBuiltinAssign', PW, 'byzance-30', ['leo']);
 
@@ -10,7 +11,7 @@ w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' }); w.run('
   for (const [width, height] of [[320, 640], [375, 740], [390, 800], [768, 1024]]) {
     const c = await b.newContext({ viewport: { width, height } }); await install(c, w);
     w.run('resetProgress', PW, 'all', 'all');
-    const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.goto('file://' + SRC + 'Index.html'); await login(p, LEO);
+    const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.goto(page('Index.html')); await login(p, LEO);
     const fits = async (what, sel) => {
       const r = await p.evaluate(sel => {
         const els = [...document.querySelectorAll(sel)].filter(e => e.offsetParent !== null);
@@ -58,7 +59,7 @@ w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' }); w.run('
   // suivi parent sur téléphone
   const c = await b.newContext({ viewport: { width: 375, height: 740 } }); await install(c, w);
   const a = await c.newPage(); a.on('pageerror', e => errs.push(e.message));
-  await a.goto('file://' + SRC + 'admin.html'); await a.fill('#admin-pseudo', 'Papa'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])'); await a.click('#tab-programmes');
+  await a.goto(page('admin.html')); await a.fill('#admin-pseudo', 'Papa'); await a.fill('#password', PW); await a.click('#unlock'); await a.waitForSelector('#admin-area:not([hidden])'); await a.click('#tab-programmes');
   ok((await a.locator('.prog-card.kid.open').count()) === 1, 'un seul enfant : sa fiche est dépliée d\'office');
   await a.locator('.prog-card[data-student="leo"] .kid-head').click();
   ok((await a.locator('.lesson-row').count()) === 0 && (await a.locator('.prog-card[data-student="leo"] .kid-head').boundingBox()).height < 80, 'on la replie : une seule ligne (initiale, nom, %)');
@@ -72,7 +73,7 @@ w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' }); w.run('
   w.run('saveStudent', ADM, { classe: '5B', pseudo: 'Emma', pin: '4321' });
   const c2 = await b.newContext({ viewport: { width: 390, height: 844 } }); await install(c2, w);
   const m = await c2.newPage(); m.on('pageerror', e => errs.push(e.message));
-  const adminLogin = async () => { await m.goto('file://' + SRC + 'admin.html'); await m.fill('#admin-pseudo', 'Papa'); await m.fill('#password', PW); await m.click('#unlock'); await m.waitForSelector('#admin-area:not([hidden])'); };
+  const adminLogin = async () => { await m.goto(page('admin.html')); await m.fill('#admin-pseudo', 'Papa'); await m.fill('#password', PW); await m.click('#unlock'); await m.waitForSelector('#admin-area:not([hidden])'); };
   await adminLogin();
   ok((await m.locator('.prog-card.kid').count()) === 2 && (await m.locator('.prog-card.kid.open').count()) === 0 && (await m.locator('.prog-card[data-student="leo"] .kid-sub').innerText()) === '2 leçons · 🔥 contrôle demain', 'téléphone, 2 enfants : une ligne chacun (« Léo · 2 leçons · 🔥 contrôle demain »), tout replié');
   await m.locator('.prog-card[data-student="leo"] .kid-head').click();

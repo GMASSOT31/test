@@ -1,0 +1,23 @@
+# QUIZy sur Cloudflare Workers (offre gratuite). Construction : node build.cjs (pages et serveur générés depuis ../apps-script).
+name = "quizy"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+preview_urls = false
+
+[build]
+command = "node build.cjs"
+watch_dir = ["../apps-script", "static"]
+
+
+[[durable_objects.bindings]]
+name = "STORE"
+class_name = "Store"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Store"]
+
+[observability]
+enabled = true

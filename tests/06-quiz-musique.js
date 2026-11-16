@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, login, LEO, PW, SRC, startLesson } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 
 // Corrigé officiel (texte fourni), tel qu'un élève le saisirait. Clé = numéro de question (0 = première).
 const QCM_KEY = { 0: "Genre musical dans lequel le compositeur imite des éléments non musicaux à l'aide d'un orchestre symphonique", 2: '1886', 3: 'Fin du 19ᵉ siècle', 5: 'Faire rire',
@@ -23,7 +24,7 @@ const CHAMPS_KEY = { 11: ['Alger', 'pneumonie'], 19: ['voix', 'instrument'], 21:
   const c = await b.newContext({ viewport: { width: 1000, height: 1100 } }); await install(c, w);
   const errs = [];
   const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + SRC + 'Index.html'); await login(p, LEO);
+  await p.goto(page('Index.html')); await login(p, LEO);
 
   // ---- 1. intégrité des données ----
   const Q = await p.evaluate(() => QUIZZES[0]);

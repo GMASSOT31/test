@@ -2,6 +2,7 @@
 // un clic manuel n'est jamais suivi d'un second saut ; quitter pendant l'attente est sans effet.
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, login, LEO, PW, SRC, startLesson } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 const w = makeWorld();
 w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' });
 for (const id of ['byzance', 'byzance-30']) w.run('setBuiltinAssign', PW, id, ['leo']);
@@ -11,7 +12,7 @@ for (const id of ['byzance', 'byzance-30']) w.run('setBuiltinAssign', PW, id, ['
   const c = await b.newContext({ viewport: { width: 1000, height: 1100 } });
   await install(c, w, { auto: true });          // passage automatique ACTIVÉ (comportement réel)
   const errs = [];
-  const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.goto('file://' + SRC + 'Index.html'); await login(p, LEO);
+  const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.goto(page('Index.html')); await login(p, LEO);
   const qtext = () => p.locator('.panel.session .question').innerText().catch(() => '');
   const right = () => p.evaluate(() => { const t = document.querySelector('.panel.session .question').textContent; for (const q of QUIZZES.flatMap(x => x.questions)) if (q.question === t) return q.options[q.correct]; });
   const click = async good => { const r = await right(); const t = (await p.locator('.option').allInnerTexts()).find(x => good ? x === r : x !== r); await p.locator('.option').filter({ hasText: t }).first().click(); };

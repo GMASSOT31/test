@@ -1,6 +1,7 @@
 // Page admin : onglet Parents, code d'invitation, « Créer ma famille », menu du compte, changer le mot de passe
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, SRC } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 
 (async () => {
   const w = makeWorld();
@@ -17,7 +18,7 @@ const { makeWorld, install, ok, summary, SRC } = require('./harness');
     await a.waitForSelector('#lock-status.ok, #lock-status.err');
   };
   const logout = async () => { await a.click('#acct-btn'); await a.click('#lock'); await a.waitForSelector('#admin-area', { state: 'hidden' }); };
-  await a.goto('file://' + SRC + 'admin.html');
+  await a.goto(page('admin.html'));
 
   // ---- 1. administrateur : onglet Parents, code d'invitation ----
   await login('Papa', 'secret');
@@ -28,7 +29,7 @@ const { makeWorld, install, ok, summary, SRC } = require('./harness');
   ok(/Stockage utilisé : \d+ Ko sur 500 Ko \(\d+ %\)/.test(await a.locator('#stockage').innerText()), 'stockage affiché : ' + (await a.locator('#stockage').innerText()).trim());
   await a.click('text=Créer un code d\'invitation'); await a.waitForSelector('#invite-code');
   const code = await a.locator('#invite-code').innerText();
-  ok(code === w.props.INVITE_CODE && (await a.locator('#invite-box input').inputValue()).endsWith('/exec?p=admin'), 'code ' + code + ' affiché avec l\'adresse de l\'espace parents à donner');
+  ok(code === w.props.INVITE_CODE && (await a.locator('#invite-box input').inputValue()).endsWith(LINKS.admin), 'code ' + code + ' affiché avec l\'adresse de l\'espace parents à donner');
   await logout();
 
   // ---- 2. une famille s'inscrit ----
@@ -100,7 +101,7 @@ const { makeWorld, install, ok, summary, SRC } = require('./harness');
   // ---- 7. téléphone : inscription lisible ----
   const m = await b.newContext({ viewport: { width: 360, height: 740 } }); await install(m, w);
   const p = await m.newPage(); p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + SRC + 'admin.html'); await p.click('#signup-open');
+  await p.goto(page('admin.html')); await p.click('#signup-open');
   ok(await p.locator('#su-save').isVisible() && await p.evaluate(() => document.documentElement.scrollWidth <= 360), 'téléphone : formulaire « Créer ma famille » sans défilement horizontal');
   ok(errs.length === 0, 'aucune erreur JavaScript ' + JSON.stringify(errs));
   await b.close(); process.exit(summary() ? 1 : 0);

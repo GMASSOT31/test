@@ -1,13 +1,14 @@
 // Affichage téléphone : bandeau fin, onglets admin en symboles sur une ligne, barre du bas côté élève, connexion compacte
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 const path = require('path');
 (async () => {
   const w = makeWorld({ ADMIN_PASSWORD: 'secret' });
   w.run('saveStudent', 'secret', { classe: '5B', pseudo: 'Léo', pin: '1234' }); w.run('setBuiltinAssign', 'secret', 'zootopia', ['leo']);
   const b = await chromium.launch();
   const c = await b.newContext({ viewport: { width: 360, height: 740 } }); await install(c, w);
-  const A = 'file://' + path.join(__dirname, '..', 'apps-script', 'admin.html'), E = 'file://' + path.join(__dirname, '..', 'apps-script', 'Index.html');
+  const A = page('admin.html'), E = page('Index.html');
   const a = await c.newPage(); await a.goto(A);
   ok((await a.locator('.rv-banner').boundingBox()).height < 50, 'ADMIN : bandeau très fin (' + Math.round((await a.locator('.rv-banner').boundingBox()).height) + ' px)');
   ok(!(await a.locator('.rv-chip').first().isVisible()) && !(await a.locator('.rv-ticker').isVisible()), 'ADMIN : plus de faux boutons ni de bandeau défilant');

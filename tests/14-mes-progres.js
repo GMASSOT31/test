@@ -1,9 +1,10 @@
 // « Mes progrès » : questions ancrées, niveaux en couleurs, temps de la semaine, leçons (même action que « Mes leçons »)
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, seed, login, startLesson, finishSession } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 const DAY = 86400000;
 const W = makeWorld(); seed(W, { allToLeo: true });
-const URL_ = 'file://' + require('path').join(__dirname, '..', 'apps-script', 'Index.html');
+const URL_ = page('Index.html');
 
 (async () => {
   const b = await chromium.launch();

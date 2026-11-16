@@ -1,6 +1,7 @@
 // Pannes réseau pendant une séance : 3 essais, ordre conservé, avertissement, pas d'insistance sur une erreur d'identifiants
 const { chromium } = require('playwright');
 const { makeWorld, bridge, ok, summary, login, LEO, PW, SRC, startLesson, answerCurrent } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 
 (async () => {
   const w = makeWorld();
@@ -12,9 +13,10 @@ const { makeWorld, bridge, ok, summary, login, LEO, PW, SRC, startLesson, answer
     return w.call(fn, args);
   };
   const b = await chromium.launch(); const c = await b.newContext({ viewport: { width: 1000, height: 900 } });
-  await c.exposeFunction('__srv', call); await c.addInitScript(bridge); await c.addInitScript('window.revisionAutoNext = false;');
+  if (TARGET === 'cloudflare') { w.handler = call; await c.addInitScript('window.revisionAutoNext = false;'); }   // pannes simulées côté serveur HTTP
+  else { await c.exposeFunction('__srv', call); await c.addInitScript(bridge); await c.addInitScript('window.revisionAutoNext = false;'); }
   const errs = []; const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + SRC + 'Index.html'); await login(p, LEO);
+  await p.goto(page('Index.html')); await login(p, LEO);
   const sync = async () => (await p.locator('#sync-status').innerText()).trim();
   const level = i => p.evaluate(i => { const z = QUIZZES[0]; return itemOf(z, z.questions[i])[0]; }, i);
   const cur = () => p.evaluate(() => { const t = document.querySelector('.panel.session .question').textContent; return QUIZZES[0].questions.findIndex(x => x.question === t); });

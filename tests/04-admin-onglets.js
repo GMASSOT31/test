@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harness');
+const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testée : Apps Script ou Cloudflare
 
 (async () => {
   const w = makeWorld();
@@ -8,9 +9,9 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
   await install(c, w);
   const errs = [];
   const a = await c.newPage(); a.on('pageerror', e => errs.push(e.message)); a.on('dialog', d => d.accept());
-  await a.goto('file://' + SRC + 'admin.html');
+  await a.goto(page('admin.html'));
   const toStudent = a.locator('#to-student');
-  ok(await toStudent.isVisible() && (await toStudent.innerText()).includes('Espace élève') && (await toStudent.getAttribute('href')).endsWith('/exec') && (await toStudent.getAttribute('target')) === '_top', 'connexion enseignant : lien discret « Espace élève » (vers la page élève, dans toute la fenêtre)');
+  ok(await toStudent.isVisible() && (await toStudent.innerText()).includes('Espace élève') && (await toStudent.getAttribute('href')).endsWith(LINKS.student) && (await toStudent.getAttribute('target')) === '_top', 'connexion enseignant : lien discret « Espace élève » (vers la page élève, dans toute la fenêtre)');
   const waitOk = async (id) => a.waitForSelector(`${id}.ok`, { timeout: 8000 });
   // navigation : 2 sections en haut (Enfants, Leçons) ; les formulaires s'ouvrent depuis leur section ; Familles depuis le menu du compte
   const PARENT = { 'eleve-ajout': 'programmes', 'quiz-ajout': 'quiz-liste', 'fc-ajout': 'quiz-liste' };
@@ -160,14 +161,14 @@ const { makeWorld, install, ok, summary, login, LEO, PW, SRC } = require('./harn
 
   // ---- 8. ce que voient les élèves ----
   const sp = await c.newPage(); sp.on('pageerror', e => errs.push(e.message));
-  await sp.goto('file://' + SRC + 'Index.html'); await login(sp, { classe: '5B', pseudo: 'Léo', pin: '5555' });
+  await sp.goto(page('Index.html')); await login(sp, { classe: '5B', pseudo: 'Léo', pin: '5555' });
   ok(JSON.stringify(await sp.locator('.card h3').allInnerTexts()) === JSON.stringify(['Grand quiz : Byzance et l\'Empire carolingien', 'Zootopia : les quartiers']), 'LÉO voit ses 2 quiz intégrés (ni Maths, ni Brouillon)');
   await sp.click('#logout'); await sp.fill('#login-pseudo', 'Emma'); await sp.fill('#login-pin', '4321'); await sp.click('#login-btn'); await sp.waitForSelector('#app:not([hidden])');
   ok(JSON.stringify(await sp.locator('.card h3').allInnerTexts()) === '["Maths"]', 'EMMA voit seulement « Maths »');
 
   // ---- 9. supprimer un enfant depuis sa fiche (« + ») ----
   await tab('programmes'); await openKid('adam');
-  await card('adam').locator('text=Supprimer Adam').click(); await waitOk('#prog-status');
+  await card('adam').locator('text=Supprimer Adam').click(); await a.waitForFunction(() => document.querySelector('#prog-status').textContent.includes('supprimé'), null, { timeout: 8000 });   // le statut était déjà « ok » : attendre CE message
   ok(JSON.stringify(await a.locator('.prog-card .st-name').allInnerTexts()) === JSON.stringify(['Emma', 'Léo', 'Nina', 'Zoé']) && (await a.locator('#count-eleves').innerText()) === '4', 'Adam supprimé (après confirmation) : 4 fiches');
   await openKid('leo'); await card('leo').locator('text=Supprimer Léo').click(); await waitOk('#prog-status');
   ok(!w.props.builtin_assign.includes('leo') && !JSON.stringify(Object.values(w.props)).includes('"leo"') && w.try('getStudentData', '5B', 'Léo', '5555').err, 'Léo supprimé : retiré de toutes les attributions, connexion impossible');
