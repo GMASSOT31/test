@@ -101,6 +101,7 @@ const same = (a, b) => JSON.stringify(clean(a)) === JSON.stringify(clean(b));
   const W = makeWorldCf({}, { env: ENV, timeZone: 'Europe/Paris' });
   const b = await chromium.launch();
   const c = await b.newContext({ viewport: { width: 390, height: 844 } });
+  await c.addInitScript('window.QUIZY_PROFILS = false;');   // profils : suite 32
   const errs = []; const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message));
   await p.goto(page('Index.html', 'cloudflare'));
   ok(new URL(p.url()).pathname === '/installer' && (await p.title()) === 'QUIZy · Installer', 'base vide : la page élève mène à l\'écran « Installer »');

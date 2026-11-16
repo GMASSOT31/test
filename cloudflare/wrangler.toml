@@ -8,7 +8,7 @@ preview_urls = false
 
 [build]
 command = "node build.cjs"
-watch_dir = ["../apps-script", "static"]
+watch_dir = ["source", "static", "theme"]
 
 
 [[durable_objects.bindings]]

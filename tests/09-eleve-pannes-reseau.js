@@ -13,7 +13,7 @@ const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testé
     return w.call(fn, args);
   };
   const b = await chromium.launch(); const c = await b.newContext({ viewport: { width: 1000, height: 900 } });
-  if (TARGET === 'cloudflare') { w.handler = call; await c.addInitScript('window.revisionAutoNext = false;'); }   // pannes simulées côté serveur HTTP
+  if (TARGET === 'cloudflare') { w.handler = call; await c.addInitScript('window.revisionAutoNext = false; window.QUIZY_PROFILS = false;'); }   // pannes simulées côté serveur HTTP
   else { await c.exposeFunction('__srv', call); await c.addInitScript(bridge); await c.addInitScript('window.revisionAutoNext = false;'); }
   const errs = []; const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message));
   await p.goto(page('Index.html')); await login(p, LEO);
