@@ -29,7 +29,29 @@ const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testé
   ok(/Stockage utilisé : \d+ Ko sur 500 Ko \(\d+ %\)/.test(await a.locator('#stockage').innerText()), 'stockage affiché : ' + (await a.locator('#stockage').innerText()).trim());
   await a.click('text=Créer un code d\'invitation'); await a.waitForSelector('#invite-code');
   const code = await a.locator('#invite-code').innerText();
-  ok(code === w.props.INVITE_CODE && (await a.locator('#invite-box input').inputValue()).endsWith(LINKS.admin), 'code ' + code + ' affiché avec l\'adresse de l\'espace parents à donner');
+  ok(code === w.props.INVITE_CODE && (await a.locator('#invite-box input').count()) === 0 && (await a.locator('#invite-share').innerText()) === '✉️ Message d\'invitation', 'code ' + code + ' : un seul bouton « ✉️ Message d\'invitation » (plus de champ adresse à copier)');
+  // ordinateur : le message est copié dans le presse-papiers
+  await c.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await a.click('#invite-share'); await a.waitForSelector('#invite-status.ok');
+  const msg = await a.evaluate(() => navigator.clipboard.readText());
+  const lien = (/https?:\/\/\S+/.exec(msg) || [''])[0];
+  ok(msg.includes(code) && lien.endsWith('/parents#invitation=' + code) && msg.includes('Créer ma famille') && (await a.locator('#invite-status').innerText()).includes('Invitation copiée'), 'message copié : lien de l\'espace parents avec le code, code en clair, étapes ; « 📋 Invitation copiée »');
+  ok(!/secret|motdepasse|Jul/i.test(msg), 'le message ne contient aucun mot de passe ni nom d\'enfant');
+  // téléphone : le menu de partage du téléphone s'ouvre (SMS, mail…) et le message est aussi copié
+  const tel = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }); await install(tel, w);
+  await tel.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await tel.addInitScript(() => { window.__partages = []; navigator.share = d => { window.__partages.push(d); return Promise.resolve(); }; });
+  const t = await tel.newPage(); t.on('pageerror', e => errs.push(e.message));
+  await t.goto(page('admin.html')); await t.fill('#admin-pseudo', 'Papa'); await t.fill('#password', 'secret'); await t.click('#unlock'); await t.waitForSelector('#admin-area:not([hidden])');
+  await t.click('#acct-btn'); await t.click('#menu-parents'); await t.click('#invite-share'); await t.waitForSelector('#invite-status.ok');
+  const parts = await t.evaluate(() => window.__partages);
+  ok(parts.length === 1 && parts[0].text === msg && parts[0].title === 'Invitation QUIZy' && (await t.locator('#invite-status').innerText()).includes('Invitation envoyée'), 'téléphone : menu de partage ouvert avec le même message (« ✅ Invitation envoyée »)');
+  // la famille touche le lien : « Créer ma famille » s'ouvre avec le code rempli, et le code quitte l'adresse
+  const f = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage(); f.on('pageerror', e => errs.push(e.message));
+  await f.goto(lien.replace(/^https?:\/\/[^/]+/, page('admin.html').replace(/\/parents$/, '')));
+  await f.waitForSelector('#signup:not([hidden])');
+  ok((await f.locator('#su-code').inputValue()) === code && !f.url().includes('invitation') && await f.evaluate(() => document.activeElement.id === 'su-famille'), 'lien d\'invitation : « Créer ma famille » ouvert, code déjà rempli, adresse nettoyée, curseur sur le nom de famille');
+  await tel.close();
   await logout();
 
   // ---- 2. une famille s'inscrit ----

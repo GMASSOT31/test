@@ -352,7 +352,9 @@
         .link-btn { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
         /* Onglet Parents */
         .invite-code { display: inline-block; font-size: 1.5rem; font-weight: 900; letter-spacing: 2px; color: var(--navy); background: #fff6dc; padding: 4px 14px; border-radius: 12px; }
-        .invite-url { margin-top: 6px; font-size: .85rem; }
+        .invite-btn { min-height: 52px; font-size: 1.05rem; }
+        .hint .invite-code { font-size: 1rem; letter-spacing: 1px; padding: 1px 8px; border-radius: 8px; }
+        .invite-text { width: 100%; margin-top: 8px; font: inherit; font-size: .9rem; }
         .stockage { margin: 0 0 12px; font-size: .9rem; font-weight: 700; color: var(--navy); }
         .stockage .bar { max-width: 360px; margin: 6px 0 2px; }
         .stockage.warn .bar span { background: linear-gradient(90deg, #ffb3c6, var(--red)); }
@@ -2231,6 +2233,44 @@
         // ================= PARENTS (administrateur principal) =================
         const adminUrl = () => $("to-student").getAttribute("href") + "?p=admin";
         const ko = n => Math.round(n / 1000);
+        // ---------- Invitation d'une famille : un message prêt à coller ou à partager ----------
+        // Le lien ouvre directement « Créer ma famille » avec le code déjà rempli (#invitation=…, jamais envoyé au serveur).
+        function invitationLink() { return adminUrl() + "#invitation=" + encodeURIComponent(DATA.invitation); }
+        function invitationText() {
+            return "Bonjour ! Je t'invite sur QUIZy, l'appli de révision de nos enfants (quiz, flashcards, révisions espacées).\n\n" +
+                "1. Ouvre ce lien : " + invitationLink() + "\n" +
+                "2. « 👪 Créer ma famille » s'ouvre avec le code déjà rempli (sinon, saisis-le : " + DATA.invitation + ").\n" +
+                "3. Choisis le nom de ta famille, ton pseudo et ton mot de passe.\n\n" +
+                "Tu pourras ensuite créer les comptes de tes enfants, leur donner des leçons et partager les tiennes.";
+        }
+        // Copie dans le presse-papiers ET ouvre le menu de partage du téléphone (SMS, mail…) quand il existe.
+        // Les deux sont lancés tout de suite, dans le geste de l'utilisateur (sinon le navigateur peut les refuser).
+        function shareInvitation(st) {
+            const text = invitationText();
+            const copied = copyText(text);
+            const canShare = !!navigator.share && matchMedia("(pointer: coarse)").matches;
+            const shared = canShare ? navigator.share({ title: "Invitation QUIZy", text }).then(() => true, e => (e && e.name === "AbortError" ? null : false)) : Promise.resolve(false);
+            Promise.all([copied, shared]).then(([c, sh]) => {
+                if (sh) showStatus(st, "ok", "✅ Invitation envoyée." + (c ? " Elle est aussi dans le presse-papiers." : ""));
+                else if (c) showStatus(st, "ok", "📋 Invitation copiée : colle-la dans un SMS, un mail ou une messagerie.");
+                else showStatus(st, "err", "Copie impossible : sélectionne le message ci-dessous et copie-le.");
+                if (!c && !sh) {
+                    const t = h("textarea", { readonly: "", class: "invite-text", "aria-label": "Message d'invitation", rows: "8" }); t.value = text;
+                    st.after(t); t.select();
+                }
+            });
+        }
+        // Presse-papiers (avec repli pour les navigateurs anciens) ; renvoie une promesse true/false
+        function copyText(text) {
+            const fallback = () => {
+                const t = h("textarea", { readonly: "", style: "position:fixed;opacity:0" }); t.value = text;
+                document.body.append(t); t.select();
+                let ok = false; try { ok = document.execCommand("copy"); } catch (e) { /* refusé */ }
+                t.remove(); return ok;
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(() => true, () => fallback());
+            return Promise.resolve(fallback());
+        }
         function renderParents() {
             if (!DATA.moi.owner) return;
             const parents = DATA.parents || [];
@@ -2238,11 +2278,12 @@
             const box = $("invite-box");
             const btn = (txt, cls, fn) => h("button", { class: "btn " + cls, type: "button", onclick: fn }, txt);
             if (DATA.invitation) {
-                const url = h("input", { type: "text", readonly: "", value: adminUrl(), "aria-label": "Adresse de l'espace parents", onfocus: e => e.target.select() });
+                const st = h("p", { class: "status", id: "invite-status", role: "status" });
                 box.replaceChildren(
-                    h("p", {}, "Code d'invitation : ", h("strong", { class: "invite-code", id: "invite-code" }, DATA.invitation)),
-                    h("div", { class: "invite-url" }, h("label", {}, "Adresse de l'espace parents à donner :"), url),
-                    h("p", { class: "hint" }, "La famille ouvre cette adresse, touche « 👪 Créer ma famille » et saisit le code. Un nouveau code remplace l'ancien."),
+                    h("button", { class: "btn invite-btn", id: "invite-share", type: "button", onclick: () => shareInvitation(st) }, "✉️ Message d'invitation"),
+                    st,
+                    h("p", { class: "hint" }, "Un message prêt à envoyer (SMS, mail…) avec le lien et le code : la famille touche le lien et crée son compte. Code actuel : ",
+                        h("strong", { class: "invite-code", id: "invite-code" }, DATA.invitation), ". Un nouveau code remplace l'ancien."),
                     h("div", { class: "actions" }, btn("🎲 Nouveau code", "secondary small", () => inviteCode("new")), btn("🚫 Fermer les inscriptions", "danger", () => inviteCode("close"))));
             } else {
                 box.replaceChildren(
@@ -2327,6 +2368,18 @@
         $("pw-save").addEventListener("click", changePassword);
         $("pw-new2").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); changePassword(); } });
         $("signup-open").addEventListener("click", () => showSignup($("signup").hidden));
+        (function invitationFromLink() {
+            const m = /(?:^#|&)invitation=([^&]+)/.exec(location.hash);
+            if (!m) return;
+            try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* ignoré */ }
+            setTimeout(() => {   // après l'écran « Qui es-tu ? » éventuel : l'invitation passe en premier
+                if (window.QuizyProfils && $("who")) $("who").hidden = true;
+                $("lockbar").hidden = false;
+                showSignup(true);
+                $("su-code").value = decodeURIComponent(m[1]).slice(0, 20);
+                $("su-famille").focus();
+            }, 0);
+        })();
         $("su-cancel").addEventListener("click", () => showSignup(false));
         $("su-save").addEventListener("click", createFamily);
         $("su-pw2").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); createFamily(); } });
