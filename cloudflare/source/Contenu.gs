@@ -3002,5 +3002,194 @@ var BUILTIN_QUIZZES = [
         "explication": "Pouille gagne 43 fois, partage le pot 0 fois et perd 1 fois sur 44 issues équiprobables. Une égalité compte pour un demi-pot : (43 + 0 ÷ 2) ÷ 44 = 97,73 %."
       }
     ]
+  },
+  {
+    "id": "poker-outs",
+    "emoji": "♠️",
+    "matiere": "Probabilités",
+    "titre": "Poker à tapis · Compte tes outs",
+    "description": "15 duels au flop ou à la turn. Les deux mains sont visibles. Estime les chances que Pouille gagne seul ; une égalité est un partage. Pour estimer la chance de toucher un out, multiplie le nombre d’outs par 4 au flop ou par 2 à la turn.",
+    "questions": [
+      {
+        "id": "a1200001",
+        "question": "Flop : quelles sont les chances que Pouille gagne seul ? Arrondis au pourcentage entier.\nPouille : as de pique, as de carreau. Zig : valet de cœur, 10 de cœur. Flop : 9 de cœur, 4 de cœur, 2 de trèfle.",
+        "options": [
+          "27 %",
+          "46 %",
+          "61 %",
+          "74 %"
+        ],
+        "correct": 2,
+        "explication": "Surpaire contre tirage couleur. Zig compte 9 cœurs pour toucher sa couleur. Au flop, 9 × 4 ≈ 36 %. La chance de n’en toucher aucun est de 36/45 × 35/44. Soustrais ce résultat à 1 pour obtenir environ 36,36 % de chances de voir au moins un cœur. Toucher la couleur et remporter le pot sont deux événements différents. Bilan : 601 victoire(s), 0 partage(s), 389 défaite(s) sur 990 issues, soit 60,71 % de victoires."
+      },
+      {
+        "id": "a1200002",
+        "question": "Flop : quelles sont les chances que Pouille gagne seul ? Arrondis au pourcentage entier.\nPouille : as de cœur, dame de cœur. Zig : 9 de trèfle, 9 de carreau. Flop : 9 de cœur, 4 de cœur, roi de pique.",
+        "options": [
+          "12 %",
+          "26 %",
+          "36 %",
+          "45 %"
+        ],
+        "correct": 1,
+        "explication": "Tirage couleur contre brelan. 9 cœurs donnent une estimation brute de 36 % pour la couleur. Mais si le roi de cœur tombe, il double le tableau et donne un full à Zig. Même après un bon cœur, Zig peut encore faire full ou carré. Voilà pourquoi on ne fait pas simplement 9 × 4. Bilan : 253 victoire(s), 0 partage(s), 737 défaite(s) sur 990 issues, soit 25,56 % de victoires."
+      },
+      {
+        "id": "a1200003",
+        "question": "Flop : quelles sont les chances que Pouille gagne seul ? Arrondis au pourcentage entier.\nPouille : 8 de trèfle, 7 de pique. Zig : as de pique, roi de carreau. Flop : 6 de carreau, 9 de trèfle, roi de cœur.",
+        "options": [
+          "17 %",
+          "24 %",
+          "34 %",
+          "48 %"
+        ],
+        "correct": 2,
+        "explication": "Tirage quinte ouvert contre paire. Les quatre 5 et les quatre 10 complètent une quinte : 8 × 4 ≈ 32 %. Au flop, quelques issues à deux cartes peuvent aussi donner deux paires ou un brelan à Pouille, même sans toucher de 5 ni de 10. Bilan : 339 victoire(s), 0 partage(s), 651 défaite(s) sur 990 issues, soit 34,24 % de victoires."
+      },
+      {
+        "id": "a1200004",
+        "question": "Flop : quelles sont les chances que Pouille gagne seul ? Arrondis au pourcentage entier.\nPouille : valet de pique, 10 de pique. Zig : as de carreau, as de trèfle. Flop : 9 de pique, 8 de pique, 2 de carreau.",
+        "options": [
+          "26 %",
+          "43 %",
+          "56 %",
+          "60 %"
+        ],
+        "correct": 2,
+        "explication": "Tirage quinte et couleur contre surpaire. Compte 9 piques et 8 cartes de quinte, puis retire les deux cartes comptées deux fois, 7♠ et Q♠ : 15 cartes distinctes. 15 × 4 = 60 %, mais avec autant d’outs le raccourci surestime déjà la chance de toucher. Il reste aussi des possibilités de retour pour Zig. Bilan : 557 victoire(s), 0 partage(s), 433 défaite(s) sur 990 issues, soit 56,26 % de victoires."
+      },
+      {
+        "id": "a1200005",
+        "question": "Flop : quelles sont les chances que Pouille gagne seul ? Arrondis au pourcentage entier.\nPouille : as de trèfle, roi de carreau. Zig : valet de cœur, valet de trèfle. Flop : 8 de pique, 5 de carreau, 2 de trèfle.",
+        "options": [
+          "12 %",
+          "26 %",
+          "36 %",
+          "50 %"
+        ],
+        "correct": 1,
+        "explication": "Deux cartes supérieures contre paire. Trois as et trois rois peuvent faire passer Pouille devant : 6 × 4 ≈ 24 %. Ces cartes ne garantissent pas la victoire sur deux tirages : Zig peut toucher un valet ou profiter des deux nouvelles cartes. Bilan : 253 victoire(s), 0 partage(s), 737 défaite(s) sur 990 issues, soit 25,56 % de victoires."
+      },
+      {
+        "id": "a1200006",
+        "question": "Flop : quelles sont les chances que Pouille gagne seul ? Arrondis au pourcentage entier.\nPouille : roi de cœur, 9 de cœur. Zig : as de cœur, valet de cœur. Flop : 8 de cœur, 5 de cœur, 2 de trèfle.",
+        "options": [
+          "0 %",
+          "19 %",
+          "22 %",
+          "36 %"
+        ],
+        "correct": 1,
+        "explication": "Tirage couleur dominé. Un cœur seul favorise aussi Zig, qui tient l’as de cœur. Les cœurs ne sont donc pas des outs propres. Il existe néanmoins des issues à deux cartes : 6♥ et 7♥ donnent à Pouille une quinte flush du 5 au 9. Bilan : 190 victoire(s), 0 partage(s), 800 défaite(s) sur 990 issues, soit 19,19 % de victoires."
+      },
+      {
+        "id": "a1200007",
+        "question": "Flop : quelles sont les chances que Pouille gagne seul ? Arrondis au pourcentage entier.\nPouille : as de pique, 8 de trèfle. Zig : as de carreau, roi de cœur. Flop : as de cœur, 8 de carreau, 4 de pique.",
+        "options": [
+          "45 %",
+          "60 %",
+          "85 %",
+          "92 %"
+        ],
+        "correct": 2,
+        "explication": "Deux paires contre top paire. Zig pense d’abord aux trois rois. Il peut aussi gagner si deux dames arrivent : chacun joue alors deux paires, as et dames, et le roi de Zig sert de kicker, la carte qui départage. Regarder seulement les cartes qui améliorent sa propre main fait oublier ces cas. Bilan : 838 victoire(s), 5 partage(s), 147 défaite(s) sur 990 issues, soit 84,65 % de victoires."
+      },
+      {
+        "id": "a1200008",
+        "question": "Flop : quelles sont les chances que Pouille gagne seul ? Arrondis au pourcentage entier.\nPouille : 7 de pique, 7 de carreau. Zig : as de trèfle, roi de trèfle. Flop : 7 de cœur, 4 de trèfle, 2 de trèfle.",
+        "options": [
+          "36 %",
+          "56 %",
+          "74 %",
+          "88 %"
+        ],
+        "correct": 2,
+        "explication": "Brelan contre tirage couleur et deux cartes hautes. Un as ou un roi seul ne bat pas un brelan. Zig vise d’abord la couleur. Un trèfle qui double le tableau, comme 7♣, peut au contraire donner un carré à Pouille, et une paire au tableau sur l’autre carte peut lui donner un full. Bilan : 737 victoire(s), 0 partage(s), 253 défaite(s) sur 990 issues, soit 74,44 % de victoires."
+      },
+      {
+        "id": "a1200009",
+        "question": "Turn : quelles sont les chances que Pouille gagne seul ? Arrondis au pourcentage entier.\nPouille : dame de cœur, valet de cœur. Zig : as de pique, as de carreau. Turn : 9 de cœur, 4 de cœur, 2 de trèfle, 7 de pique.",
+        "options": [
+          "9 %",
+          "18 %",
+          "20 %",
+          "36 %"
+        ],
+        "correct": 2,
+        "explication": "Tirage couleur contre surpaire. Les 9 cœurs restants sont gagnants. À la turn : 9 × 2 ≈ 18 %. Avec les deux mains visibles, il reste exactement 44 cartes et 9 ÷ 44 donne 20,45 %. Le raccourci est une estimation. Bilan : 9 victoire(s), 0 partage(s), 35 défaite(s) sur 44 issues, soit 20,45 % de victoires."
+      },
+      {
+        "id": "a1200010",
+        "question": "Turn : quelles sont les chances que Pouille gagne seul ? Arrondis au pourcentage entier.\nPouille : 6 de trèfle, 5 de pique. Zig : as de pique, roi de carreau. Turn : 7 de carreau, 9 de trèfle, roi de cœur, 2 de pique.",
+        "options": [
+          "4 %",
+          "8 %",
+          "9 %",
+          "16 %"
+        ],
+        "correct": 2,
+        "explication": "Tirage quinte ventral contre paire. Seuls les quatre 8 complètent 5–6–7–8–9. La règle du ×2 donne 8 %, contre 4 ÷ 44 = 9,09 %. Un 4 donne quatre cartes qui se suivent, ce qui ne suffit pas. Bilan : 4 victoire(s), 0 partage(s), 40 défaite(s) sur 44 issues, soit 9,09 % de victoires."
+      },
+      {
+        "id": "a1200011",
+        "question": "Turn : quelles sont les chances que Pouille gagne seul ? Arrondis au pourcentage entier.\nPouille : 9 de trèfle, 9 de carreau. Zig : as de cœur, dame de cœur. Turn : 9 de cœur, 4 de cœur, roi de pique, 2 de cœur.",
+        "options": [
+          "10 %",
+          "20 %",
+          "23 %",
+          "45 %"
+        ],
+        "correct": 2,
+        "explication": "Brelan contre couleur faite. Pour remonter contre la couleur, Pouille vise le dernier 9 pour un carré, ou un roi, un 4 ou un 2 pour un full : 1 + 3 + 3 + 3 = 10 outs. 10 × 2 ≈ 20 %, contre 10 ÷ 44 = 22,73 %. Bilan : 10 victoire(s), 0 partage(s), 34 défaite(s) sur 44 issues, soit 22,73 % de victoires."
+      },
+      {
+        "id": "a1200012",
+        "question": "Turn : quelles sont les chances que Pouille gagne seul ? Arrondis au pourcentage entier.\nPouille : 8 de cœur, 7 de cœur. Zig : as de trèfle, as de carreau. Turn : 6 de cœur, 5 de cœur, roi de pique, 2 de trèfle.",
+        "options": [
+          "15 %",
+          "30 %",
+          "34 %",
+          "60 %"
+        ],
+        "correct": 2,
+        "explication": "Tirage combiné à la turn. Il y a 9 cœurs et 8 cartes de quinte. Le 4♥ et le 9♥ comptent dans les deux groupes : 9 + 8 − 2 = 15 outs. ×2 donne 30 % ; exactement, 15 ÷ 44 = 34,09 %. Bilan : 15 victoire(s), 0 partage(s), 29 défaite(s) sur 44 issues, soit 34,09 % de victoires."
+      },
+      {
+        "id": "a1200013",
+        "question": "Turn : quelles sont les chances que Pouille gagne seul ? Arrondis au pourcentage entier.\nPouille : valet de trèfle, 10 de carreau. Zig : valet de cœur, 10 de trèfle. Turn : as de pique, roi de carreau, dame de trèfle, 2 de pique.",
+        "options": [
+          "0 %",
+          "25 %",
+          "50 %",
+          "100 %"
+        ],
+        "correct": 0,
+        "explication": "Même quinte et partage du pot. Les deux joueurs ont la quinte à l’as et une seule carte ne peut donner de couleur à personne. Les 44 rivers partagent le pot. La probabilité de gagner seul est de 0 %, mais chacun reçoit en moyenne 50 % du pot. Bilan : 0 victoire(s), 44 partage(s), 0 défaite(s) sur 44 issues, soit 0,00 % de victoires."
+      },
+      {
+        "id": "a1200014",
+        "question": "Turn : quelles sont les chances que Pouille gagne seul ? Arrondis au pourcentage entier.\nPouille : as de trèfle, as de carreau. Zig : roi de cœur, roi de trèfle. Turn : as de cœur, as de pique, roi de carreau, roi de pique.",
+        "options": [
+          "50 %",
+          "95 %",
+          "98 %",
+          "100 %"
+        ],
+        "correct": 3,
+        "explication": "Carré d’as contre carré de rois. Zig a déjà un carré, mais aucun river ne lui donne une quinte flush ni un carré supérieur. Pouille est certain de gagner. Une main spectaculaire n’a pas forcément le moindre out contre une main encore plus forte. Bilan : 44 victoire(s), 0 partage(s), 0 défaite(s) sur 44 issues, soit 100,00 % de victoires."
+      },
+      {
+        "id": "a1200015",
+        "question": "Turn : quelles sont les chances que Pouille gagne seul ? Arrondis au pourcentage entier.\nPouille : 2 de trèfle, 2 de carreau. Zig : as de pique, 8 de carreau. Turn : 2 de pique, 2 de cœur, as de trèfle, as de carreau.",
+        "options": [
+          "2 %",
+          "91 %",
+          "98 %",
+          "100 %"
+        ],
+        "correct": 2,
+        "explication": "Carré contre full avec un out. Le seul as restant, A♥, donne à Zig un carré d’as supérieur au carré de 2. Pouille gagne sur les 43 autres cartes : 43 ÷ 44 ≈ 98 %. L’astuce est de compter l’unique out de Zig, puis de prendre le complément. Bilan : 43 victoire(s), 0 partage(s), 1 défaite(s) sur 44 issues, soit 97,73 % de victoires."
+      }
+    ]
   }
 ];

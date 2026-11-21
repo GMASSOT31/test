@@ -38,7 +38,7 @@ const P = n => page(n, 'cloudflare');
   const sections = await a.locator('.ls:not([hidden]) .ls-titre').allInnerTexts();
   ok(JSON.stringify(sections) === '["✏️ Mes leçons","🏛️ Leçons fournies","👪 Leçons créées par les familles","🃏 Cartes en plus"]', 'administrateur : 4 parties : ' + sections.join(' · '));
   ok((await a.locator('.ls-corps:visible').count()) === 0 && (await a.locator('.ls-toggle[aria-expanded="false"]').count()) === 4, 'téléphone : toutes les parties repliées (titres seulement)');
-  ok(JSON.stringify(await a.locator('.ls:not([hidden]) .ls-nb').allInnerTexts()) === '["0","12","1","0"]', 'nombre de leçons de chaque partie : 0, 12, 1, 0');
+  ok(JSON.stringify(await a.locator('.ls:not([hidden]) .ls-nb').allInnerTexts()) === '["0","13","1","0"]', 'nombre de leçons de chaque partie : 0, 13, 1, 0');
   const boxes = await a.locator('.ls-toggle').evaluateAll(els => els.map(e => e.getBoundingClientRect().height));
   ok(boxes.every(hh => hh >= 48) && (await a.locator('.ls-toggle').first().getAttribute('aria-controls')) === 'ls-mes', 'boutons de partie : 48 px au moins, reliés à leur contenu (aria-controls)');
   await a.click('#family-lessons .ls-toggle');

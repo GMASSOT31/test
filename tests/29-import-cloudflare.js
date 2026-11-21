@@ -12,7 +12,7 @@ const clean = o => {
   delete c.partagees; delete c.leconsFamilles;
   (c.builtins || []).forEach(b => delete b.familles); (c.quizzes || []).forEach(q => delete q.familles);
   // Le quiz Poker est fourni uniquement sur Cloudflare et n'est attribué à personne après import.
-  if (c.builtins) c.builtins = c.builtins.filter(b => b.id !== 'poker-all-in' || b.pour.length);
+  if (c.builtins) c.builtins = c.builtins.filter(b => !['poker-all-in', 'poker-outs'].includes(b.id) || b.pour.length);
   if (c.moi && !c.moi.owner && c.builtins) c.builtins = c.builtins.filter(b => b.pour.length);
   // questions de synthèse (16/11/2026) : historique des synthèses de l'élève et résumé pour le parent
   Object.values(c.srs || {}).forEach(r => delete r.syn);
