@@ -25,7 +25,7 @@ const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testé
   await a.click('#acct-btn');
   ok(await a.locator('#menu-parents').isVisible(), 'administrateur : « 👪 Familles invitées » dans le menu du compte');
   await a.click('#menu-parents');
-  ok((await a.locator('#invite-box').innerText()).includes('Inscriptions fermées') && (await a.locator('#parent-list .item').count()) === 1 && (await a.locator('#parent-list').innerText()).includes('Ta famille'), 'pas encore de code : inscriptions fermées ; seule ta famille est listée');
+  ok((await a.locator('#invite-box').innerText()).includes('Le code général est désactivé') && (await a.locator('#parent-list .item').count()) === 1 && (await a.locator('#parent-list').innerText()).includes('Ta famille'), 'pas encore de code général ; seule ta famille est listée');
   ok(/Stockage utilisé : \d+ Ko sur 500 Ko \(\d+ %\)/.test(await a.locator('#stockage').innerText()), 'stockage affiché : ' + (await a.locator('#stockage').innerText()).trim());
   await a.click('text=Créer un code d\'invitation'); await a.waitForSelector('#invite-code');
   const code = await a.locator('#invite-code').innerText();
