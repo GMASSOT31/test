@@ -500,7 +500,10 @@
         .admin-only:focus-visible { outline: 3px solid #542182; outline-offset: 2px; }
         .admin-block { border-left: 4px solid #75489d; padding: 10px 12px; border-radius: 8px; }
         .quiz-invitation-form { display: grid; gap: 8px; margin-top: 12px; }
-        .quiz-invitation-form input { max-width: 100%; }
+        .quiz-invitation-form input, .quiz-invitation-form select { max-width: 100%; }
+        #orphan-tools { margin-top: 10px; }
+        #quiz-invitations { margin-top: 12px; }
+        #quiz-invitations summary { cursor: pointer; }
     </style>
 </head>
 <body>
@@ -663,8 +666,15 @@
             <div id="guide"></div>
             <div class="status" id="prog-status" role="status"></div>
             <div id="prog-list"></div>
-            <section id="quiz-invitations" hidden></section>
             <button class="add-tile" id="tab-eleve-ajout" type="button">➕ Ajouter un enfant</button>
+            <div id="orphan-tools" hidden>
+                <button class="add-tile admin-only" id="add-orphan" type="button" aria-expanded="false" aria-controls="orphan-form">➕ Ajouter un orphelin</button>
+                <div id="orphan-form" hidden></div>
+                <details class="admin-block admin-only" id="quiz-invitations">
+                    <summary>Les orphelins</summary>
+                    <div id="orphan-list"></div>
+                </details>
+            </div>
         </div>
 
         <!-- ================= AJOUTER / MODIFIER UN ENFANT ================= -->
@@ -1814,7 +1824,25 @@
         lsApply();
         const openBuiltins = new Set();   // « type:id » dont les réglages sont dépliés
         // opts.partagee : leçon d'un autre, partagée avec ma famille (pas de modification) ; opts.famille : leçon d'une famille (admin)
-        function quizInvitationForm(it, kind) {
+        $("add-orphan").addEventListener("click", () => {
+            if (!DATA || !DATA.moi.owner) return;
+            const container = $("orphan-form");
+            container.hidden = !container.hidden;
+            $("add-orphan").setAttribute("aria-expanded", String(!container.hidden));
+            if (!container.hidden) {
+                if (!container.firstChild) container.append(quizInvitationForm());
+                container.querySelector("input").focus();
+            }
+        });
+
+        function quizInvitationForm() {
+            const quizzes = [
+                ...DATA.quizzes.map(q => ({ id: q.id, titre: q.titre, kind: "quiz" })),
+                ...DATA.builtins.map(q => ({ id: q.id, titre: q.titre, kind: "builtin" }))
+            ];
+            const choice = h("select", { id: "orphan-quiz", required: "" },
+                h("option", { value: "" }, "Choisir une leçon"),
+                quizzes.map((q, i) => h("option", { value: String(i) }, q.titre)));
             const pseudo = h("input", { type: "text", required: "", maxlength: "30", autocomplete: "off" });
             const exam = h("input", { type: "date" });
             const dateParts = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" })
@@ -1826,12 +1854,13 @@
             const create = h("button", { class: "btn admin-only", type: "submit" }, "Créer le lien");
             const form = h("form", { class: "quiz-invitation-form", onsubmit: async e => {
                 e.preventDefault();
+                const { id, titre, kind } = quizzes[Number(choice.value)];
                 create.disabled = true;
                 status.textContent = "Création du lien…";
                 try {
-                    const invitation = await server("createQuizInvitation", pw(), kind, it.id, pseudo.value, exam.value);
+                    const invitation = await server("createQuizInvitation", pw(), kind, id, pseudo.value, exam.value);
                     const url = location.origin + "/#quiz=" + invitation.link;
-                    const text = "Voici ton quiz QUIZy pour réviser « " + it.titre + " ». Ouvre le lien pour commencer.";
+                    const text = "Voici ton quiz QUIZy pour réviser « " + titre + " ». Ouvre le lien pour commencer.";
                     const link = h("input", { type: "url", readonly: "", "aria-label": "Lien du quiz invité" });
                     link.value = url;
                     const share = h("button", { class: "btn admin-only", type: "button", onclick: async () => {
@@ -1841,12 +1870,17 @@
                         } catch (err) { if (err.name !== "AbortError") link.select(); }
                     } }, navigator.share ? "Partager le lien" : "Copier le lien");
                     status.textContent = "Lien valable jusqu’au " + timeFr(invitation.expires) + ".";
-                    form.replaceChildren(link, share, status);
+                    const again = h("button", { class: "btn secondary", type: "button", onclick: () => {
+                        form.replaceWith(quizInvitationForm());
+                        $("orphan-form").querySelector("input").focus();
+                    } }, "Créer un autre lien");
+                    form.replaceChildren(link, share, again, status);
                     try {
                         const latest = await server("adminData", pw());
                         if (DATA && DATA.moi.owner && latest.moi.pseudo === DATA.moi.pseudo) {
                             DATA.quizInvitations = latest.quizInvitations;
                             renderQuizInvitations(true);
+                            $("quiz-invitations").open = true;
                         }
                     } catch (error) { /* le lien est prêt, le suivi est disponible à la prochaine actualisation */ }
                 } catch (error) {
@@ -1854,19 +1888,26 @@
                     create.disabled = false;
                 }
             } },
-                h("label", {}, "Pseudo de l’enfant", pseudo), h("label", {}, "Date du contrôle (facultative)", exam),
+                h("label", {}, "Pseudo de l’enfant", pseudo), h("div", {}, h("label", { for: "orphan-quiz" }, "Leçon"), choice), h("label", {}, "Date du contrôle (facultative)", exam),
                 h("p", { class: "hint" }, "Le lien reste valable une semaine après le contrôle, ou une semaine dès sa création si tu laisses la date vide."),
                 create, status);
             return form;
         }
 
         function renderQuizInvitations(owner) {
-            const section = $("quiz-invitations"), guests = DATA.quizInvitations || [];
-            section.hidden = !owner || !guests.length;
-            section.replaceChildren();
-            if (section.hidden) return;
+            const list = $("orphan-list"), guests = DATA.quizInvitations || [];
+            $("orphan-tools").hidden = !owner;
+            list.replaceChildren();
+            if (!owner) {
+                $("orphan-form").replaceChildren();
+                $("orphan-form").hidden = true;
+                $("add-orphan").setAttribute("aria-expanded", "false");
+                $("quiz-invitations").open = false;
+                return;
+            }
             const status = h("p", { role: "status" });
-            section.append(h("h2", {}, "Quiz sur invitation"), status);
+            list.append(status);
+            if (!guests.length) list.append(h("p", {}, "Aucun orphelin pour le moment."));
             guests.slice().reverse().forEach(guest => {
                 const expired = guest.expires <= Date.now();
                 const remove = h("button", { class: "btn admin-only small", type: "button", onclick: async () => {
@@ -1875,7 +1916,7 @@
                     try { await server("removeQuizInvitation", pw(), guest.id); await reload(); }
                     catch (error) { status.textContent = error.message; remove.disabled = false; }
                 } }, "Supprimer l’invitation");
-                section.append(h("details", { class: "admin-block admin-only" },
+                list.append(h("details", { class: "admin-block" },
                     h("summary", {}, guest.pseudo + " · " + guest.progress.titre + " · " + guest.progress.avancement + " %"),
                     h("p", {}, expired ? "Lien expiré" : "Lien valable jusqu’au " + timeFr(guest.expires)),
                     typeof guest.helpful === "boolean" ? h("p", {}, "La séance t’a aidé à réviser ? " + (guest.helpful ? "Oui" : "Pas encore")) : null,
@@ -1920,8 +1961,6 @@
             const details = h("div", { class: "builtin-details" },
                 h("div", { class: "info" }, h("span", {}, it.titre + " · " + size)),
                 h("label", {}, "Qui l'a ?"), boxes, familles, msg,
-                owner && (kind === "builtin" || (kind === "quiz" && !opts.famille && !opts.partagee))
-                    ? h("details", { class: "admin-block admin-only" }, h("summary", {}, "Inviter un enfant sans compte"), quizInvitationForm(it, kind)) : null,
                 opts.partagee ? h("p", { class: "hint" }, "Leçon partagée par l'administrateur : tu ne peux pas la modifier.") : null,
                 actions.some(Boolean) ? h("div", { class: "actions", style: "margin-top:8px" }, actions) : null);
             details.hidden = !open;

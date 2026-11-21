@@ -194,11 +194,11 @@ définitives : PIN incorrect, leçon inaccessible…). Indicateur « ⏳ Sauvega
 
 ### Quiz sur invitation (QUIZy Cloudflare)
 
-- Les commandes réservées à l’administrateur sont repérées en violet. Dans une leçon qu’il a créée ou une leçon fournie, l’administrateur peut choisir un pseudo et créer un lien pour un enfant sans compte.
+- Les commandes réservées à l’administrateur sont repérées en violet. Dans « Enfants → Ajouter un orphelin », l’administrateur choisit un pseudo et une leçon fournie ou créée par lui pour générer le lien.
 - La date du contrôle est facultative et proposée pour le lendemain. Elle initialise le parcours habituel, dont la révision express si le contrôle est le lendemain. Le lien expire sept jours après la date choisie, ou sept jours après sa création sans date. Les changements ultérieurs du plan de révision ne prolongent pas le lien.
 - L’invitation donne accès à une copie de la leçon et à sa propre progression. Le lien contient un secret transmis dans le fragment d’URL. Après validation il est conservé pour la durée de l’onglet, sans créer de profil mémorisé. Le serveur conserve l’empreinte du secret dans `guest_<id>` et la progression dans `srs_<id>__<quiz>`.
 - En fin de séance, l’enfant peut répondre à la question « Cette séance t’a aidé à réviser ? » et envoyer un lien séparé à un parent. Ce lien permet de créer une famille une seule fois et expire avec l’invitation. Les liens déjà émis fonctionnent indépendamment du code général de création de famille. La nouvelle famille peut créer des leçons et bénéficie des règles de partage habituelles.
-- L’administrateur retrouve le suivi dans « Enfants → Quiz sur invitation », avec les niveaux, les séances et la réponse au sondage. L’expiration bloque l’accès et le suivi reste consultable. Supprimer l’invitation retire ses deux accès et efface la progression associée. La limite est de 100 invitations conservées.
+- L’administrateur retrouve le suivi dans « Enfants → Les orphelins », avec les niveaux, les séances et la réponse au sondage. L’expiration bloque l’accès et le suivi reste consultable. Supprimer l’invitation retire ses deux accès et efface la progression associée. La limite est de 100 invitations conservées.
 
 ### 5 bis. Écran « Qui es-tu ? » (QUIZy Cloudflare, depuis le 16/11/2026)
 - Après chaque connexion réussie (élève ou parent), le profil est mémorisé **sur l'appareil** (localStorage `profiles`, 8 au plus,
