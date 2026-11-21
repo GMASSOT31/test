@@ -480,17 +480,30 @@ function lessonClassification_(props) {
 }
 
 function createLessonDiscipline(cred, name) {
+  return saveLessonDiscipline_(cred, name, null);
+}
+
+function renameLessonDiscipline(cred, id, name) {
+  return saveLessonDiscipline_(cred, name, typeof id === 'string' ? id : '');
+}
+
+function saveLessonDiscipline_(cred, name, id) {
   ownerOnly_(cred);
   var label = str_(name, 60).replace(/\s+/g, ' ');
   if (!label) throw new Error('Donne un nom à la discipline.');
   var store = PropertiesService.getScriptProperties();
   var state = lessonClassification_(store.getProperties());
-  if (state.disciplines.some(function (d) { return norm_(d.name) === norm_(label); })) {
+  var discipline = state.disciplines.find(function (d) { return d.id === id; });
+  if (id !== null && !discipline) throw new Error('Discipline introuvable.');
+  if (state.disciplines.some(function (d) { return d.id !== id && norm_(d.name) === norm_(label); })) {
     throw new Error('Cette discipline existe déjà.');
   }
-  var discipline = { id: Utilities.getUuid(), name: label };
+  if (!discipline) {
+    discipline = { id: Utilities.getUuid(), name: label };
+    state.disciplines.push(discipline);
+  }
+  discipline.name = label;
   store.setProperty(DISCIPLINE_PREFIX + discipline.id, JSON.stringify(discipline));
-  state.disciplines.push(discipline);
   return state;
 }
 
