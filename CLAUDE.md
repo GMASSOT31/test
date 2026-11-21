@@ -4,7 +4,7 @@ Application de révision scolaire (élèves + espace parents). Ce fichier est **
 données, parcours, commandes, déploiement. `AGENTS.md` y renvoie. Détails métier : `docs/LOGIQUE-APP.md` (invariants §10).
 Historique et procédures : `docs/REPRISE.md`, `docs/MIGRATION-CLOUDFLARE.md`, `docs/PARCOURS-V3.md`.
 
-Vérifié le 21/11/2026 (dépôt à `81b662a`, accès Cloudflare et GitHub de la session Claude Code). Ce qui n'a pas pu être
+Vérifié le 21/11/2026 (dépôt à `75de053`, accès Cloudflare et GitHub de la session Claude Code). Ce qui n'a pas pu être
 confirmé est marqué **(non vérifié)**.
 
 ## 1. Consignes de l'utilisateur (toujours valables)
@@ -22,7 +22,7 @@ confirmé est marqué **(non vérifié)**.
 | Dépôt GitHub | https://github.com/GMASSOT31/test |
 | Dossier de l'application | `cloudflare/` (sources à modifier : `cloudflare/source/`, `cloudflare/static/`, `cloudflare/src/`, `cloudflare/theme/`) |
 | Branche principale | `main` (branche par défaut, vérifié) |
-| Branche de production | **aucune liaison automatique** : la production = ce qui a été publié avec `wrangler deploy`, par convention depuis `main` à jour après fusion. Dernier déploiement (21/11/2026, version `f81e33da-…`) = `main` à `88bc2bd` (Poker ALL IN). |
+| Branche de production | **aucune liaison automatique** : la production = ce qui a été publié avec `wrangler deploy`, par convention depuis `main` à jour après fusion. Dernier déploiement (21/11/2026 08:25 UTC, version `e5648755-…`) = `main` à `75de053` (orphelins, #54) : 33 fichiers statiques identiques octet par octet et textes de #54 présents en ligne (vérifié). |
 | Site public | https://quizy.gabriel-massot31.workers.dev (élève `/`, parents `/parents`, installation `/installer`) |
 | Hébergeur | Cloudflare Workers, offre gratuite |
 | Projet | Worker **`quizy`** (`cloudflare/wrangler.toml`), compte Cloudflare `f4ec7fb04d7a99f9e990a5396cf4319d`, sous-domaine `gabriel-massot31.workers.dev` |
@@ -74,13 +74,15 @@ src/app.gen.js = source/Contenu.gs + source/Code.gs emballés SANS modification 
 ### Données (table `props`, clé → JSON) — détail dans `docs/REPRISE.md` §3 et `docs/LOGIQUE-APP.md` §2
 `student_<id>` (élève, PIN haché, `fam`), `parent_<id>` (famille invitée), `quiz_<id>` / `deck_<id>` (leçons, cartes ;
 morcelées `~0, ~1…`), `override_<id>` (leçon intégrée modifiée ; originaux dans `Contenu.gs`), `builtin_assign`, `shares`
-(partage aux familles), `guest_<id>` (pseudo, copie du quiz, expiration, empreintes du lien élève et du lien parent à usage unique),
+(partage aux familles), `guest_<id>` (id `invite-<32 hex>` ; pseudo, copie du quiz, expiration, empreintes du lien élève et du lien parent à usage unique),
 `srs_<élève ou invité>__<quiz>` (révision espacée), `INVITE_CODE`, `ADMIN_PSEUDO`, `ADMIN_PASS_HASH`,
 `schema_version`. Table `cache` : compteurs anti-force-brute (`echecs|…`, `admin-echecs|…`).
 
 ### Règles d'accès (dans `cloudflare/source/Code.gs`, pas de RLS)
 - Élève : `authStudent_(classe, pseudo, pin)` — 5 erreurs → blocage 5 min. Ne reçoit que les leçons dont il est destinataire.
 - Élève invité : lien à durée limitée, vérifié à chaque accès au serveur. Il donne accès à une seule leçon et à sa progression.
+  Lien `/#quiz=<id>.<secret>` (id = `invite-<32 hex>`, secret = 32 hex) → `connect({ classe: '@invitation', pseudo: id, pin: secret })` (`Index.html`) →
+  `authStudent_` reconnaît `@invitation` via `guestById_` (empreinte + expiration). Lien parent : `/parents#invitation=<code>`.
 - Parent / administrateur : `checkAdmin_(cred)` → `{owner, fam, pseudo, famille}` ; 8 erreurs → blocage 5 min.
 - Cloisonnement par famille : `familyStudents_`, `ownedBy_`, `visibleQuiz_`, `visibleBuiltin_`, `shares_`.
 - Administrateur principal seulement : `ownerOnly_` (leçons intégrées, code d'invitation, familles, export).
@@ -101,6 +103,7 @@ Fonctions client dans `cloudflare/source/Index.html` (élève) et `cloudflare/so
 | Installation / import / export | `/installer` (`static/installer.html`) ; menu 👤 → Exporter | `/setup/status`, `/setup/install`, `/setup/import` (`core.js`) ; `backupData` | toute la table `props` | secret `INSTALL_CODE` ; admin principal | 28, 29, 31 |
 | Profils « Qui es-tu ? » | `static/profils.js` | — (navigateur seul) | localStorage `profiles` | — | 32 |
 | Installer l'appli (PWA) | `static/installation.js`, `static/sw.js`, manifestes | — | localStorage `quizy-installation` | — | 36 |
+| Quiz intégré illustré « Poker ALL IN » | `Index.html` `questionContent()` : questions `a1100001`…`a1100020` du quiz `poker-all-in` → image `static/poker-all-in-01…20.png` | données dans `source/Contenu.gs` (`BUILTIN_QUIZZES`) | `builtin_assign` | comme les autres leçons intégrées | 37 |
 
 ⚠️ **Import** (`/setup/import`) **remplace toutes les données** : jamais en production sans accord explicite.
 
@@ -131,7 +134,7 @@ l’accès dans son navigateur. Le dossier de configuration reste en dehors du d
 ```bash
 cd cloudflare && npm ci                 # dépendances (wrangler 4, mermaid pour la suite 34)
 node build.cjs                          # construction seule → public/ + src/*.gen.js
-cd .. && node tests/run-all.cjs         # toutes les suites (cible cloudflare) — 33 suites, 954 contrôles, 0 échec
+cd .. && node tests/run-all.cjs         # toutes les suites (cible cloudflare) — 35 suites, 1010 contrôles, 0 échec (21/11, `75de053`)
 QUIZY_TARGET=cloudflare node tests/36-installation.js   # une suite
 cd cloudflare && npx wrangler dev       # site local (base locale vide → /installer ; mettre INSTALL_CODE dans .dev.vars)
 npx wrangler deploy                     # ⚠️ MISE EN LIGNE immédiate, données réelles (construit avant d'envoyer)
