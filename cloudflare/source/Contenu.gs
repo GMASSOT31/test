@@ -2753,5 +2753,254 @@ var BUILTIN_QUIZZES = [
         "correct": 0
       }
     ]
+  },
+  {
+    "id": "poker-all-in",
+    "emoji": "♠️",
+    "matiere": "Probabilités",
+    "titre": "Poker ALL IN",
+    "description": "20 duels de Texas Hold’em. Trouve la part moyenne du pot qui revient à Pouille quand les deux joueurs sont à tapis. En cas d’égalité, chacun reçoit la moitié du pot.",
+    "questions": [
+      {
+        "id": "a1100001",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : as de trèfle, 5 de trèfle. Zigouille : 7 de cœur, 2 de pique. Flop : 7 de trèfle, 5 de pique, roi de trèfle.",
+        "options": [
+          "27 %",
+          "38 %",
+          "52 %",
+          "64 %"
+        ],
+        "correct": 2,
+        "explication": "Pouille gagne 511 fois, partage le pot 0 fois et perd 479 fois sur 990 issues équiprobables. Une égalité compte pour un demi-pot : (511 + 0 ÷ 2) ÷ 990 = 51,62 %."
+      },
+      {
+        "id": "a1100002",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : as de cœur, dame de cœur. Zigouille : 9 de trèfle, 9 de carreau. Flop : 9 de cœur, 4 de cœur, roi de pique.",
+        "options": [
+          "12 %",
+          "26 %",
+          "38 %",
+          "74 %"
+        ],
+        "correct": 1,
+        "explication": "Pouille gagne 253 fois, partage le pot 0 fois et perd 737 fois sur 990 issues équiprobables. Une égalité compte pour un demi-pot : (253 + 0 ÷ 2) ÷ 990 = 25,56 %."
+      },
+      {
+        "id": "a1100003",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : 8 de trèfle, 7 de pique. Zigouille : as de carreau, dame de carreau. Flop : 6 de carreau, 9 de carreau, roi de pique.",
+        "options": [
+          "13 %",
+          "27 %",
+          "39 %",
+          "73 %"
+        ],
+        "correct": 1,
+        "explication": "Pouille gagne 272 fois, partage le pot 0 fois et perd 718 fois sur 990 issues équiprobables. Une égalité compte pour un demi-pot : (272 + 0 ÷ 2) ÷ 990 = 27,47 %."
+      },
+      {
+        "id": "a1100004",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : as de pique, as de carreau. Zigouille : valet de pique, 10 de pique. Flop : 9 de pique, 8 de pique, 2 de carreau.",
+        "options": [
+          "33 %",
+          "47 %",
+          "53 %",
+          "59 %"
+        ],
+        "correct": 1,
+        "explication": "Pouille gagne 469 fois, partage le pot 0 fois et perd 521 fois sur 990 issues équiprobables. Une égalité compte pour un demi-pot : (469 + 0 ÷ 2) ÷ 990 = 47,37 %."
+      },
+      {
+        "id": "a1100005",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : valet de trèfle, 10 de trèfle. Zigouille : as de cœur, as de carreau. Flop : 9 de carreau, 8 de pique, 3 de cœur.",
+        "options": [
+          "20 %",
+          "34 %",
+          "46 %",
+          "66 %"
+        ],
+        "correct": 1,
+        "explication": "Pouille gagne 339 fois, partage le pot 0 fois et perd 651 fois sur 990 issues équiprobables. Une égalité compte pour un demi-pot : (339 + 0 ÷ 2) ÷ 990 = 34,24 %."
+      },
+      {
+        "id": "a1100006",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : roi de cœur, dame de carreau. Zigouille : 9 de pique, 9 de trèfle. Flop : valet de trèfle, 7 de carreau, 2 de cœur.",
+        "options": [
+          "12 %",
+          "26 %",
+          "38 %",
+          "74 %"
+        ],
+        "correct": 1,
+        "explication": "Pouille gagne 261 fois, partage le pot 0 fois et perd 729 fois sur 990 issues équiprobables. Une égalité compte pour un demi-pot : (261 + 0 ÷ 2) ÷ 990 = 26,36 %."
+      },
+      {
+        "id": "a1100007",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : as de trèfle, roi de carreau. Zigouille : as de pique, valet de cœur. Flop : as de carreau, 8 de trèfle, 4 de pique.",
+        "options": [
+          "13 %",
+          "73 %",
+          "87 %",
+          "99 %"
+        ],
+        "correct": 2,
+        "explication": "Pouille gagne 858 fois, partage le pot 12 fois et perd 120 fois sur 990 issues équiprobables. Une égalité compte pour un demi-pot : (858 + 12 ÷ 2) ÷ 990 = 87,27 %."
+      },
+      {
+        "id": "a1100008",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : roi de pique, dame de pique. Zigouille : as de trèfle, valet de trèfle. Flop : 10 de trèfle, 9 de carreau, valet de carreau.",
+        "options": [
+          "8 %",
+          "67 %",
+          "78 %",
+          "92 %"
+        ],
+        "correct": 3,
+        "explication": "Pouille gagne 909 fois, partage le pot 0 fois et perd 81 fois sur 990 issues équiprobables. Une égalité compte pour un demi-pot : (909 + 0 ÷ 2) ÷ 990 = 91,82 %."
+      },
+      {
+        "id": "a1100009",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : valet de carreau, 10 de carreau. Zigouille : as de carreau, 8 de carreau. Flop : roi de carreau, 4 de carreau, 7 de trèfle.",
+        "options": [
+          "8 %",
+          "22 %",
+          "34 %",
+          "78 %"
+        ],
+        "correct": 1,
+        "explication": "Pouille gagne 217 fois, partage le pot 0 fois et perd 773 fois sur 990 issues équiprobables. Une égalité compte pour un demi-pot : (217 + 0 ÷ 2) ÷ 990 = 21,92 %."
+      },
+      {
+        "id": "a1100010",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : 7 de cœur, 7 de carreau. Zigouille : roi de cœur, roi de carreau. Flop : 7 de pique, roi de trèfle, 2 de carreau.",
+        "options": [
+          "4 %",
+          "16 %",
+          "31 %",
+          "96 %"
+        ],
+        "correct": 0,
+        "explication": "Pouille gagne 43 fois, partage le pot 0 fois et perd 947 fois sur 990 issues équiprobables. Une égalité compte pour un demi-pot : (43 + 0 ÷ 2) ÷ 990 = 4,34 %."
+      },
+      {
+        "id": "a1100011",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : 9 de pique, 8 de pique. Zigouille : as de cœur, roi de carreau. Flop : as de pique, 9 de cœur, 8 de trèfle.",
+        "options": [
+          "25 %",
+          "61 %",
+          "75 %",
+          "87 %"
+        ],
+        "correct": 2,
+        "explication": "Pouille gagne 747 fois, partage le pot 0 fois et perd 243 fois sur 990 issues équiprobables. Une égalité compte pour un demi-pot : (747 + 0 ÷ 2) ÷ 990 = 75,45 %."
+      },
+      {
+        "id": "a1100012",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : as de cœur, 5 de cœur. Zigouille : 8 de carreau, 7 de pique. Flop : 6 de cœur, 9 de cœur, 10 de trèfle.",
+        "options": [
+          "23 %",
+          "37 %",
+          "49 %",
+          "63 %"
+        ],
+        "correct": 1,
+        "explication": "Pouille gagne 360 fois, partage le pot 4 fois et perd 626 fois sur 990 issues équiprobables. Une égalité compte pour un demi-pot : (360 + 4 ÷ 2) ÷ 990 = 36,57 %."
+      },
+      {
+        "id": "a1100013",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : dame de cœur, valet de cœur. Zigouille : 7 de pique, 7 de trèfle. Turn : 7 de cœur, 3 de cœur, roi de trèfle, 2 de carreau.",
+        "options": [
+          "2 %",
+          "16 %",
+          "28 %",
+          "84 %"
+        ],
+        "correct": 1,
+        "explication": "Pouille gagne 7 fois, partage le pot 0 fois et perd 37 fois sur 44 issues équiprobables. Une égalité compte pour un demi-pot : (7 + 0 ÷ 2) ÷ 44 = 15,91 %."
+      },
+      {
+        "id": "a1100014",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : dame de trèfle, 9 de trèfle. Zigouille : valet de carreau, valet de pique. Turn : valet de cœur, 10 de trèfle, 7 de pique, 3 de carreau.",
+        "options": [
+          "4 %",
+          "18 %",
+          "30 %",
+          "82 %"
+        ],
+        "correct": 1,
+        "explication": "Pouille gagne 8 fois, partage le pot 0 fois et perd 36 fois sur 44 issues équiprobables. Une égalité compte pour un demi-pot : (8 + 0 ÷ 2) ÷ 44 = 18,18 %."
+      },
+      {
+        "id": "a1100015",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : as de pique, as de trèfle. Zigouille : roi de carreau, roi de cœur. Turn : 9 de cœur, 8 de pique, 4 de carreau, 2 de trèfle.",
+        "options": [
+          "5 %",
+          "70 %",
+          "81 %",
+          "95 %"
+        ],
+        "correct": 3,
+        "explication": "Pouille gagne 42 fois, partage le pot 0 fois et perd 2 fois sur 44 issues équiprobables. Une égalité compte pour un demi-pot : (42 + 0 ÷ 2) ÷ 44 = 95,45 %."
+      },
+      {
+        "id": "a1100016",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : 8 de cœur, 8 de carreau. Zigouille : as de trèfle, 5 de trèfle. Turn : as de pique, 5 de pique, 8 de trèfle, valet de trèfle.",
+        "options": [
+          "25 %",
+          "61 %",
+          "75 %",
+          "87 %"
+        ],
+        "correct": 2,
+        "explication": "Pouille gagne 33 fois, partage le pot 0 fois et perd 11 fois sur 44 issues équiprobables. Une égalité compte pour un demi-pot : (33 + 0 ÷ 2) ÷ 44 = 75,00 %."
+      },
+      {
+        "id": "a1100017",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : 6 de pique, 5 de pique. Zigouille : dame de cœur, dame de carreau. Turn : 7 de pique, 8 de pique, dame de trèfle, 2 de cœur.",
+        "options": [
+          "16 %",
+          "30 %",
+          "42 %",
+          "70 %"
+        ],
+        "correct": 1,
+        "explication": "Pouille gagne 13 fois, partage le pot 0 fois et perd 31 fois sur 44 issues équiprobables. Une égalité compte pour un demi-pot : (13 + 0 ÷ 2) ÷ 44 = 29,55 %."
+      },
+      {
+        "id": "a1100018",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : as de carreau, 2 de trèfle. Zigouille : as de pique, 8 de pique. Turn : roi de cœur, roi de carreau, dame de trèfle, dame de cœur.",
+        "options": [
+          "25 %",
+          "36 %",
+          "50 %",
+          "62 %"
+        ],
+        "correct": 2,
+        "explication": "Pouille gagne 0 fois, partage le pot 44 fois et perd 0 fois sur 44 issues équiprobables. Une égalité compte pour un demi-pot : (0 + 44 ÷ 2) ÷ 44 = 50,00 %."
+      },
+      {
+        "id": "a1100019",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : as de trèfle, roi de trèfle. Zigouille : as de cœur, 3 de pique. Turn : dame de cœur, valet de carreau, 10 de pique, 4 de trèfle.",
+        "options": [
+          "3 %",
+          "72 %",
+          "83 %",
+          "97 %"
+        ],
+        "correct": 3,
+        "explication": "Pouille gagne 41 fois, partage le pot 3 fois et perd 0 fois sur 44 issues équiprobables. Une égalité compte pour un demi-pot : (41 + 3 ÷ 2) ÷ 44 = 96,59 %."
+      },
+      {
+        "id": "a1100020",
+        "question": "Quelle part moyenne du pot revient à Pouille ? Arrondis au pourcentage entier.\nPouille : 2 de cœur, 2 de carreau. Zigouille : as de pique, 8 de carreau. Turn : 2 de pique, 2 de trèfle, as de trèfle, as de carreau.",
+        "options": [
+          "2 %",
+          "73 %",
+          "84 %",
+          "98 %"
+        ],
+        "correct": 3,
+        "explication": "Pouille gagne 43 fois, partage le pot 0 fois et perd 1 fois sur 44 issues équiprobables. Une égalité compte pour un demi-pot : (43 + 0 ÷ 2) ÷ 44 = 97,73 %."
+      }
+    ]
   }
 ];

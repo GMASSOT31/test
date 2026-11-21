@@ -471,6 +471,14 @@
         .rv-sticker, .rv-sub, .rv-chips, .rv-ticker, .rv-float { display: none; }
         .rv-title { margin: 0; font-size: 18px; letter-spacing: -.5px; text-shadow: 0 2px 0 rgba(15,23,80,.35); }
       }
+        .question-image {
+            display: block;
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+            margin: 10px auto 0;
+            border-radius: 12px;
+        }
     </style>
 </head>
 <body>
@@ -671,6 +679,17 @@
             });
             children.flat().forEach(c => { if (c != null) el.append(c); });
             return el;
+        }
+        function questionContent(quizId, q) {
+            // Les illustrations du quiz intégré suivent ses identifiants de question stables.
+            if (quizId !== "poker-all-in" || !/^a11000(?:0[1-9]|1[0-9]|20)$/.test(q.id)) return q.question;
+            const [prompt, ...lines] = q.question.split("\n");
+            const cards = lines.join(" ");
+            if (!cards) return q.question;
+            return [prompt, h("img", {
+                class: "question-image", src: "/poker-all-in-" + q.id.slice(-2) + ".png",
+                alt: cards, width: "760", height: "510"
+            })];
         }
         // Mélange de Fisher-Yates sur une copie
         function shuffle(list) {
@@ -1083,7 +1102,7 @@
                 content.replaceChildren(h("div", { class: "panel session" }, head, bar, lessonName,
                     h("div", { class: "flashcard flipped learn" },
                         h("div", { class: "face-label" }, "À retenir"),
-                        h("div", { class: "face-text" }, t.q.question),
+                        h("div", { class: "face-text" }, questionContent(t.quiz.id, t.q)),
                         h("div", { class: "face-answer" }, answerOf(t.q)),
                         t.q.explication ? h("div", { class: "face-expl" }, t.q.explication) : null),
                     h("div", { class: "actions" }, nextBtn)));
@@ -1217,7 +1236,7 @@
             } else if (t.stage === "qcm") body = choiceBody(q, shuffle(q.options.map((text, i) => ({ text, ok: i === q.correct }))), settle);
             else if (Array.isArray(q.rappel) && q.rappel.length) body = typedBody(q, q.rappel, settle, q.options[q.correct]);
             else body = maskedBody(q, harderOptions(t.quiz, q), settle);
-            panel.append(...[h("h3", { class: "question" }, q.question), body, progressLine, explication, next, autoBar].filter(Boolean));
+            panel.append(...[h("h3", { class: "question" }, questionContent(t.quiz.id, q)), body, progressLine, explication, next, autoBar].filter(Boolean));
         }
 
         // Question de synthèse : l'enfant rédige, valide, découvre la réponse modèle et les éléments attendus (à cocher),
@@ -1426,7 +1445,7 @@
         function deckOf(q) {
             return { id: "quiz-" + q.id, emoji: q.emoji, matiere: q.matiere, titre: q.titre,
                 description: "Cartes générées depuis le quiz : la question au recto, la réponse au verso.",
-                cartes: q.questions.map(x => ({ recto: x.question, verso: answerOf(x) })) };
+                cartes: q.questions.map(x => ({ recto: x.question, verso: answerOf(x), question: x, quizId: q.id })) };
         }
         function decksFromQuizzes() { return QUIZZES.map(deckOf); }
         function allDecks() { return decksFromQuizzes().concat(FLASHCARDS); }
@@ -1522,10 +1541,11 @@
                 const c = cards.get(cur);
                 if (!flipped) {
                     const flip = () => { flipped = true; draw(); };
+                    const front = c.question ? questionContent(c.quizId, c.question) : c.recto;
                     stage.replaceChildren(
-                        h("button", { class: "flashcard", "aria-label": "Voir la réponse", onclick: flip },
+                        h("button", { class: "flashcard", "aria-label": Array.isArray(front) ? c.recto + " Voir la réponse" : "Voir la réponse", onclick: flip },
                             h("div", { class: "face-label" }, "Question"),
-                            h("div", { class: "face-text" }, c.recto),
+                            h("div", { class: "face-text" }, front),
                             h("div", { class: "face-hint" }, "Cherche ta réponse")),
                         h("div", { class: "deck-nav" },
                             h("button", { class: "btn secondary", onclick: () => { fresh = shuffle(fresh); draw(); } }, "🔀 Mélanger"),
@@ -1569,7 +1589,7 @@
             opts = opts || {};
             runCards({
                 titre: deck.titre,
-                cartes: deck.cartes.map((c, i) => ({ id: "c" + i, recto: c.recto, verso: c.verso })),
+                cartes: deck.cartes.map((c, i) => ({ ...c, id: "c" + i })),
                 back: opts.back || "← Retour à la liste",
                 onBack: opts.onBack,
                 finishLabel: "Terminer la séance",
