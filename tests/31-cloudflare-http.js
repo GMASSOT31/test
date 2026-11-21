@@ -50,6 +50,14 @@ const api = async (fn, ...args) => (await post('/api/' + fn, args)).json();
   ok(eleve.includes('<title>QUIZy</title>') && parents.includes('<title>QUIZy · Parents</title>'), 'pages : « QUIZy » et « QUIZy · Parents »');
   ok(!/script\.google\.com|\/exec\b/.test(eleve + parents) && eleve.includes('href="/parents"') && parents.includes('href="/"'), 'liens entre les pages : / et /parents (plus aucune adresse Google)');
   ok(eleve.includes('<script src="/run.js"></script>') && eleve.includes('rel="manifest" href="/manifest.webmanifest"'), 'pont run.js et manifeste dans la page élève');
+  const preview = eleve.match(/<meta property="og:image" content="([^"]+)">/);
+  ok(preview?.[1] === 'https://quizy.gabriel-massot31.workers.dev/quizy-apercu-invitation.png' &&
+    eleve.includes('property="og:title" content="QUIZy · À toi de jouer !"') && eleve.includes('name="twitter:card" content="summary_large_image"'),
+  'vignette de partage déclarée dans le HTML servi, avec une adresse publique absolue');
+  const cover = await fetch(BASE + new URL(preview[1]).pathname);
+  const coverBytes = Buffer.from(await cover.arrayBuffer());
+  ok(cover.ok && cover.headers.get('content-type') === 'image/png' && coverBytes.length >= 24 &&
+    coverBytes.readUInt32BE(16) === 1200 && coverBytes.readUInt32BE(20) === 630, 'vignette publique PNG au format 1200 × 630');
   const man = await (await fetch(BASE + '/manifest.webmanifest')).json();
   ok(man.name === 'QUIZy' && man.short_name === 'QUIZy' && man.display === 'standalone' && man.start_url === '/', 'manifeste : appli « QUIZy » installable (plein écran, démarre sur /)');
   const icons = await Promise.all(['/icon-192.png', '/icon-512.png', '/icon-180.png', '/icon.svg'].map(async u => { const x = await fetch(BASE + u); return x.status === 200 && (await x.arrayBuffer()).byteLength > 300; }));
