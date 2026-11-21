@@ -33,6 +33,8 @@ en morceaux `<clé>~0, <clé>~1…` avec une tête `{ _chunks, id, ajoute }`).
 | `deck_<id>` | paquet de flashcards en plus : `{ id, titre, matiere, emoji, description, pour, cartes:[{recto, verso}], ajoute, fam? }` |
 | `override_<id>` | version modifiée d'une leçon fournie (l'original reste dans `Contenu.gs`, « Rétablir » supprime l'override) |
 | `builtin_assign` | `{ idLeçonFournie: [idÉlève…] }` — à qui est donnée chaque leçon fournie (toutes familles) |
+| `lesson_discipline_<id>` | `{ id, name }` — discipline de classement créée par l’administrateur principal |
+| `lesson_classification_<type>:<idLeçon>` | identifiant de la discipline dans la vue Leçons de l’administrateur. Sans effet sur les matières, les attributions et la progression |
 | `srs_<idÉlève>__<idLeçon>` | révision espacée d'un élève sur une leçon (voir §4) |
 | `schema_version` | `'3'` (migration unique déjà faite : anciennes clés `prog_`, `done_`, `parcours_` effacées) |
 | `ADMIN_PSEUDO` | pseudo de l'administrateur principal (choisi à sa 1re connexion) |

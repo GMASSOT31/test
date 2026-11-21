@@ -107,6 +107,8 @@ Fonctions client dans `cloudflare/source/Index.html` (élève) et `cloudflare/so
 
 ⚠️ **Import** (`/setup/import`) **remplace toutes les données** : jamais en production sans accord explicite.
 
+Dans l’onglet Leçons, l’administrateur crée des disciplines et classe les éléments via « Gérer ». Les quatre rubriques restent distinctes. Les fonctions `createLessonDiscipline` et `classifyLesson` enregistrent ce classement séparément et `adminData` le renvoie uniquement à l’administrateur principal. Le classement est inclus dans la sauvegarde. Voir la suite 39.
+
 ## 6. Versionné dans Git / configuré ailleurs
 - **Dans Git** : tout le code (`cloudflare/source`, `static`, `src/{worker,core,router,assets}.js`, `theme`, `build.cjs`,
   `wrangler.toml`, `package*.json`), les tests (`tests/`), la doc.

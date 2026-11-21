@@ -47,6 +47,8 @@ var GUEST_CLASS = '@invitation';
 var OVERRIDE_PREFIX = 'override_';   // version modifiée d'un quiz intégré (l'original reste dans Contenu.gs)
 var BUILTIN_ASSIGN_KEY = 'builtin_assign';
 var SHARES_KEY = 'shares';   // leçons partagées par l'administrateur avec les familles (voir shares_)
+var DISCIPLINE_PREFIX = 'lesson_discipline_';
+var CLASSIFICATION_PREFIX = 'lesson_classification_';
 var PROGRESS_PREFIX = 'prog_';
 var DONE_PREFIX = 'done_';
 var PARCOURS_PREFIX = 'parcours_';
@@ -439,6 +441,8 @@ function adminData(cred) {
     now: Date.now()
   };
   if (me.owner) {
+    var classification = lessonClassification_(props);
+    if (classification.disciplines.length) res.lessonClassification = classification;
     var all = students_();
     res.parents = parents_().map(function (p) {
       return { id: p.id, pseudo: p.pseudo, famille: p.famille, ajoute: p.ajoute, vu: p.vu || 0,
@@ -463,6 +467,50 @@ function adminData(cred) {
     touchParent_(store, me.fam);
   }
   return res;
+}
+
+// Classement personnel de l’administrateur, séparé des leçons et de leurs destinataires.
+function lessonClassification_(props) {
+  var disciplines = [], byLesson = {};
+  Object.keys(props).forEach(function (key) {
+    if (key.indexOf(DISCIPLINE_PREFIX) === 0) disciplines.push(parseJson_(props[key]));
+    if (key.indexOf(CLASSIFICATION_PREFIX) === 0) byLesson[key.slice(CLASSIFICATION_PREFIX.length)] = props[key];
+  });
+  return { disciplines: disciplines.filter(Boolean), byLesson: byLesson };
+}
+
+function createLessonDiscipline(cred, name) {
+  ownerOnly_(cred);
+  var label = str_(name, 60).replace(/\s+/g, ' ');
+  if (!label) throw new Error('Donne un nom à la discipline.');
+  var store = PropertiesService.getScriptProperties();
+  var state = lessonClassification_(store.getProperties());
+  if (state.disciplines.some(function (d) { return norm_(d.name) === norm_(label); })) {
+    throw new Error('Cette discipline existe déjà.');
+  }
+  var discipline = { id: Utilities.getUuid(), name: label };
+  store.setProperty(DISCIPLINE_PREFIX + discipline.id, JSON.stringify(discipline));
+  state.disciplines.push(discipline);
+  return state;
+}
+
+function classifyLesson(cred, kind, id, disciplineId) {
+  ownerOnly_(cred);
+  var store = PropertiesService.getScriptProperties();
+  if (!/^[a-z0-9-]{1,80}$/.test(String(id))) throw new Error('Leçon introuvable.');
+  var exists = kind === 'builtin' ? builtins_().some(function (q) { return q.id === id; })
+    : kind === 'quiz' ? getItem_(store, QUIZ_PREFIX, id)
+    : kind === 'deck' && getItem_(store, DECK_PREFIX, id);
+  if (!exists) throw new Error('Leçon introuvable.');
+  var key = CLASSIFICATION_PREFIX + kind + ':' + id;
+  if (disciplineId === '') store.deleteProperty(key);
+  else {
+    if (typeof disciplineId !== 'string' || !store.getProperty(DISCIPLINE_PREFIX + disciplineId)) {
+      throw new Error('Discipline introuvable.');
+    }
+    store.setProperty(key, disciplineId);
+  }
+  return lessonClassification_(store.getProperties());
 }
 
 // Création (sans id) ou modification (avec id) d'un compte. Le PIN est enregistré haché : on ne peut plus le relire.
@@ -1212,6 +1260,9 @@ function delItem_(store, prefix, id) {
   var n = old && old._chunks ? old._chunks : 0;
   for (var i = 0; i < n; i++) store.deleteProperty(key + '~' + i);
   store.deleteProperty(key);
+  if (prefix === QUIZ_PREFIX || prefix === DECK_PREFIX) {
+    store.deleteProperty(CLASSIFICATION_PREFIX + (prefix === QUIZ_PREFIX ? 'quiz:' : 'deck:') + id);
+  }
 }
 
 function save_(prefix, clean, requestedId, fam, famIds) {
