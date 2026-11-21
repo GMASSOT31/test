@@ -191,6 +191,16 @@
         .ls-toggle[aria-expanded="true"] .ls-chev { transform: rotate(180deg); }
 
         .ls-corps[hidden], .ls[hidden] { display: none; }
+        .discipline-tools, .discipline-group { margin: 0 0 12px; }
+        .discipline-tools summary, .discipline-group summary {
+            display: list-item; list-style-position: inside; padding: 12px; min-height: 44px;
+            border-radius: 12px; background: #f1f4fb; color: var(--navy); font-weight: 800;
+            cursor: pointer; overflow-wrap: anywhere;
+        }
+        .discipline-tools form { padding: 0 12px 8px; }
+        .discipline-group .builtin { margin-inline: 4px; }
+        .discipline-count { margin-inline-start: 8px; color: var(--muted); }
+        .discipline-picker { margin-bottom: 12px; }
         .pour-familles { margin-top: 10px; }
         .builtin-auteur { font-weight: 700; color: var(--violet); }
         /* profil mémorisé : la puce (avatar + nom + « Autre profil ») remplace le champ pseudo */
@@ -712,6 +722,15 @@
                 <button class="btn small" id="tab-quiz-ajout" type="button">➕ Créer une leçon</button>
             </div>
             <div class="status" id="quizlist-status" role="status"></div>
+            <details id="discipline-tools" class="discipline-tools admin-block" hidden>
+                <summary>➕ Créer une discipline</summary>
+                <form id="discipline-form">
+                    <label for="discipline-name">Nom de la discipline</label>
+                    <input id="discipline-name" required maxlength="60" placeholder="Ex. : Mathématiques">
+                    <button type="submit" class="btn small admin-only">Créer la discipline</button>
+                    <p class="hint">Pour ranger une leçon, ouvre « Gérer » et choisis sa discipline.</p>
+                </form>
+            </details>
             <!-- Parties repliables (repliées sur téléphone, ouvertes sur ordinateur, état retenu sur l'appareil) -->
             <section class="ls" id="my-lessons" data-ls="mes">
                 <h2 class="ls-h"><button class="ls-toggle" type="button" aria-expanded="true" aria-controls="ls-mes"><span class="ls-titre">✏️ Mes leçons</span><span class="ls-nb" id="nb-mes"></span><span class="ls-chev" aria-hidden="true">▾</span></button></h2>
@@ -1083,6 +1102,9 @@
             // rien de la session précédente ne doit rester visible (un autre parent peut se connecter sur cet appareil)
             document.querySelectorAll("#admin-area .status").forEach(el => { el.className = "status"; el.textContent = ""; });
             [openDetails, openLessons, openArchived, openPickers, openBuiltins].forEach(set => set.clear());
+            openDisciplines.clear();
+            $("discipline-tools").open = false;
+            $("discipline-form").reset();
             DATA = { moi: { owner: false, pseudo: "" }, students: [], quizzes: [], decks: [], builtins: [], progress: {}, now: Date.now() };
             renderAll();
             $("admin-area").hidden = true;
@@ -1122,6 +1144,7 @@
             $("menu-export").hidden = !owner;
             $("menu-ux").hidden = !owner;
             $("admin-color-key").hidden = !owner;
+            $("discipline-tools").hidden = !owner;
             if (!owner && !$("pane-parents").hidden) go("programmes");
             $("count-eleves").textContent = DATA.students.length || "";
             // les cases « Pour quels élèves ? » gardent la sélection en cours quand la liste des élèves change
@@ -1775,25 +1798,115 @@
         }
 
         // ================= LEÇONS ET PAQUETS : une ligne par élément, « ⚙️ Gérer » déplie les cases et les actions =================
+        const openDisciplines = new Map();
+        let savingDiscipline = false;
+
+        function disciplineRows(section, items, kind, opts) {
+            const classification = DATA.lessonClassification;
+            if (!classification || !items.length) return items.map(it => accessRow(it, kind, opts));
+            const sorted = classification.disciplines.slice().sort((a, b) => a.name.localeCompare(b.name, "fr"));
+            const groups = new Map(sorted.map(d => [d.id, []]));
+            const unclassified = [];
+            items.forEach(it => {
+                const rows = groups.get(classification.byLesson[kind + ":" + it.id]) || unclassified;
+                rows.push(accessRow(it, kind, opts));
+            });
+            function group(id, label, rows) {
+                const key = section + ":" + id;
+                const details = h("details", { class: "discipline-group" },
+                    h("summary", {}, label, h("span", { class: "discipline-count" }, String(rows.length))), rows);
+                details.open = openDisciplines.get(key) ?? (id === "");
+                details.addEventListener("toggle", () => {
+                    if (details.isConnected) openDisciplines.set(key, details.open);
+                });
+                return details;
+            }
+            const sections = sorted.filter(d => groups.get(d.id).length).map(d => group(d.id, d.name, groups.get(d.id)));
+            if (!sections.length) return unclassified;
+            if (unclassified.length) sections.push(group("", "Sans discipline", unclassified));
+            return sections;
+        }
+
+        async function saveClassification(method, args, onSaved) {
+            if (savingDiscipline) return false;
+            const data = DATA, status = $("quizlist-status");
+            savingDiscipline = true;
+            showStatus(status, "info", "Enregistrement…");
+            try {
+                const result = await server(method, pw(), ...args);
+                if (!DATA || !DATA.moi.owner || data.moi.pseudo !== DATA.moi.pseudo) return false;
+                DATA.lessonClassification = result;
+                onSaved();
+                renderQuizList();
+                renderBuiltins();
+                renderDeckList();
+                return true;
+            } catch (error) {
+                showStatus(status, "err", error.message);
+                return false;
+            } finally {
+                savingDiscipline = false;
+            }
+        }
+
+        $("discipline-form").addEventListener("submit", async event => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const input = $("discipline-name"), button = form.querySelector("button");
+            const name = input.value.trim();
+            button.disabled = true;
+            const saved = await saveClassification("createLessonDiscipline", [name], () => {
+                showStatus($("quizlist-status"), "ok", "Discipline créée. Ouvre « Gérer » sur une leçon pour la ranger.");
+            });
+            button.disabled = false;
+            if (saved) {
+                form.reset();
+                $("discipline-tools").open = false;
+                $("discipline-tools").querySelector("summary").focus();
+            }
+        });
+
+        function disciplinePicker(it, kind, section) {
+            const classification = DATA.lessonClassification;
+            if (!classification?.disciplines.length) return null;
+            const key = kind + ":" + it.id, current = classification.byLesson[key] || "";
+            const id = "discipline-" + key;
+            const sorted = classification.disciplines.slice().sort((a, b) => a.name.localeCompare(b.name, "fr"));
+            const select = h("select", { id }, h("option", { value: "" }, "Sans discipline"),
+                sorted.map(d => h("option", { value: d.id }, d.name)));
+            select.value = sorted.some(d => d.id === current) ? current : "";
+            select.addEventListener("change", async () => {
+                const chosen = select.value;
+                select.disabled = true;
+                const saved = await saveClassification("classifyLesson", [kind, it.id, chosen], () => {
+                    openDisciplines.set(section + ":" + chosen, true);
+                    showStatus($("quizlist-status"), "ok", "Classement enregistré.");
+                });
+                if (saved) $(id)?.focus();
+                else { select.disabled = false; select.value = current; }
+            });
+            return h("div", { class: "discipline-picker" }, h("label", { for: id }, "Discipline"), select);
+        }
+
         function renderQuizList() {
-            $("quiz-list").replaceChildren(...(DATA.quizzes.length ? DATA.quizzes.map(q => accessRow(q, "quiz"))
+            $("quiz-list").replaceChildren(...(DATA.quizzes.length ? disciplineRows("mes", DATA.quizzes, "quiz")
                 : [h("p", { class: "empty" }, "Aucune leçon créée pour l'instant : « ➕ Créer une leçon ».")]));
             $("nb-mes").textContent = DATA.quizzes.length;
             // 3e partie : seulement pour l'administrateur principal
             const fam = DATA.moi.owner ? (DATA.leconsFamilles || []) : [];
             $("family-lessons").hidden = !DATA.moi.owner;
-            $("family-list").replaceChildren(...(fam.length ? fam.map(q => accessRow(q, "quiz", { famille: true }))
+            $("family-list").replaceChildren(...(fam.length ? disciplineRows("familles", fam, "quiz", { famille: true })
                 : [h("p", { class: "empty" }, "Aucune famille n'a encore créé de leçon.")]));
             $("nb-familles").textContent = fam.length;
         }
         function renderDeckList() {
-            $("deck-list").replaceChildren(...(DATA.decks.length ? DATA.decks.map(d => accessRow(d, "deck")) : [h("p", { class: "empty" }, "Aucun paquet en plus.")]));
+            $("deck-list").replaceChildren(...(DATA.decks.length ? disciplineRows("cartes", DATA.decks, "deck") : [h("p", { class: "empty" }, "Aucun paquet en plus.")]));
             $("nb-cartes").textContent = DATA.decks.length;
         }
         // Leçons fournies : pour une famille, celles que l'administrateur lui a partagées (fournies + leçons créées par d'autres)
         function renderBuiltins() {
             const shared = DATA.partagees || [];
-            $("builtin-list").replaceChildren(...DATA.builtins.map(q => accessRow(q, "builtin")));
+            $("builtin-list").replaceChildren(...disciplineRows("fournies", DATA.builtins, "builtin"));
             $("shared-list").replaceChildren(...shared.map(q => accessRow(q, "quiz", { partagee: true })));
             const n = DATA.builtins.length + shared.length;
             $("nb-fournies").textContent = n;
@@ -1958,8 +2071,10 @@
             }
             const nb = kind === "deck" ? it.cartes.length : (typeof it.questions === "number" ? it.questions : it.questions.length);
             const size = nb + (kind === "deck" ? " carte" : " question") + (nb > 1 ? "s" : "");
+            const section = kind === "builtin" ? "fournies" : kind === "deck" ? "cartes" : opts.famille ? "familles" : "mes";
             const details = h("div", { class: "builtin-details" },
                 h("div", { class: "info" }, h("span", {}, it.titre + " · " + size)),
+                owner ? disciplinePicker(it, kind, section) : null,
                 h("label", {}, "Qui l'a ?"), boxes, familles, msg,
                 opts.partagee ? h("p", { class: "hint" }, "Leçon partagée par l'administrateur : tu ne peux pas la modifier.") : null,
                 actions.some(Boolean) ? h("div", { class: "actions", style: "margin-top:8px" }, actions) : null);
