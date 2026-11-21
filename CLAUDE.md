@@ -22,7 +22,7 @@ confirmé est marqué **(non vérifié)**.
 | Dépôt GitHub | https://github.com/GMASSOT31/test |
 | Dossier de l'application | `cloudflare/` (sources à modifier : `cloudflare/source/`, `cloudflare/static/`, `cloudflare/src/`, `cloudflare/theme/`) |
 | Branche principale | `main` (branche par défaut, vérifié) |
-| Branche de production | **aucune liaison automatique** : la production = ce qui a été publié avec `wrangler deploy`, par convention depuis `main` à jour après fusion. Dernier déploiement (16/11/2026 20:42 UTC, version `f3d1e242-…`) = `main` à `81b662a`. |
+| Branche de production | **aucune liaison automatique** : la production = ce qui a été publié avec `wrangler deploy`, par convention depuis `main` à jour après fusion. Dernier déploiement (21/11/2026, version `f81e33da-…`) = `main` à `88bc2bd` (Poker ALL IN). |
 | Site public | https://quizy.gabriel-massot31.workers.dev (élève `/`, parents `/parents`, installation `/installer`) |
 | Hébergeur | Cloudflare Workers, offre gratuite |
 | Projet | Worker **`quizy`** (`cloudflare/wrangler.toml`), compte Cloudflare `f4ec7fb04d7a99f9e990a5396cf4319d`, sous-domaine `gabriel-massot31.workers.dev` |
@@ -74,11 +74,13 @@ src/app.gen.js = source/Contenu.gs + source/Code.gs emballés SANS modification 
 ### Données (table `props`, clé → JSON) — détail dans `docs/REPRISE.md` §3 et `docs/LOGIQUE-APP.md` §2
 `student_<id>` (élève, PIN haché, `fam`), `parent_<id>` (famille invitée), `quiz_<id>` / `deck_<id>` (leçons, cartes ;
 morcelées `~0, ~1…`), `override_<id>` (leçon intégrée modifiée ; originaux dans `Contenu.gs`), `builtin_assign`, `shares`
-(partage aux familles), `srs_<élève>__<quiz>` (révision espacée), `INVITE_CODE`, `ADMIN_PSEUDO`, `ADMIN_PASS_HASH`,
+(partage aux familles), `guest_<id>` (pseudo, copie du quiz, expiration, empreintes du lien élève et du lien parent à usage unique),
+`srs_<élève ou invité>__<quiz>` (révision espacée), `INVITE_CODE`, `ADMIN_PSEUDO`, `ADMIN_PASS_HASH`,
 `schema_version`. Table `cache` : compteurs anti-force-brute (`echecs|…`, `admin-echecs|…`).
 
 ### Règles d'accès (dans `cloudflare/source/Code.gs`, pas de RLS)
 - Élève : `authStudent_(classe, pseudo, pin)` — 5 erreurs → blocage 5 min. Ne reçoit que les leçons dont il est destinataire.
+- Élève invité : lien à durée limitée, vérifié à chaque accès au serveur. Il donne accès à une seule leçon et à sa progression.
 - Parent / administrateur : `checkAdmin_(cred)` → `{owner, fam, pseudo, famille}` ; 8 erreurs → blocage 5 min.
 - Cloisonnement par famille : `familyStudents_`, `ownedBy_`, `visibleQuiz_`, `visibleBuiltin_`, `shares_`.
 - Administrateur principal seulement : `ownerOnly_` (leçons intégrées, code d'invitation, familles, export).
@@ -94,6 +96,7 @@ Fonctions client dans `cloudflare/source/Index.html` (élève) et `cloudflare/so
 | Connexion parent / admin | `admin.html` `unlock()` → `reload()` → `renderAll()` | `adminData` | `ADMIN_PSEUDO`, `ADMIN_PASS_HASH`, `parent_*` | `checkAdmin_` | 01, 04, 32 |
 | Enfants | onglet Enfants | `saveStudent`, `deleteStudent`, `resetProgress` | `student_*`, `srs_*` | `checkAdmin_` + famille | 04, 08, 25 |
 | Leçons et cartes (dont création avec une IA) | onglet Leçons, éditeur | `saveQuiz`, `saveDeck`, `deleteQuiz`, `deleteDeck`, `setAccess`, `setBuiltinAssign`, `setShare`, `getBuiltinForEdit`/`saveBuiltin`/`restoreBuiltin` | `quiz_*`, `deck_*`, `override_*`, `builtin_assign`, `shares` | `checkAdmin_`, `ownerOnly_` pour intégrées/partage | 11, 15, 19, 27, 33, 35 |
+| Quiz sur invitation | Leçons → Gérer → Inviter un enfant sans compte ; suivi dans Enfants → Quiz sur invitation | `createQuizInvitation`, `getStudentData`, API de révision habituelles, `quizInvitationFeedback`, `removeQuizInvitation` ; inscription via `createFamily` | `guest_*`, `srs_*` | Création et suivi réservés à l’administrateur ; accès élève par lien ; lien parent distinct et à usage unique | 38 |
 | Familles invitées | « 👪 Créer ma famille » ; menu 👤 → Familles invitées | `createFamily`, `setInviteCode`, `resetParentPassword`, `deleteFamily` | `INVITE_CODE`, `parent_*` | code d'invitation ; `ownerOnly_` | 25, 26, 33 |
 | Installation / import / export | `/installer` (`static/installer.html`) ; menu 👤 → Exporter | `/setup/status`, `/setup/install`, `/setup/import` (`core.js`) ; `backupData` | toute la table `props` | secret `INSTALL_CODE` ; admin principal | 28, 29, 31 |
 | Profils « Qui es-tu ? » | `static/profils.js` | — (navigateur seul) | localStorage `profiles` | — | 32 |
@@ -119,8 +122,10 @@ Fonctions client dans `cloudflare/source/Index.html` (élève) et `cloudflare/so
 | `QUIZY_TARGET` | tests | `cloudflare` (défaut) ou `apps-script` (ancienne version figée) |
 | `WRANGLER_SEND_METRICS=false` | facultatif | pas de télémétrie wrangler |
 
-Dans les sessions Claude Code cloud, le jeton est injecté par le proxy (`CLOUDFLARE_API_TOKEN=proxy-injected`). Un autre
-agent doit disposer de son propre jeton, fourni par l'utilisateur hors du chat.
+Dans les sessions Claude Code cloud, l’accès est fourni par le proxy. Dans l’espace Codex déjà autorisé, Wrangler
+réutilise sa session OAuth via `XDG_CONFIG_HOME=/workspace/.quizy-wrangler`. Si elle a expiré ou si l’espace a été remplacé,
+`wrangler login --device --scopes account:read user:read workers_scripts:write` permet au propriétaire du compte de valider
+l’accès dans son navigateur. Le dossier de configuration reste en dehors du dépôt.
 
 ## 8. Commandes (vérifiées le 21/11/2026 sauf mention)
 ```bash

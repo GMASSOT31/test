@@ -496,6 +496,11 @@
             .lesson-row .lr-main { padding: 10px 12px; gap: 8px; }
             .kid-head { padding: 12px; }
         }
+        .admin-only { background: #f5eaff !important; color: #542182 !important; border-color: #a884c5 !important; }
+        .admin-only:focus-visible { outline: 3px solid #542182; outline-offset: 2px; }
+        .admin-block { border-left: 4px solid #75489d; padding: 10px 12px; border-radius: 8px; }
+        .quiz-invitation-form { display: grid; gap: 8px; margin-top: 12px; }
+        .quiz-invitation-form input { max-width: 100%; }
     </style>
 </head>
 <body>
@@ -537,10 +542,10 @@
             <button class="btn secondary" id="acct-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="acct-menu" title="Mon compte : changer le mot de passe, se déconnecter">👤 <span id="acct-name">Mon compte</span> ▾</button>
             <div class="acct-menu" id="acct-menu" hidden>
                 <div class="menu-who" id="acct-who"></div>
-                <button class="menu-item" id="menu-parents" type="button" hidden>👪 Familles invitées</button>
-                <button class="menu-item" id="menu-export" type="button" hidden>💾 Exporter toutes les données</button>
+                <button class="menu-item admin-only" id="menu-parents" type="button" hidden>👪 Familles invitées</button>
+                <button class="menu-item admin-only" id="menu-export" type="button" hidden>💾 Exporter toutes les données</button>
                 <button class="menu-item" id="change-pw" type="button">🔑 Changer le mot de passe</button>
-                <button class="menu-item" id="menu-ux" type="button" hidden>🧭 Parcours UX</button>
+                <button class="menu-item admin-only" id="menu-ux" type="button" hidden>🧭 Parcours UX</button>
                 <button class="menu-item" id="menu-install" type="button" hidden>📲 Installer l'appli</button>
                 <button class="menu-item" id="lock" type="button">🔒 Se déconnecter</button>
             </div>
@@ -558,7 +563,7 @@
         <h2>👪 Créer ma famille</h2>
         <p class="hint">Il te faut le <strong>code d'invitation</strong> donné par l'administrateur de l'appli. Tu pourras ensuite créer les comptes de tes enfants et suivre leurs révisions ; personne d'autre ne les voit.</p>
         <label for="su-code">Code d'invitation</label>
-        <input type="text" id="su-code" maxlength="20" placeholder="Ex : ABCD-EFGH" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <input type="text" id="su-code" maxlength="65" placeholder="Ex : ABCD-EFGH" autocomplete="off" autocapitalize="characters" spellcheck="false">
         <label for="su-famille">Nom de la famille</label>
         <input type="text" id="su-famille" maxlength="40" placeholder="Ex : Famille Martin" autocomplete="off">
         <div class="row2">
@@ -654,9 +659,11 @@
         <!-- ================= ENFANTS (accueil) : où ils en sont, leurs leçons, leur compte ================= -->
         <div class="pane" id="pane-programmes" role="tabpanel" aria-labelledby="tab-programmes" hidden>
             <h2 class="sr-only">Mes enfants</h2>
+            <p class="hint admin-only admin-block" id="admin-color-key" hidden>Les commandes en violet sont réservées à l’administrateur.</p>
             <div id="guide"></div>
             <div class="status" id="prog-status" role="status"></div>
             <div id="prog-list"></div>
+            <section id="quiz-invitations" hidden></section>
             <button class="add-tile" id="tab-eleve-ajout" type="button">➕ Ajouter un enfant</button>
         </div>
 
@@ -712,7 +719,7 @@
                 </div>
             </section>
             <!-- administrateur principal seulement : les leçons créées par les familles invitées -->
-            <section class="ls" id="family-lessons" data-ls="familles" hidden>
+            <section class="ls admin-only admin-block" id="family-lessons" data-ls="familles" hidden>
                 <h2 class="ls-h"><button class="ls-toggle" type="button" aria-expanded="true" aria-controls="ls-familles"><span class="ls-titre">👪 Leçons créées par les familles</span><span class="ls-nb" id="nb-familles"></span><span class="ls-chev" aria-hidden="true">▾</span></button></h2>
                 <div class="ls-corps" id="ls-familles">
                     <p class="hint">Les leçons que les familles invitées ont créées. Donne-les à tes enfants ou partage-les avec d'autres familles (« ⚙️ Gérer »).</p>
@@ -1104,6 +1111,7 @@
             $("menu-parents").hidden = !owner;
             $("menu-export").hidden = !owner;
             $("menu-ux").hidden = !owner;
+            $("admin-color-key").hidden = !owner;
             if (!owner && !$("pane-parents").hidden) go("programmes");
             $("count-eleves").textContent = DATA.students.length || "";
             // les cases « Pour quels élèves ? » gardent la sélection en cours quand la liste des élèves change
@@ -1113,6 +1121,7 @@
             renderBuiltins();
             renderDeckList();
             renderProgrammes();
+            renderQuizInvitations(owner);
             renderParents();
         }
 
@@ -1805,6 +1814,75 @@
         lsApply();
         const openBuiltins = new Set();   // « type:id » dont les réglages sont dépliés
         // opts.partagee : leçon d'un autre, partagée avec ma famille (pas de modification) ; opts.famille : leçon d'une famille (admin)
+        function quizInvitationForm(it, kind) {
+            const pseudo = h("input", { type: "text", required: "", maxlength: "30", autocomplete: "off" });
+            const exam = h("input", { type: "date" });
+            const dateParts = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" })
+                .formatToParts(DATA.now);
+            const [year, month, day] = ["year", "month", "day"].map(type => Number(dateParts.find(p => p.type === type).value));
+            exam.min = new Date(Date.UTC(year, month - 1, day)).toISOString().slice(0, 10);
+            exam.value = new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+            const status = h("p", { role: "status" });
+            const create = h("button", { class: "btn admin-only", type: "submit" }, "Créer le lien");
+            const form = h("form", { class: "quiz-invitation-form", onsubmit: async e => {
+                e.preventDefault();
+                create.disabled = true;
+                status.textContent = "Création du lien…";
+                try {
+                    const invitation = await server("createQuizInvitation", pw(), kind, it.id, pseudo.value, exam.value);
+                    const url = location.origin + "/#quiz=" + invitation.link;
+                    const text = "Voici ton quiz QUIZy pour réviser « " + it.titre + " ». Ouvre le lien pour commencer.";
+                    const link = h("input", { type: "url", readonly: "", "aria-label": "Lien du quiz invité" });
+                    link.value = url;
+                    const share = h("button", { class: "btn admin-only", type: "button", onclick: async () => {
+                        try {
+                            if (navigator.share) await navigator.share({ text, url });
+                            else { await navigator.clipboard.writeText(url); status.textContent = "Lien copié."; }
+                        } catch (err) { if (err.name !== "AbortError") link.select(); }
+                    } }, navigator.share ? "Partager le lien" : "Copier le lien");
+                    status.textContent = "Lien valable jusqu’au " + timeFr(invitation.expires) + ".";
+                    form.replaceChildren(link, share, status);
+                    try {
+                        const latest = await server("adminData", pw());
+                        if (DATA && DATA.moi.owner && latest.moi.pseudo === DATA.moi.pseudo) {
+                            DATA.quizInvitations = latest.quizInvitations;
+                            renderQuizInvitations(true);
+                        }
+                    } catch (error) { /* le lien est prêt, le suivi est disponible à la prochaine actualisation */ }
+                } catch (error) {
+                    status.textContent = error.message;
+                    create.disabled = false;
+                }
+            } },
+                h("label", {}, "Pseudo de l’enfant", pseudo), h("label", {}, "Date du contrôle (facultative)", exam),
+                h("p", { class: "hint" }, "Le lien reste valable une semaine après le contrôle, ou une semaine dès sa création si tu laisses la date vide."),
+                create, status);
+            return form;
+        }
+
+        function renderQuizInvitations(owner) {
+            const section = $("quiz-invitations"), guests = DATA.quizInvitations || [];
+            section.hidden = !owner || !guests.length;
+            section.replaceChildren();
+            if (section.hidden) return;
+            const status = h("p", { role: "status" });
+            section.append(h("h2", {}, "Quiz sur invitation"), status);
+            guests.slice().reverse().forEach(guest => {
+                const expired = guest.expires <= Date.now();
+                const remove = h("button", { class: "btn admin-only small", type: "button", onclick: async () => {
+                    if (!confirm("Supprimer cette invitation et ses statistiques ?")) return;
+                    remove.disabled = true;
+                    try { await server("removeQuizInvitation", pw(), guest.id); await reload(); }
+                    catch (error) { status.textContent = error.message; remove.disabled = false; }
+                } }, "Supprimer l’invitation");
+                section.append(h("details", { class: "admin-block admin-only" },
+                    h("summary", {}, guest.pseudo + " · " + guest.progress.titre + " · " + guest.progress.avancement + " %"),
+                    h("p", {}, expired ? "Lien expiré" : "Lien valable jusqu’au " + timeFr(guest.expires)),
+                    typeof guest.helpful === "boolean" ? h("p", {}, "La séance t’a aidé à réviser ? " + (guest.helpful ? "Oui" : "Pas encore")) : null,
+                    lessonDetail(null, guest.progress), remove));
+            });
+        }
+
         function accessRow(it, kind, opts = {}) {
             const key = kind + ":" + it.id, open = openBuiltins.has(key), owner = DATA.moi.owner;
             const pour = it.pour || [];
@@ -1819,7 +1897,7 @@
             });
             const btn = (txt, cls, fn) => h("button", { class: "btn " + cls, type: "button", onclick: fn }, txt);
             const actions = kind === "builtin"
-                ? [owner ? btn("✏️ Modifier", "secondary small", () => editBuiltin(it)) : null, owner && it.modifie ? btn("Rétablir l'original", "danger", () => restoreBuiltin(it)) : null]
+                ? [owner ? btn("✏️ Modifier", "secondary small admin-only", () => editBuiltin(it)) : null, owner && it.modifie ? btn("Rétablir l'original", "danger admin-only", () => restoreBuiltin(it)) : null]
                 : opts.partagee ? []
                 : opts.famille ? [btn("Supprimer", "danger", () => removeItem(kind, it))]
                 : [btn("✏️ Modifier", "secondary small", () => kind === "quiz" ? loadQuiz(it) : loadDeck(it)), btn("Supprimer", "danger", () => removeItem(kind, it))];
@@ -1827,7 +1905,7 @@
             let familles = null;
             if (owner && kind !== "deck") {
                 const parents = (DATA.parents || []).filter(p => p.id !== it.auteur), shared = it.familles || [];
-                const fbox = h("div", { class: "pour pour-familles" });
+                const fbox = h("div", { class: "pour pour-familles admin-block admin-only" });
                 if (!parents.length) fbox.append(h("p", { class: "hint" }, opts.famille ? "Aucune autre famille pour l'instant." : "Aucune famille invitée pour l'instant (menu 👤 → Familles invitées)."));
                 parents.forEach(p => {
                     const cb = h("input", { type: "checkbox", value: p.id, "data-famille": p.id });
@@ -1842,6 +1920,8 @@
             const details = h("div", { class: "builtin-details" },
                 h("div", { class: "info" }, h("span", {}, it.titre + " · " + size)),
                 h("label", {}, "Qui l'a ?"), boxes, familles, msg,
+                owner && (kind === "builtin" || (kind === "quiz" && !opts.famille && !opts.partagee))
+                    ? h("details", { class: "admin-block admin-only" }, h("summary", {}, "Inviter un enfant sans compte"), quizInvitationForm(it, kind)) : null,
                 opts.partagee ? h("p", { class: "hint" }, "Leçon partagée par l'administrateur : tu ne peux pas la modifier.") : null,
                 actions.some(Boolean) ? h("div", { class: "actions", style: "margin-top:8px" }, actions) : null);
             details.hidden = !open;
@@ -2190,10 +2270,10 @@
                 const plan = planText(l);
                 return h("div", { class: "lesson", "data-quiz": l.id },
                     h("div", { class: "ld-title" }, (l.emoji || "📘") + " " + l.titre),
-                    h("div", { class: "lesson-actions exam-row" },
+                    s ? h("div", { class: "lesson-actions exam-row" },
                         h("label", { class: "exam-label" }, "📅 Date du contrôle : ", dateIn),
                         h("button", { class: "btn small", type: "button", onclick: () => setPlan(s, l, dateIn.value) }, "Enregistrer la date"),
-                        l.exam ? h("button", { class: "btn secondary small", type: "button", onclick: () => setPlan(s, l, "") }, "Pas de contrôle") : null),
+                        l.exam ? h("button", { class: "btn secondary small", type: "button", onclick: () => setPlan(s, l, "") }, "Pas de contrôle") : null) : null,
                     h("div", { class: "lesson-detail" },
                         h("span", { class: "exam-txt" }, examText(l)),
                         h("span", {}, l.aReviser ? l.aReviser + " question" + (l.aReviser > 1 ? "s" : "") + " à réviser maintenant" : "Rien à réviser maintenant"),
@@ -2210,11 +2290,11 @@
                             x.dernier && x.dernier.texte ? h("blockquote", { class: "syn-texte-parent" }, x.dernier.texte) : null)))) : null,
                     l.seances.length ? h("details", { class: "historique" }, h("summary", {}, "Historique (" + l.nbSeances + " séance" + (l.nbSeances > 1 ? "s" : "") + ")"),
                         h("ul", {}, l.seances.map(x => h("li", {}, timeFr(x.debut) + " · " + Math.max(1, Math.round(x.duree / 60)) + " min · " + x.reussies + " / " + x.questions + " réussies du premier coup" + (x.bonus ? " · bonus" : ""))))) : null,
-                    h("div", { class: "lesson-actions" },
+                    s ? h("div", { class: "lesson-actions" },
                         l.mode === "archive"
                             ? h("button", { class: "btn secondary small", type: "button", onclick: () => setMode(s, l, "entretien") }, "Réactiver")
                             : h("button", { class: "btn secondary small", type: "button", onclick: () => setMode(s, l, "archive") }, "📦 Archiver"),
-                        h("button", { class: "btn secondary small", type: "button", onclick: () => resetProgress(s.id, l.id, "la leçon « " + l.titre + " » de " + s.pseudo) }, "Remettre cette leçon à zéro")));
+                        h("button", { class: "btn secondary small", type: "button", onclick: () => resetProgress(s.id, l.id, "la leçon « " + l.titre + " » de " + s.pseudo) }, "Remettre cette leçon à zéro")) : null);
         }
         async function setPlan(s, l, exam) {
             const status = $("prog-status");
@@ -2575,6 +2655,7 @@ ${UX_STYLES}` }
             const parents = DATA.parents || [];
             // code d'invitation
             const box = $("invite-box");
+            box.classList.add("admin-block", "admin-only");
             const btn = (txt, cls, fn) => h("button", { class: "btn " + cls, type: "button", onclick: fn }, txt);
             if (DATA.invitation) {
                 const st = h("p", { class: "status", id: "invite-status", role: "status" });
@@ -2583,10 +2664,10 @@ ${UX_STYLES}` }
                     st,
                     h("p", { class: "hint" }, "Un message prêt à envoyer (SMS, mail…) avec le lien et le code : la famille touche le lien et crée son compte. Code actuel : ",
                         h("strong", { class: "invite-code", id: "invite-code" }, DATA.invitation), ". Un nouveau code remplace l'ancien."),
-                    h("div", { class: "actions" }, btn("🎲 Nouveau code", "secondary small", () => inviteCode("new")), btn("🚫 Fermer les inscriptions", "danger", () => inviteCode("close"))));
+                    h("div", { class: "actions" }, btn("🎲 Nouveau code", "secondary small", () => inviteCode("new")), btn("🚫 Désactiver le code général", "danger", () => inviteCode("close"))));
             } else {
                 box.replaceChildren(
-                    h("p", { class: "hint" }, "🚫 Inscriptions fermées : personne ne peut créer de famille."),
+                    h("p", { class: "hint" }, "Le code général est désactivé. Les liens envoyés depuis un quiz sur invitation restent valables."),
                     h("div", { class: "actions" }, btn("🎟️ Créer un code d'invitation", "small", () => inviteCode("new"))));
             }
             // stockage
@@ -2609,10 +2690,11 @@ ${UX_STYLES}` }
                 h("button", { class: "btn secondary small", type: "button", onclick: () => newParentPassword(p) }, "🔑 Nouveau mot de passe"),
                 h("button", { class: "btn danger", type: "button", onclick: () => removeFamily(p) }, "Supprimer"))));
             if (!parents.length) rows.push(h("p", { class: "empty" }, "Aucune autre famille pour l'instant."));
+            $("parent-list").classList.add("admin-block", "admin-only");
             $("parent-list").replaceChildren(...rows);
         }
         async function inviteCode(action) {
-            if (action === "close" && !confirm("Fermer les inscriptions ? Le code actuel ne marchera plus (les familles déjà inscrites ne sont pas touchées).")) return;
+            if (action === "close" && !confirm("Désactiver le code général ? Les liens des quiz sur invitation restent valables.")) return;
             const status = $("parents-status");
             try {
                 await server("setInviteCode", pw(), action);
@@ -2675,7 +2757,7 @@ ${UX_STYLES}` }
                 if (window.QuizyProfils && $("who")) $("who").hidden = true;
                 $("lockbar").hidden = false;
                 showSignup(true);
-                $("su-code").value = decodeURIComponent(m[1]).slice(0, 20);
+                $("su-code").value = decodeURIComponent(m[1]).slice(0, 65);
                 $("su-famille").focus();
             }, 0);
         })();

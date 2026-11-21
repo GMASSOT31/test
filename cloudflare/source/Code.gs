@@ -42,6 +42,8 @@ function doGet(e) {
 var QUIZ_PREFIX = 'quiz_';
 var DECK_PREFIX = 'deck_';
 var STUDENT_PREFIX = 'student_';
+var GUEST_PREFIX = 'guest_';
+var GUEST_CLASS = '@invitation';
 var OVERRIDE_PREFIX = 'override_';   // version modifiée d'un quiz intégré (l'original reste dans Contenu.gs)
 var BUILTIN_ASSIGN_KEY = 'builtin_assign';
 var SHARES_KEY = 'shares';   // leçons partagées par l'administrateur avec les familles (voir shares_)
@@ -78,17 +80,72 @@ function getStudentData(classe, pseudo, pin) {
   var st = authStudent_(classe, pseudo, pin);
   migrateV3_();
   var quizzes = quizzesOf_(st.id);
-  var decks = list_(DECK_PREFIX).filter(function (d) { return isFor_(d, st.id); }).map(withoutPour_);
+  var decks = st.quiz ? [] : list_(DECK_PREFIX).filter(function (d) { return isFor_(d, st.id); }).map(withoutPour_);
   var props = PropertiesService.getScriptProperties().getProperties();
   var srs = {};
   quizzes.forEach(function (q) { srs[q.id] = presentSrs_(readSrs_(props[srsKey_(st.id, q.id)])); });
-  return {
+  var data = {
     student: { id: st.id, classe: st.classe, pseudo: st.pseudo },
     quizzes: quizzes.map(withoutPour_),
     decks: decks,
     srs: srs,
     now: Date.now()
   };
+  if (st.quiz) data.guest = { parentCode: st.parentUsed ? '' : guestParentCode_(st.id, pin), helpful: st.helpful };
+  return data;
+}
+
+// Invitations à une seule leçon, indépendantes des comptes élèves et des attributions ordinaires.
+function createQuizInvitation(cred, kind, quizId, pseudo, exam) {
+  ownerOnly_(cred);
+  migrateV3_();
+  pseudo = str_(pseudo, 30);
+  if (!pseudo) throw new Error('Choisis un pseudo.');
+  var store = PropertiesService.getScriptProperties();
+  var source = kind === 'builtin' ? builtins_() : kind === 'quiz' ? list_(QUIZ_PREFIX).filter(function (q) { return !q.fam; }) : [];
+  var quiz = source.filter(function (q) { return q.id === quizId; })[0];
+  if (!quiz) throw new Error('Leçon introuvable.');
+  var now = Date.now(), r = defaultSrs_();
+  applyPlan_(r, exam, false, now);
+  if (list_(GUEST_PREFIX).length >= 100 || storageBytes_(store.getProperties()) > STORAGE_MAX * STORAGE_SIGNUP_LIMIT)
+    throw new Error("Limite d’invitations atteinte. Supprime une invitation terminée pour libérer de la place.");
+  var id = 'invite-' + Utilities.getUuid().replace(/-/g, '');
+  var secret = Utilities.getUuid().replace(/-/g, '');
+  var parentCode = guestParentCode_(id, secret);
+  var expires = (exam ? dateStart_(exam) : now) + 7 * DAY_MS;
+  var guest = { id: id, pseudo: pseudo, ajoute: now, expires: expires, exam: r.exam,
+    hash: hashPin_(id, secret), parentHash: hashPin_(id, parentCode), quiz: withoutPour_(withQids_(quiz)) };
+  putItem_(store, GUEST_PREFIX, id, guest);
+  store.setProperty(srsKey_(id, quizId), JSON.stringify(r));
+  return { link: id + '.' + secret, expires: expires };
+}
+
+function guestParentCode_(id, secret) {
+  return 'I' + id.slice(7).toUpperCase() + hashPin_('parent:' + id, secret).slice(0, 32).toUpperCase();
+}
+
+function guestById_(id) {
+  if (!/^invite-[0-9a-f]{32}$/.test(String(id))) return null;
+  var guest = getItem_(PropertiesService.getScriptProperties(), GUEST_PREFIX, id);
+  return guest && guest.quiz ? guest : null;
+}
+
+function removeQuizInvitation(cred, id) {
+  ownerOnly_(cred);
+  var guest = guestById_(id);
+  if (!guest) throw new Error('Invitation introuvable.');
+  var store = PropertiesService.getScriptProperties();
+  delItem_(store, GUEST_PREFIX, id);
+  store.deleteProperty(srsKey_(id, guest.quiz.id));
+  return true;
+}
+
+function quizInvitationFeedback(id, secret, helpful) {
+  var guest = authStudent_(GUEST_CLASS, id, secret);
+  if (typeof helpful !== 'boolean') throw new Error('Réponse invalide.');
+  guest.helpful = helpful;
+  putItem_(PropertiesService.getScriptProperties(), GUEST_PREFIX, id, guest);
+  return true;
 }
 
 // ---------------- Révision espacée (parcours v3) ----------------
@@ -396,6 +453,11 @@ function adminData(cred) {
       return c;
     });
     res.invitation = store.getProperty(INVITE_KEY) || '';
+    var guests = list_(GUEST_PREFIX);
+    if (guests.length) res.quizInvitations = guests.map(function (st) {
+      return { id: st.id, pseudo: st.pseudo, expires: st.expires, exam: st.exam, helpful: st.helpful,
+        progress: lessonSummary_(st.quiz, readSrs_(props[srsKey_(st.id, st.quiz.id)])) };
+    });
     res.stockage = { octets: storageBytes_(props), max: STORAGE_MAX };
   } else {
     touchParent_(store, me.fam);
@@ -687,10 +749,15 @@ function createFamily(code, info) {
   var store = PropertiesService.getScriptProperties();
   var cache = CacheService.getScriptCache();
   var failKey = 'invitation-echecs';
-  if (Number(cache.get(failKey) || 0) >= MAX_INVITE_FAILS) throw new Error("Trop d'essais. Réessaie dans quelques minutes.");
   var invite = store.getProperty(INVITE_KEY) || '';
-  if (!invite) throw new Error("Les inscriptions sont fermées : demande un code d'invitation à l'administrateur.");
-  if (normCode_(code) !== normCode_(invite)) {
+  var normalized = normCode_(code);
+  var guestCode = /^I[0-9A-F]{64}$/.test(normalized);
+  var guest = guestCode ? guestById_('invite-' + normalized.slice(1, 33).toLowerCase()) : null;
+  if (guestCode && (!guest || guest.parentUsed || guest.expires <= Date.now() || guest.parentHash !== hashPin_(guest.id, normalized)))
+    throw new Error("Ce lien d’inscription a expiré ou a déjà été utilisé.");
+  if (!guestCode && Number(cache.get(failKey) || 0) >= MAX_INVITE_FAILS) throw new Error("Trop d'essais. Réessaie dans quelques minutes.");
+  if (!invite && !guestCode) throw new Error("Les inscriptions sont fermées : demande un code d'invitation à l'administrateur.");
+  if (!guestCode && normalized !== normCode_(invite)) {
     cache.put(failKey, String(Number(cache.get(failKey) || 0) + 1), LOCK_SECONDS);
     Utilities.sleep(1000);
     throw new Error("Code d'invitation incorrect.");
@@ -715,6 +782,10 @@ function createFamily(code, info) {
     var id = uniqueId_(slugify_(pseudo) || 'parent', parents.map(function (p) { return p.id; }));
     var salt = Utilities.getUuid();
     var rec = { id: id, pseudo: pseudo, famille: famille, salt: salt, hash: hashPin_(salt, info.password), ajoute: Date.now(), vu: 0 };
+    if (guest) {
+      guest.parentUsed = true;
+      putItem_(store, GUEST_PREFIX, guest.id, guest);
+    }
     store.setProperty(PARENT_PREFIX + id, JSON.stringify(rec));
     return { pseudo: pseudo, famille: famille };
   } finally {
@@ -908,6 +979,10 @@ function quizFor_(quiz, studentId, assigned) {
 }
 
 function quizzesOf_(studentId) {
+  if (studentId.indexOf('invite-') === 0) {
+    var guest = guestById_(studentId);
+    if (guest) return [guest.quiz];
+  }
   var assigned = builtinAssign_(), sh = shares_();
   var st = getItem_(PropertiesService.getScriptProperties(), STUDENT_PREFIX, studentId);
   var fam = st && st.fam ? st.fam : '';
@@ -1061,6 +1136,13 @@ function hashPin_(salt, pin) {
 // Vérifie classe + pseudo + PIN. Message volontairement identique quelle que soit l'erreur.
 // Après MAX_PIN_FAILS erreurs sur le même couple classe/pseudo : blocage de LOCK_SECONDS.
 function authStudent_(classe, pseudo, pin) {
+  if (classe === GUEST_CLASS) {
+    var guest = guestById_(pseudo);
+    if (!guest || guest.expires <= Date.now() || !/^[0-9a-f]{32}$/.test(String(pin)) || guest.hash !== hashPin_(guest.id, pin))
+      throw new Error('Ce lien est expiré ou invalide. Demande un nouveau lien à la personne qui te l’a envoyé.');
+    guest.classe = 'Invité';
+    return guest;
+  }
   var c = norm_(classe);
   var p = norm_(pseudo);
   var cache = CacheService.getScriptCache();

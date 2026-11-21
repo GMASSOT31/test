@@ -1185,6 +1185,7 @@
                 actions.append(h("button", { class: "btn secondary", onclick: renderList }, "Retour aux leçons"));
                 status.textContent = lines.join(" ") || "Progression enregistrée.";
                 box.append(actions);
+                if (!stopped && s.seen.size && me && guestSession) box.append(guestInvitationPanel());
                 updateCounts();
             });
         }
@@ -1602,12 +1603,53 @@
         const LAST_KEY = "revision-dernier-eleve"; // localStorage : préremplit la classe et le pseudo (jamais le PIN)
         const hasServer = !!(window.google && google.script && google.script.run);
         const $ = id => document.getElementById(id);
-        let me = null;
+        let me = null, guestSession = null;
+
+        function guestInvitationPanel() {
+            const panel = h("section", { class: "etape-intro" },
+                h("h3", {}, "Bravo pour ta séance 💪"),
+                h("p", {}, "Chaque séance t’aide à mieux retenir. Bon courage pour ton contrôle !"));
+            if (guestSession.helpful === undefined) {
+                const buttons = h("div", { class: "actions" });
+                const feedback = async helpful => {
+                    const prompt = buttons.previousElementSibling;
+                    try {
+                        await new Promise((resolve, reject) => google.script.run
+                            .withSuccessHandler(resolve).withFailureHandler(reject)
+                            .quizInvitationFeedback(session.pseudo, session.pin, helpful));
+                        guestSession.helpful = helpful;
+                        prompt.textContent = "Merci pour ta réponse !";
+                        buttons.remove();
+                    } catch (error) { prompt.textContent = cleanError(error); }
+                };
+                panel.append(h("p", { role: "status" }, "Cette séance t’a aidé à réviser ?"),
+                    buttons);
+                buttons.append(h("button", { class: "btn secondary", onclick: () => feedback(true) }, "Oui"),
+                    h("button", { class: "btn secondary", onclick: () => feedback(false) }, "Pas encore"));
+            }
+            if (guestSession.parentCode) {
+                const url = location.origin + "/parents#invitation=" + guestSession.parentCode;
+                const message = "J’ai révisé avec QUIZy ! Tu peux créer gratuitement des quiz pour moi avec ce lien.";
+                const status = h("p", { role: "status" });
+                const link = h("input", { type: "url", readonly: "", hidden: "", "aria-label": "Lien à envoyer à un parent" });
+                link.value = url;
+                panel.append(h("p", {}, "Envie d’autres quiz ? Un parent peut t’en créer gratuitement sur QUIZy."),
+                    h("button", { class: "btn secondary", onclick: async () => {
+                        try {
+                            if (navigator.share) await navigator.share({ text: message, url });
+                            else { await navigator.clipboard.writeText(message + "\n" + url); status.textContent = "Lien copié. Tu peux le coller dans un SMS."; }
+                        } catch (error) {
+                            if (error.name !== "AbortError") { link.hidden = false; link.select(); }
+                        }
+                    } }, "Envoyer à un parent"), link, status);
+            }
+            return panel;
+        }
 
         function cleanError(err) { return String(err && err.message ? err.message : err).replace(/^Error:\s*/, ""); }
 
         function showLogin(message) {
-            me = null; session = null; QUIZZES = []; FLASHCARDS = []; SRS = {}; S = null; inQuiz = false;
+            me = null; guestSession = null; session = null; QUIZZES = []; FLASHCARDS = []; SRS = {}; S = null; inQuiz = false;
             content.replaceChildren();
             $("app").hidden = true;
             $("login").hidden = false;
@@ -1620,23 +1662,25 @@
 
         function enterApp(data, creds) {
             me = data.student;
+            guestSession = data.guest || null;
             QUIZZES = data.quizzes;
             FLASHCARDS = data.decks;
             SRS = data.srs || {};
             clockSkew = data.now ? data.now - Date.now() : 0;
             session = creds;
             try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(creds)); } catch (e) { /* ignoré */ }
-            try { localStorage.setItem(LAST_KEY, JSON.stringify({ classe: creds.classe, pseudo: creds.pseudo })); } catch (e) { /* ignoré */ }
+            if (!guestSession) try { localStorage.setItem(LAST_KEY, JSON.stringify({ classe: creds.classe, pseudo: creds.pseudo })); } catch (e) { /* ignoré */ }
             $("login").hidden = true;
             $("app").hidden = false;
             $("whoami-name").textContent = "👤 " + me.pseudo + " · " + me.classe;
             if (window.rvStreakFor) window.rvStreakFor(me.id);
             setTab("quiz");
             // profil mémorisé (mis à jour si le prénom a changé) — jamais le PIN
-            if (PROFILS) PROFILS.memoriser({ role: "eleve", id: me.id, nom: me.pseudo, pseudo: me.pseudo, classe: me.classe });
+            if (PROFILS && !guestSession) PROFILS.memoriser({ role: "eleve", id: me.id, nom: me.pseudo, pseudo: me.pseudo, classe: me.classe });
             formulaireComplet(false);
             // invitation discrète à installer l'appli (static/installation.js) : jamais si déjà installée ou reportée
-            if (window.QuizyInstallation) window.QuizyInstallation.proposer();
+            if (window.QuizyInstallation && !guestSession) window.QuizyInstallation.proposer();
+            if (guestSession && QUIZZES.length) openLesson(QUIZZES[0]);
         }
 
         function connect(creds, silent) {
@@ -1720,7 +1764,11 @@
         } catch (e) { /* ignoré */ }
         let savedSession = null;
         try { savedSession = JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch (e) { /* ignoré */ }
-        if (savedSession && savedSession.classe) connect(savedSession, true);
+        const guestLink = /^#quiz=(invite-[0-9a-f]{32})\.([0-9a-f]{32})$/.exec(location.hash);
+        if (guestLink) {
+            history.replaceState(null, "", location.pathname + location.search);
+            connect({ classe: "@invitation", pseudo: guestLink[1], pin: guestLink[2] }, false);
+        } else if (savedSession && savedSession.classe) connect(savedSession, savedSession.classe !== "@invitation");
         else if (PROFILS) {
             // profil touché dans l'espace parents ? sinon la grille, s'il y a des profils mémorisés
             const choix = PROFILS.choixEnAttente();
