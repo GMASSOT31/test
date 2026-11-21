@@ -67,6 +67,24 @@ const { makeWorldCf, install, ok, summary, page } = require('./harness');
     await myLessons.locator('.builtin[data-id="' + quiz + '"]').waitFor();
     ok(!state().byLesson['quiz:' + quiz] && state().byLesson['builtin:zootopia'] === id,
       'retirer une leçon de sa discipline ne touche pas les autres');
+    const assigned = JSON.stringify(state().byLesson);
+    const provided = admin.locator('#provided-lessons');
+    admin.once('dialog', dialog => dialog.accept('Maths et logique'));
+    await provided.getByRole('button', { name: 'Renommer Mathématiques', exact: true }).click();
+    await provided.locator('.discipline-group summary', { hasText: 'Maths et logique' }).waitFor();
+    ok(state().disciplines.some(d => d.id === id && d.name === 'Maths et logique') &&
+      JSON.stringify(state().byLesson) === assigned, 'le bouton renomme le groupe sans déplacer ses leçons');
+    ok(w.try('renameLessonDiscipline', family, id, 'Privée').err &&
+      w.try('renameLessonDiscipline', owner, null, 'Autre').err, 'seul l’administrateur peut renommer une discipline existante');
+
+    const empty = w.run('createLessonDiscipline', owner, 'À ranger').disciplines.find(d => d.name === 'À ranger');
+    ok(w.try('renameLessonDiscipline', owner, empty.id, 'maths et logique').err, 'le renommage refuse les doublons');
+    await connect(admin, owner);
+    await admin.getByText('➕ Créer une discipline', { exact: true }).click();
+    admin.once('dialog', dialog => dialog.accept('À relire'));
+    await admin.locator('#discipline-list').getByRole('button', { name: 'Renommer À ranger', exact: true }).click();
+    await admin.locator('#discipline-list').getByRole('button', { name: 'Renommer À relire', exact: true }).waitFor();
+    ok(state().disciplines.some(d => d.id === empty.id && d.name === 'À relire'), 'une discipline vide reste renommable');
     w.run('deleteDeck', owner, deck);
     ok(!state().byLesson['deck:' + deck], 'la suppression d’un paquet efface aussi son classement');
   } finally {

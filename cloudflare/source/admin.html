@@ -201,6 +201,12 @@
         .discipline-group .builtin { margin-inline: 4px; }
         .discipline-count { margin-inline-start: 8px; color: var(--muted); }
         .discipline-picker { margin-bottom: 12px; }
+        .discipline-heading { position: relative; }
+        .discipline-heading summary { padding-inline-end: 56px; }
+        .discipline-entry { display: flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
+        .discipline-entry > span { flex: 1; min-width: 0; }
+        .discipline-rename { flex: none; min-width: 44px; min-height: 44px; }
+        .discipline-heading > .discipline-rename { position: absolute; inset-inline-end: 4px; top: 0; margin: 0; }
         .pour-familles { margin-top: 10px; }
         .builtin-auteur { font-weight: 700; color: var(--violet); }
         /* profil mémorisé : la puce (avatar + nom + « Autre profil ») remplace le champ pseudo */
@@ -730,6 +736,7 @@
                     <button type="submit" class="btn small admin-only">Créer la discipline</button>
                     <p class="hint">Pour ranger une leçon, ouvre « Gérer » et choisis sa discipline.</p>
                 </form>
+                <div id="discipline-list"></div>
             </details>
             <!-- Parties repliables (repliées sur téléphone, ouvertes sur ordinateur, état retenu sur l'appareil) -->
             <section class="ls" id="my-lessons" data-ls="mes">
@@ -1145,6 +1152,7 @@
             $("menu-ux").hidden = !owner;
             $("admin-color-key").hidden = !owner;
             $("discipline-tools").hidden = !owner;
+            renderDisciplineList();
             if (!owner && !$("pane-parents").hidden) go("programmes");
             $("count-eleves").textContent = DATA.students.length || "";
             // les cases « Pour quels élèves ? » gardent la sélection en cours quand la liste des élèves change
@@ -1801,6 +1809,29 @@
         const openDisciplines = new Map();
         let savingDiscipline = false;
 
+        function disciplineRenameButton(discipline, location) {
+            const id = "rename-discipline-" + location + "-" + discipline.id;
+            const button = h("button", { id, class: "btn secondary small discipline-rename", type: "button",
+                "aria-label": "Renommer " + discipline.name, title: "Renommer la discipline" }, "✏️");
+            button.addEventListener("click", async () => {
+                const name = prompt("Nouveau nom de la discipline", discipline.name);
+                if (name === null || name.trim() === discipline.name) return;
+                button.disabled = true;
+                const saved = await saveClassification("renameLessonDiscipline", [discipline.id, name], () => {
+                    showStatus($("quizlist-status"), "ok", "Discipline renommée.");
+                });
+                if (saved) $(id)?.focus();
+                else button.disabled = false;
+            });
+            return button;
+        }
+
+        function renderDisciplineList() {
+            const disciplines = DATA.lessonClassification?.disciplines || [];
+            $("discipline-list").replaceChildren(...disciplines.slice().sort((a, b) => a.name.localeCompare(b.name, "fr"))
+                .map(d => h("div", { class: "discipline-entry" }, h("span", {}, d.name), disciplineRenameButton(d, "list"))));
+        }
+
         function disciplineRows(section, items, kind, opts) {
             const classification = DATA.lessonClassification;
             if (!classification || !items.length) return items.map(it => accessRow(it, kind, opts));
@@ -1821,7 +1852,8 @@
                 });
                 return details;
             }
-            const sections = sorted.filter(d => groups.get(d.id).length).map(d => group(d.id, d.name, groups.get(d.id)));
+            const sections = sorted.filter(d => groups.get(d.id).length).map(d => h("div", { class: "discipline-heading" },
+                group(d.id, d.name, groups.get(d.id)), disciplineRenameButton(d, section)));
             if (!sections.length) return unclassified;
             if (unclassified.length) sections.push(group("", "Sans discipline", unclassified));
             return sections;
@@ -1837,6 +1869,7 @@
                 if (!DATA || !DATA.moi.owner || data.moi.pseudo !== DATA.moi.pseudo) return false;
                 DATA.lessonClassification = result;
                 onSaved();
+                renderDisciplineList();
                 renderQuizList();
                 renderBuiltins();
                 renderDeckList();
