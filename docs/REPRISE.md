@@ -1,5 +1,8 @@
 # Reprise du développement – portail de révision (Google Apps Script)
 
+> **Depuis le 16/11/2026, l'appli en service est QUIZy sur Cloudflare.** Référence pratique à jour (dépôt, hébergement,
+> base, environnements, commandes, coopération entre développeurs) : `CLAUDE.md` à la racine. Ce fichier garde l'historique.
+
 ## Prompt à copier dans une nouvelle session Claude Code
 
 ```
