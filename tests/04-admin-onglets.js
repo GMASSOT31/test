@@ -114,7 +114,7 @@ const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testé
   // ---- 6. leçons fournies : cases enregistrées tout de suite ----
   await tab('quiz-liste');
   const rows = await a.locator('#builtin-list .builtin strong').allInnerTexts();
-  ok(rows.length === (TARGET === "cloudflare" ? 12 : 11), 'Leçons fournies listées : ' + rows.map(r => r.slice(0, 22)).join(' | '));
+  ok(rows.length === (TARGET === "cloudflare" ? 13 : 11), 'Leçons fournies listées : ' + rows.map(r => r.slice(0, 22)).join(' | '));
   ok((await a.locator('#builtin-list .builtin-details:visible').count()) === 0 && (await a.locator('#builtin-list .builtin').first().innerText()).replace(/\s+/g, ' ').trim().split(' ').length < 14, 'LISTE COMPACTE : titre court, matière et destinataires (réglages repliés) : ' + (await a.locator('#builtin-list .builtin').first().innerText()).replace(/\s+/g, ' '));
   ok((await a.locator('#builtin-list .builtin-toggle').first().getAttribute('aria-expanded')) === 'false', 'un bouton « ⚙️ Gérer » par leçon (replié)');
   for (const id of ['byzance-30', 'zootopia']) {

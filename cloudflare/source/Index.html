@@ -696,13 +696,15 @@
         }
         function questionContent(quizId, q) {
             // Les illustrations du quiz intégré suivent ses identifiants de question stables.
-            if (quizId !== "poker-all-in" || !/^a11000(?:0[1-9]|1[0-9]|20)$/.test(q.id)) return q.question;
+            const allIn = quizId === "poker-all-in" && /^a11000(?:0[1-9]|1[0-9]|20)$/.test(q.id);
+            const outs = quizId === "poker-outs" && /^a12000(?:0[1-9]|1[0-5])$/.test(q.id);
+            if (!allIn && !outs) return q.question;
             const [prompt, ...lines] = q.question.split("\n");
             const cards = lines.join(" ");
             if (!cards) return q.question;
             return [prompt, h("img", {
-                class: "question-image", src: "/poker-all-in-" + q.id.slice(-2) + ".png",
-                alt: cards, width: "760", height: "510"
+                class: "question-image", src: "/" + quizId + "-" + q.id.slice(-2) + ".png",
+                alt: cards, width: "760", height: outs ? "420" : "510"
             })];
         }
         // Mélange de Fisher-Yates sur une copie

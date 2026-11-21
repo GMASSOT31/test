@@ -28,6 +28,10 @@ const { makeWorld, install, page, login, LEO, PW, ok, summary } = require('./har
     const quiz = quizzes().find(q => q.id === id);
     ok(quiz.questions.length === 20, 'l’attribution depuis les Leçons fournies rend les 20 questions accessibles');
 
+    const outsId = 'poker-outs';
+    world.run('setBuiltinAssign', { pseudo: 'Papa', password: PW }, outsId, ['leo']);
+    ok(quizzes().find(q => q.id === outsId).questions.length === 15, 'le nouveau quiz contient exactement 15 questions');
+
     const student = await context.newPage();
     await student.goto(page('Index.html'));
     await login(student, LEO);
@@ -48,6 +52,22 @@ const { makeWorld, install, page, login, LEO, PW, ok, summary } = require('./har
         `question ${i + 1} : ${percent} % accepté`);
     }
     ok(images.size === 20, 'une image distincte par question');
+
+    const outsExpected = [61, 26, 34, 56, 26, 19, 85, 74, 20, 9, 23, 34, 0, 100, 98];
+    for (const [i, percent] of outsExpected.entries()) {
+      await student.evaluate(([id, index]) => revisionPreview(id, index, 'qcm'), [outsId, i]);
+      const asset = await student.locator('.question-image').evaluate(async img => {
+        await img.decode();
+        return { src: img.getAttribute('src'), alt: img.alt, right: img.getBoundingClientRect().right };
+      });
+      const stage = i < 8 ? 'Flop' : 'Turn';
+      ok(asset.src === '/poker-outs-' + String(i + 1).padStart(2, '0') + '.png' &&
+        asset.alt.includes('Pouille :') && asset.alt.includes('Zig :') && asset.alt.includes(stage + ' :') && asset.right <= 360,
+      `outs, question ${i + 1} : cartes du ${stage.toLowerCase()} chargées à 360 px`);
+      await student.getByRole('button', { name: percent + ' %', exact: true }).click();
+      ok(await student.evaluate(() => window.revisionPreviewResult === true),
+        `outs, question ${i + 1} : ${percent} % accepté`);
+    }
   } finally {
     await browser.close();
   }
