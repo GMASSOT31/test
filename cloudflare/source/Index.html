@@ -471,6 +471,18 @@
         .rv-sticker, .rv-sub, .rv-chips, .rv-ticker, .rv-float { display: none; }
         .rv-title { margin: 0; font-size: 18px; letter-spacing: -.5px; text-shadow: 0 2px 0 rgba(15,23,80,.35); }
       }
+        .guest-focus .rv-banner, .guest-focus .sidebar, .guest-focus #whoami-name { display: none; }
+        .guest-focus .whoami { padding: 0 14px; }
+        .guest-focus .layout .content { width: 100%; max-width: 680px; margin: 0 auto; padding: 14px; }
+        .guest-welcome, .guest-loading { text-align: center; }
+        .guest-loading { padding: 24px 14px; color: var(--navy); font-weight: 800; }
+        .guest-welcome .emoji { display: block; font-size: 3rem; line-height: 1.2; }
+        .content .guest-welcome h2 { margin: 6px 0 14px; padding: 0; background: none; color: var(--navy); overflow-wrap: anywhere; }
+        .guest-welcome .big-btn { width: 100%; min-height: 58px; font-size: 1.25rem; margin: 0; }
+        .guest-progress { margin: 18px 0 4px; color: var(--navy); font-weight: 800; }
+        .guest-focus .bar span { background: var(--blue); }
+        .guest-welcome .linkish, .guest-focus .session-head .back { min-height: 44px; }
+        .guest-focus .session-count { white-space: nowrap; }
         .question-image {
             display: block;
             width: 100%;
@@ -532,6 +544,8 @@
         <!-- lien discret vers la connexion parents (target _top : l'application s'affiche dans un cadre Google) -->
         <a class="switch-link" id="to-admin" href="https://script.google.com/macros/s/AKfycbzzqlCAUDZAoHOmhxufvj4CAAHWX8JtU8vBsTB0ZsoEK_mLu2tW4BoESRUdrg4b7bkF/exec?p=admin" target="_top">👨‍👩‍👧 Espace parents</a>
     </section>
+
+    <div id="guest-loading" class="guest-loading" role="status" hidden>Ouverture du quiz…</div>
 
     <div id="app" hidden>
         <div class="whoami">
@@ -864,6 +878,7 @@
         }
         function renderList() {
             inQuiz = false;
+            document.body.classList.remove("guest-focus");
             content.replaceChildren();
             updateCounts();
             if (activeTab === "quiz") renderHome();
@@ -916,11 +931,33 @@
         }
 
         // ---------------- Écran d'une leçon ----------------
-        function openLesson(quiz) {
+        function openGuestLesson(quiz) {
+            document.body.classList.add("guest-focus");
+            const total = quiz.questions.length;
+            const learned = quiz.questions.filter(q => levelOf(quiz, q) > 0).length;
+            const review = dueList(quiz).length || newList(quiz).length;
+            const start = h("button", { class: "btn big-btn", onclick: () => startSession({ quiz, bonus: !review }) },
+                h("span", { "aria-hidden": "true" }, "▶ "), "C’est parti !");
+            content.replaceChildren(h("section", { class: "panel lesson-screen guest-welcome", "aria-labelledby": "guest-quiz-title" },
+                h("span", { class: "emoji", "aria-hidden": "true" }, quiz.emoji || "🎯"),
+                h("h2", { id: "guest-quiz-title" }, quiz.titre),
+                start,
+                h("div", { class: "guest-progress" }, h("span", { "aria-hidden": "true" }, "⭐ "),
+                    `${learned} / ${total} ${learned === 1 ? "question réussie" : "questions réussies"}`),
+                progressBar(learned, total, "Questions réussies"),
+                h("button", { class: "linkish", onclick: () => openLesson(quiz, true) }, "Voir la leçon")));
+            start.focus({ preventScroll: true });
+            window.scrollTo(0, 0);
+        }
+
+        function openLesson(quiz, detailed = false) {
             inQuiz = true;
+            if (guestSession && !detailed && isConfigured(quiz) && !["archive", "apres"].includes(lessonState(quiz).kind)) return openGuestLesson(quiz);
+            document.body.classList.remove("guest-focus");
             if (!isConfigured(quiz)) return showSetup(quiz);
             const r = srsOf(quiz.id), st = lessonState(quiz), x = examInfo(quiz);
-            const parts = [h("button", { class: "back", onclick: renderList }, "← Retour aux leçons"),
+            const back = guestSession && detailed ? () => openLesson(quiz) : renderList;
+            const parts = [h("button", { class: "back", onclick: back }, guestSession && detailed ? "← Retour au quiz" : "← Retour aux leçons"),
                 h("div", { class: "lesson-head" }, h("span", { class: "emoji" }, quiz.emoji), h("div", {}, h("h2", {}, quiz.titre), h("div", { class: "meta" }, `${quiz.matiere} · ${quiz.questions.length} questions`)))];
 
             if (st.kind === "apres") {
@@ -1084,21 +1121,29 @@
             if (t.stage === "synthese") return ["🧩", "Synthèse"];
             return ["✅", t.bonus ? "Séance bonus" : "Je teste"];
         }
+        function progressBar(done, total, label) {
+            return h("div", { class: "bar session-bar", role: "progressbar", "aria-label": label,
+                "aria-valuenow": String(done), "aria-valuemax": String(total) },
+                h("span", { style: `width:${total ? done / total * 100 : 0}%` }));
+        }
         function showTask() {
             if (S.i >= S.tasks.length) return endSessionScreen();
+            if (guestSession) window.scrollTo(0, 0);
             const t = S.tasks[S.i];
             const [ico, label] = stageLabel(t);
             const testsTotal = new Set(S.tasks.filter(x => x.stage !== "carte").map(key)).size;
-            const testsDone = S.done.size;
+            const cards = guestSession ? S.tasks.filter(x => x.stage === "carte").length : 0;
+            const cardsRead = cards ? S.tasks.slice(0, S.i).filter(x => x.stage === "carte").length : 0;
+            const total = testsTotal + cards;
+            const done = S.done.size + cardsRead;
             const head = h("div", { class: "session-head" },
                 h("button", { class: "back", onclick: quitSession }, "✕ Arrêter"),
                 h("span", { class: "stage-chip " + (t.retest ? "corrige" : t.stage) }, ico + " " + label),
-                h("span", { class: "session-count" }, `${testsDone} / ${testsTotal}`));
-            const bar = h("div", { class: "bar session-bar", role: "progressbar", "aria-valuenow": String(testsDone), "aria-valuemax": String(testsTotal) },
-                h("span", { style: `width:${testsTotal ? testsDone / testsTotal * 100 : 0}%` }));
+                h("span", { class: "session-count" }, `${done} / ${total}`));
+            const bar = progressBar(done, total, "Progression de la séance");
             const lessonName = S.opts.mixed ? h("div", { class: "meta" }, t.quiz.emoji + " " + t.quiz.titre) : null;
             if (t.stage === "carte") {
-                const nextBtn = h("button", { class: "btn", onclick: () => { S.i++; showTask(); } }, "J'ai lu, carte suivante ➔");
+                const nextBtn = h("button", { class: "btn", onclick: () => { S.i++; showTask(); } }, guestSession ? "Suivant ➔" : "J'ai lu, carte suivante ➔");
                 content.replaceChildren(h("div", { class: "panel session" }, head, bar, lessonName,
                     h("div", { class: "flashcard flipped learn" },
                         h("div", { class: "face-label" }, "À retenir"),
@@ -1106,7 +1151,7 @@
                         h("div", { class: "face-answer" }, answerOf(t.q)),
                         t.q.explication ? h("div", { class: "face-expl" }, t.q.explication) : null),
                     h("div", { class: "actions" }, nextBtn)));
-                nextBtn.focus();
+                nextBtn.focus({ preventScroll: !!guestSession });
                 return;
             }
             const lien = t.quiz.lien && /^https?:\/\//.test(t.quiz.lien.url || "")
@@ -1118,7 +1163,9 @@
         }
         function quitSession() {
             if (S && S.seen.size) return endSessionScreen(true);
-            S = null; renderList();
+            const quiz = S && S.opts.quiz;
+            S = null;
+            if (guestSession && quiz) openLesson(quiz); else renderList();
         }
         // Résultat d'une question : envoyé au serveur ; une erreur la fait revenir plus loin dans la séance
         function onAnswered(t, ok, conf, syn) {
@@ -1651,6 +1698,8 @@
         function showLogin(message) {
             me = null; guestSession = null; session = null; QUIZZES = []; FLASHCARDS = []; SRS = {}; S = null; inQuiz = false;
             content.replaceChildren();
+            document.body.classList.remove("guest-focus");
+            $("guest-loading").hidden = true;
             $("app").hidden = true;
             $("login").hidden = false;
             $("login-error").textContent = message || "";
@@ -1671,20 +1720,26 @@
             try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(creds)); } catch (e) { /* ignoré */ }
             if (!guestSession) try { localStorage.setItem(LAST_KEY, JSON.stringify({ classe: creds.classe, pseudo: creds.pseudo })); } catch (e) { /* ignoré */ }
             $("login").hidden = true;
+            $("guest-loading").hidden = true;
             $("app").hidden = false;
             $("whoami-name").textContent = "👤 " + me.pseudo + " · " + me.classe;
             if (window.rvStreakFor) window.rvStreakFor(me.id);
             setTab("quiz");
+            if (guestSession && QUIZZES.length) openLesson(QUIZZES[0]);
             // profil mémorisé (mis à jour si le prénom a changé) — jamais le PIN
             if (PROFILS && !guestSession) PROFILS.memoriser({ role: "eleve", id: me.id, nom: me.pseudo, pseudo: me.pseudo, classe: me.classe });
             formulaireComplet(false);
             // invitation discrète à installer l'appli (static/installation.js) : jamais si déjà installée ou reportée
             if (window.QuizyInstallation && !guestSession) window.QuizyInstallation.proposer();
-            if (guestSession && QUIZZES.length) openLesson(QUIZZES[0]);
         }
 
         function connect(creds, silent) {
             if (!hasServer) { showLogin("La connexion n'est disponible que depuis le script déployé."); return; }
+            if (creds.classe === "@invitation") {
+                document.body.classList.add("guest-focus");
+                $("login").hidden = true;
+                $("guest-loading").hidden = false;
+            }
             $("login-btn").disabled = true;
             google.script.run
                 .withSuccessHandler(data => enterApp(data, creds))

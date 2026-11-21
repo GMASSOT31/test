@@ -44,8 +44,24 @@ const { makeWorld, install, page, PW, ok, summary, finishSession } = require('./
     ok(!JSON.stringify(w.props).includes(secret), 'le secret du lien est haché dans la base');
 
     const student = await ctx.newPage();
+    await student.setViewportSize({ width: 320, height: 568 });
     await student.goto(link);
-    await student.locator('.lesson-screen .big-btn').click();
+    const start = student.getByRole('button', { name: 'C’est parti !', exact: true });
+    await start.waitFor();
+    const startBox = await start.boundingBox();
+    ok(startBox.y >= 0 && startBox.y + startBox.height <= 568 && startBox.height >= 44 &&
+      await student.locator('#login').isHidden() && await student.locator('.sidebar').isHidden(),
+    'sur petit téléphone, le bouton principal est visible sans défilement ni connexion');
+    await student.getByRole('button', { name: 'Voir la leçon', exact: true }).click();
+    ok(await student.getByRole('button', { name: 'Modifier', exact: true }).isVisible() &&
+      await student.getByRole('button', { name: 'Voir les cartes' }).isVisible(), 'le plan et les cartes restent accessibles');
+    await student.getByRole('button', { name: 'Retour au quiz' }).click();
+    const learned = student.getByRole('progressbar', { name: 'Questions réussies' });
+    ok(await learned.getAttribute('aria-valuenow') === '0', 'la progression initiale part de zéro');
+    await start.click();
+    await student.getByRole('button', { name: 'Suivant' }).click();
+    ok(await student.getByRole('progressbar', { name: 'Progression de la séance' }).getAttribute('aria-valuenow') === '1',
+      'la progression avance dès la première carte');
     await finishSession(student);
     await student.getByRole('button', { name: 'Oui', exact: true }).click();
     await student.getByText('Merci pour ta réponse !').waitFor();
@@ -55,6 +71,9 @@ const { makeWorld, install, page, PW, ok, summary, finishSession } = require('./
     const guests = w.run('adminData', cred).quizInvitations;
     ok(guests[0].pseudo === 'Lune' && guests[0].progress.nbSeances === 1 && guests[0].helpful === true, 'suivi et sondage associés au pseudo invité');
     ok(w.run('adminData', cred).students.length === 0, 'aucun compte élève nécessaire');
+    await student.reload();
+    await learned.waitFor();
+    ok(await learned.getAttribute('aria-valuenow') === '2', 'la progression enregistrée réapparaît à la réouverture');
 
     const parent = await ctx.newPage();
     await parent.goto(referral);
