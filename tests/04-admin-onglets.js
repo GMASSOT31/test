@@ -114,7 +114,7 @@ const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testé
   // ---- 6. leçons fournies : cases enregistrées tout de suite ----
   await tab('quiz-liste');
   const rows = await a.locator('#builtin-list .builtin strong').allInnerTexts();
-  ok(rows.length === 11, '11 leçons fournies listées : ' + rows.map(r => r.slice(0, 22)).join(' | '));
+  ok(rows.length === (TARGET === "cloudflare" ? 12 : 11), 'Leçons fournies listées : ' + rows.map(r => r.slice(0, 22)).join(' | '));
   ok((await a.locator('#builtin-list .builtin-details:visible').count()) === 0 && (await a.locator('#builtin-list .builtin').first().innerText()).replace(/\s+/g, ' ').trim().split(' ').length < 14, 'LISTE COMPACTE : titre court, matière et destinataires (réglages repliés) : ' + (await a.locator('#builtin-list .builtin').first().innerText()).replace(/\s+/g, ' '));
   ok((await a.locator('#builtin-list .builtin-toggle').first().getAttribute('aria-expanded')) === 'false', 'un bouton « ⚙️ Gérer » par leçon (replié)');
   for (const id of ['byzance-30', 'zootopia']) {
@@ -132,7 +132,7 @@ const { page, pageFile, LINKS, TARGET } = require('./harness');   // page testé
   await tab('programmes');
   await card('emma').locator('.pick-btn').click();
   const pick = card('emma').locator('.picker');
-  ok((await pick.locator('.pick-item').count()) === 13 && await pick.locator('.pick-item[data-quiz="' + quizId.slice(5) + '"] input').isChecked(), 'choix des leçons d\'Emma : ses 2 leçons créées + les 11 fournies, « Maths » cochée');
+  ok((await pick.locator('.pick-item').count()) === rows.length + 2 && await pick.locator('.pick-item[data-quiz="' + quizId.slice(5) + '"] input').isChecked(), 'choix des leçons d\'Emma : ses 2 leçons créées + les leçons fournies, « Maths » cochée');
   await pick.locator('.pick-item[data-quiz="musique-carnaval"] input').check();
   await a.waitForFunction(() => document.querySelector('.prog-card[data-student="emma"] .lesson-row[data-quiz="musique-carnaval"]'));
   ok(JSON.parse(w.props.builtin_assign)['musique-carnaval'].join() === 'emma' && (await a.locator('#prog-status').innerText()).includes('donnée à Emma') && (await card('emma').locator('.picker').count()) === 1, 'cocher « Musique » : donnée à Emma tout de suite, la leçon apparaît sur sa fiche, le choix reste ouvert');
