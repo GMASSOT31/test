@@ -24,15 +24,16 @@ const { makeWorld, install, page, PW, ok, summary, finishSession } = require('./
     await admin.click('#unlock');
     await admin.locator('#lock-status.ok').waitFor({ state: 'attached' });
     ok(await admin.locator('#admin-color-key').isVisible(), 'le violet identifie les commandes admin');
-    await admin.click('#tab-quiz-liste');
-    await admin.locator('#my-lessons .ls-toggle').click();
-    const lesson = admin.locator(`#quiz-list .builtin[data-id="${quiz.id}"]`);
-    await lesson.locator('.builtin-toggle').click();
-    await lesson.getByText('Inviter un enfant sans compte', { exact: true }).click();
-    await lesson.getByLabel('Pseudo de l’enfant').fill('Lune');
-    const exam = await lesson.getByLabel('Date du contrôle').inputValue();
-    await lesson.getByRole('button', { name: 'Créer le lien' }).click();
-    const link = await lesson.getByLabel('Lien du quiz invité').inputValue();
+    ok(!(await admin.locator('#quiz-invitations').evaluate(el => el.open)), 'Les orphelins est replié par défaut');
+    await admin.getByRole('button', { name: /Ajouter un orphelin/ }).click();
+    const form = admin.locator('#orphan-form');
+    await form.getByLabel('Pseudo de l’enfant').fill('Lune');
+    await form.getByLabel('Leçon', { exact: true }).selectOption({ label: 'Calcul mental' });
+    const exam = await form.getByLabel('Date du contrôle').inputValue();
+    await form.getByRole('button', { name: 'Créer le lien' }).click();
+    const link = await form.getByLabel('Lien du quiz invité').inputValue();
+    await admin.locator('#quiz-invitations summary', { hasText: 'Lune' }).waitFor();
+    ok(await admin.locator('#quiz-invitations').evaluate(el => el.open), 'le nouvel invité apparaît dans Les orphelins');
     const [id, secret] = new URL(link).hash.slice(6).split('.');
     const args = ['@invitation', id, secret];
     const invited = () => w.run('getStudentData', ...args);
@@ -65,7 +66,7 @@ const { makeWorld, install, page, PW, ok, summary, finishSession } = require('./
     await parent.click('#su-save');
     await parent.waitForSelector('#admin-area:not([hidden])');
     const parentCred = { pseudo: 'Parent Test', password: 'mot-de-passe-test' };
-    ok((await parent.locator('#admin-color-key').isHidden()) && !w.run('adminData', parentCred).quizInvitations
+    ok((await parent.locator('#admin-color-key').isHidden()) && await parent.locator('#orphan-tools').isHidden() && !w.run('adminData', parentCred).quizInvitations
       && w.try('createQuizInvitation', parentCred, 'quiz', quiz.id, 'Autre', exam).err, 'le parent invité ne voit ni suivi ni commandes admin');
     ok(w.try('createFamily', new URL(referral).hash.slice(12), { famille: 'Autre', pseudo: 'Autre parent', password: 'mot-de-passe-test' }).err,
       'le lien de création de famille est à usage unique');
