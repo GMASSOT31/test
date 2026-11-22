@@ -1,5 +1,5 @@
 // Révision espacée (parcours v3) côté serveur : niveaux, échéances, plan selon la date du contrôle, express, bonus, migration
-const { makeWorld, ok, summary, PW } = require('./harness');
+const { makeWorld, ok, summary, PW, TARGET } = require('./harness');
 const DAY = 86400000, MIN = 60000, HOUR = 3600000;
 const w = makeWorld({ ADMIN_PASSWORD: PW, prog_leo__zootopia: '{"q":{}}', done_leo__zootopia: '{"n":3}', parcours_leo__zootopia: '{"v":2}', student_vieux: 'x' });
 w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' }); w.run('saveStudent', PW, { classe: '5B', pseudo: 'Emma', pin: '4321' });
@@ -11,6 +11,7 @@ const srs = (c = L, quiz = 'zootopia') => get(c).srs[quiz];
 let op = 0;
 const ans = (id, stage, good, sid, conf = '', c = L, quiz = 'zootopia') => w.run('answer', ...c, quiz, id, stage, good, conf, sid, 'op' + (++op)).item;
 const dayStart = ms => Math.floor(ms / DAY) * DAY;   // le harnais tourne en UTC
+const morning = TARGET === "cloudflare" ? 7 * HOUR : 0;
 const iso = ms => new Date(ms).toISOString().slice(0, 10);
 
 // ---- migration : effacement unique des anciennes données ----
@@ -22,32 +23,33 @@ ok(w.props.prog_leo__zootopia === 'nouveau', 'la remise à zéro ne se refait pa
 delete w.props.prog_leo__zootopia;
 
 // ---- sans contrôle : niveaux et intervalles 1, 3, 7, 14 jours ----
+w.advance(dayStart(w.now()) + 12 * HOUR - w.now());
 let t0 = w.now();
 let it = ans(ids[0], 'qcm', true, 's1');
-ok(it[0] === 1 && it[1] === dayStart(t0) + DAY && it[3] === 1, 'nouvelle question réussie en QCM : niveau 1 (Découverte), à revoir demain');
+ok(it[0] === 1 && it[1] === dayStart(t0) + DAY + morning && it[3] === 1, 'nouvelle question réussie en QCM : niveau 1 (Découverte), à revoir demain');
 it = ans(ids[0], 'rappel', true, 's1');
 ok(it[0] === 1, 'une 2e réponse dans la même séance ne fait pas monter le niveau');
 it = ans(ids[1], 'qcm', false, 's1');
 ok(it[0] === 0 && it[2] === 1, 'nouvelle question ratée : reste à 0, une erreur');
 it = ans(ids[1], 'qcm', true, 's1');
-ok(it[0] === 1 && it[2] === 1 && it[1] === dayStart(t0) + DAY, 'puis réussie dans la même séance (après correction) : niveau 1, à revoir demain');
+ok(it[0] === 1 && it[2] === 1 && it[1] === dayStart(t0) + DAY + morning, 'puis réussie dans la même séance (après correction) : niveau 1, à revoir demain');
 w.advance(DAY);
 it = ans(ids[0], 'rappel', true, 's2');
-ok(it[0] === 2 && it[1] === dayStart(w.now()) + 3 * DAY, 'le lendemain, rappel réussi : niveau 2 (Rappelée), dans 3 jours');
+ok(it[0] === 2 && it[1] === dayStart(w.now()) + 3 * DAY + morning, 'le lendemain, rappel réussi : niveau 2 (Rappelée), dans 3 jours');
 it = ans(ids[1], 'rappel', true, 's2', 'doute');
 ok(it[0] === 1, 'réussi mais « je crois savoir » : le niveau ne monte pas');
 it = ans(ids[2], 'qcm', true, 's2'); const before = it.slice();
 it = ans(ids[0], 'rappel', true, 's3');
 ok(it[0] === 2, 'séance « bonus » (question pas encore à revoir) : une réussite n\'avance pas le plan');
 w.advance(3 * DAY);
-it = ans(ids[0], 'rappel', true, 's4'); ok(it[0] === 3 && it[1] === dayStart(w.now()) + 7 * DAY, 'niveau 3 (Ancrée) : dans 7 jours');
+it = ans(ids[0], 'rappel', true, 's4'); ok(it[0] === 3 && it[1] === dayStart(w.now()) + 7 * DAY + morning, 'niveau 3 (Ancrée) : dans 7 jours');
 w.advance(7 * DAY);
-it = ans(ids[0], 'rappel', true, 's5'); ok(it[0] === 4 && it[1] === dayStart(w.now()) + 14 * DAY, 'niveau 4 (Maîtrisée) : dans 14 jours');
+it = ans(ids[0], 'rappel', true, 's5'); ok(it[0] === 4 && it[1] === dayStart(w.now()) + 14 * DAY + morning, 'niveau 4 (Maîtrisée) : dans 14 jours');
 w.advance(14 * DAY);
 it = ans(ids[0], 'qcm', true, 's6'); ok(it[0] === 4, 'un QCM ne fait pas monter au-delà (seul le rappel compte)');
 w.advance(14 * DAY);
 it = ans(ids[0], 'rappel', false, 's7', 'sur');
-ok(it[0] === 1 && it[1] === dayStart(w.now()) + DAY && it[4] === 1, 'erreur (même maîtrisée) : retour au niveau 1, demain ; erreur « sûre » comptée');
+ok(it[0] === 1 && it[1] === dayStart(w.now()) + DAY + morning && it[4] === 1, 'erreur (même maîtrisée) : retour au niveau 1, demain ; erreur « sûre » comptée');
 ok(w.run('answer', ...L, 'zootopia', ids[3], 'qcm', true, '', 's7', 'op' + op).rejoue, 'opération rejouée (même identifiant) : sans effet');
 
 // ---- contrôle dans une semaine : plan de séances ----
@@ -60,31 +62,31 @@ ok(JSON.stringify(r.plan.map(p => Math.round((dayStart(p) - today) / DAY))) === 
 r = w.run('setLessonPlan', ...L, 'zootopia', iso(today + 3 * DAY), true);
 ok(JSON.stringify(r.plan.map(p => Math.round((dayStart(p) - today) / DAY))) === '[0,1,2]', 'dans 3 jours : aujourd\'hui, demain, la veille');
 r = w.run('setLessonPlan', ...L, 'zootopia', iso(today + 2 * DAY), true);
-ok(JSON.stringify(r.plan.map(p => Math.round((dayStart(p) - today) / DAY))) === '[0,1,2]' && r.plan[2] === today + 2 * DAY, 'dans 2 jours : aujourd\'hui, demain, le matin du contrôle');
+ok(JSON.stringify(r.plan.map(p => Math.round((dayStart(p) - today) / DAY))) === '[0,1,2]' && r.plan[2] === today + 2 * DAY + morning, 'dans 2 jours : aujourd\'hui, demain, le matin du contrôle');
 r = w.run('setLessonPlan', ...L, 'zootopia', iso(today + 7 * DAY), true);
 it = ans(ids[0], 'qcm', true, 'p1');
-ok(it[1] === today + DAY, 'avec un plan : la question réussie revient à la séance suivante (demain)');
+ok(it[1] === today + DAY + morning, 'avec un plan : la question réussie revient à la séance suivante (demain)');
 w.advance(DAY);
-it = ans(ids[0], 'rappel', true, 'p2'); ok(it[0] === 2 && it[1] === today + 3 * DAY, 'demain réussie : revient à la séance J+3');
+it = ans(ids[0], 'rappel', true, 'p2'); ok(it[0] === 2 && it[1] === today + 3 * DAY + morning, 'demain réussie : revient à la séance J+3');
 w.advance(2 * DAY);
-it = ans(ids[0], 'rappel', true, 'p3'); ok(it[0] === 3 && it[1] === today + 6 * DAY, 'ancrée (niveau 3) : revient à la DERNIÈRE séance (la veille)');
-it = ans(ids[1], 'qcm', false, 'p3'); ok(it[1] === today + 6 * DAY, 'erreur : revient à la séance suivante');
+it = ans(ids[0], 'rappel', true, 'p3'); ok(it[0] === 3 && it[1] === today + 6 * DAY + morning, 'ancrée (niveau 3) : revient à la DERNIÈRE séance (la veille)');
+it = ans(ids[1], 'qcm', false, 'p3'); ok(it[1] === today + 6 * DAY + morning, 'erreur : revient à la séance suivante');
 w.advance(5 * DAY);   // jour du contrôle
-it = ans(ids[0], 'rappel', true, 'p4'); ok(it[0] === 4 && it[1] === dayStart(w.now()) + 14 * DAY, 'plus de séance prévue : rythme normal (14 jours)');
+it = ans(ids[0], 'rappel', true, 'p4'); ok(it[0] === 4 && it[1] === dayStart(w.now()) + 14 * DAY + morning, 'plus de séance prévue : rythme normal (14 jours)');
 
 // ---- contrôle demain : révision express ----
 w.run('resetProgress', PW, 'leo', 'zootopia');
 const noon = dayStart(w.now()) + 12 * HOUR; w.advance(noon - w.now());
 now = w.now(); today = dayStart(now);
 r = w.run('setLessonPlan', ...L, 'zootopia', iso(today + DAY), true);
-ok(r.plan.length === 3 && r.plan[0] === now && r.plan[1] === now + HOUR && r.plan[2] === today + DAY, 'contrôle demain (à midi) : maintenant, 1 h plus tard, le matin du contrôle');
+ok(r.plan.length === 3 && r.plan[0] === now && r.plan[1] === now + HOUR && r.plan[2] === today + DAY + morning, 'contrôle demain (à midi) : maintenant, 1 h plus tard, le matin du contrôle');
 it = ans(ids[0], 'qcm', true, 'x1'); ok(it[1] === now + HOUR, 'express : réussie, revient 1 h plus tard');
 it = ans(ids[1], 'qcm', false, 'x1'); ans(ids[1], 'qcm', true, 'x1'); ok(srs().it[ids[1]][1] === now + HOUR, 'express : ratée puis corrigée, revient aussi 1 h plus tard');
 w.advance(HOUR + MIN);
-it = ans(ids[0], 'rappel', true, 'x2'); ok(it[0] === 2 && it[1] === today + DAY, '1 h plus tard : rappel réussi, revient le matin du contrôle');
+it = ans(ids[0], 'rappel', true, 'x2'); ok(it[0] === 2 && it[1] === today + DAY + morning, '1 h plus tard : rappel réussi, revient le matin du contrôle');
 const late = dayStart(w.now()) + 23 * HOUR + 30 * MIN; w.advance(late - w.now());
 r = w.run('setLessonPlan', ...L, 'zootopia', iso(dayStart(w.now()) + DAY), true);
-ok(r.plan.length === 2 && r.plan[1] === dayStart(w.now()) + DAY, 'express commencé à 23 h 30 : maintenant et le matin du contrôle');
+ok(TARGET === 'cloudflare' ? r.plan.length === 1 && r.plan[0] === dayStart(w.now()) + DAY + morning : r.plan.length === 2 && r.plan[1] === dayStart(w.now()) + DAY, 'express configuré à 23 h 30 : prochain créneau le matin du contrôle');
 ok(w.try('setLessonPlan', ...L, 'zootopia', iso(dayStart(w.now()) - DAY), true).err === "Choisis une date entre aujourd'hui et dans un an.", 'date passée refusée');
 ok(w.try('setLessonPlan', ...L, 'zootopia', '2026-13-45', true).err === 'Date invalide.', 'date invalide refusée');
 r = w.run('setLessonPlan', ...L, 'zootopia', '', true);
@@ -117,7 +119,7 @@ ok(w.try('setLessonPlanAdmin', PW, 'emma', 'byzance', '').err === "Cette leçon 
 // ---- suivi parent ----
 const t = dayStart(w.now());
 const sum = w.run('setLessonPlanAdmin', PW, 'leo', 'zootopia', iso(t + DAY));
-ok(sum.exam === iso(t + DAY) && sum.plan.length >= 2 && srs().exam === iso(t + DAY), 'le parent fixe la date du contrôle : plan recalculé, vu par l\'élève');
+ok(sum.exam === iso(t + DAY) && sum.plan.length >= (TARGET === "cloudflare" ? 1 : 2) && srs().exam === iso(t + DAY), 'le parent fixe la date du contrôle : plan recalculé, vu par l\'élève');
 w.run('setLessonModeAdmin', PW, 'leo', 'zootopia', 'archive'); ok(srs().mode === 'archive', 'le parent peut archiver');
 const adm = w.run('adminData', PW).progress.leo.find(x => x.id === 'zootopia');
 ok(typeof adm.avancement === 'number' && adm.avancement === Math.round((adm.niveaux[1] + 2 * adm.niveaux[2] + 3 * (adm.niveaux[3] + adm.niveaux[4])) / 30 * 100), 'avancement de l\'apprentissage : ' + adm.avancement + ' %');

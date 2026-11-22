@@ -90,8 +90,7 @@ Enregistrement `it[idQuestion] = [niveau, échéance(ms), erreurs, réussites, e
 | 3 | ⭐ Ancrée | idem | J+7 |
 | 4 | 🏆 Maîtrisée | idem | J+14 (J+30 en mode entretien) |
 
-Intervalles : `INTERVAL_DAYS = [0, 1, 3, 7, 14]`, `MAINTENANCE_DAYS = 30`. Les échéances sont calées sur **minuit, heure de Paris**
-(`dayStart_`, fuseau `Europe/Paris` — à conserver).
+Intervalles : `INTERVAL_DAYS = [0, 1, 3, 7, 14]`, `MAINTENANCE_DAYS = 30`. Les échéances régulières commencent à **7 h, heure de Paris**, le jour prévu. Les séances de quiz sont proposées entre 7 h et 22 h. Une séance déjà commencée peut être terminée après 22 h.
 
 ### 4.3 Règles de réponse (`answer`)
 Paramètres : leçon, question, `stage` (`qcm` ou `rappel`), `ok` (juste du premier essai), `conf` (`sur` | `doute` | ''), `sid`
@@ -110,10 +109,10 @@ Paramètres : leçon, question, `stage` (`qcm` ou `rappel`), `ok` (juste du prem
 ### 4.4 Date du contrôle et plan de séances (`makePlan_`)
 Fixée par l'enfant à la 1re ouverture de la leçon (Demain, Après-demain, Dans une semaine, Pas de contrôle, ou une date), ou par le
 parent (suivi, ou étape 3 de la création IA). Bornes : d'aujourd'hui à 1 an.
-- **Contrôle demain = mode express** : maintenant, **+1 h**, et le **matin du contrôle** (si +1 h dépasse minuit : maintenant et le matin).
-- 2 jours : aujourd'hui, demain, le matin du contrôle. 3 jours : aujourd'hui, demain, la veille.
+- **Contrôle demain = mode express** : première séance pendant la fenêtre de révision, rappel à **+1 h** uniquement s’il tombe avant 22 h, puis dernier rappel **facultatif à partir de 7 h** le matin du contrôle.
+- 2 jours : aujourd'hui, demain à partir de 7 h, puis le rappel facultatif le matin du contrôle. 3 jours : aujourd'hui, demain, la veille.
 - Plus loin : aujourd'hui, demain, J+3, J+7, J+15… (`next = next × 2 + 1`) et **toujours la veille**.
-- Contrôle aujourd'hui : une séance maintenant.
+- Contrôle aujourd'hui : une séance pendant la fenêtre de révision, si celle-ci est encore ouverte aujourd’hui.
 - Avec un contrôle actif, `dueFor_` place la question à la **prochaine séance du plan** (en express : au moins 59 min plus tard,
   sinon un autre jour) ; une question **ancrée ou maîtrisée** saute à la **dernière** séance. S'il n'y a plus de séance : rythme normal.
 - Changer la date recalcule le plan et ramène les questions déjà travaillées à la prochaine séance.
