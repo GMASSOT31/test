@@ -205,7 +205,22 @@ var MAX_SESSIONS_KEPT = 30;
 
 function srsKey_(studentId, quizId) { return SRS_PREFIX + studentId + '__' + quizId; }
 function defaultSrs_() { return { v: 3, it: {}, exam: '', plan: [], tf: false, mode: 'actif', ses: [], maj: 0 }; }
-function readSrs_(raw) { var r = parseJson_(raw); return r && r.v === 3 ? r : defaultSrs_(); }
+function readSrs_(raw) {
+  var r = parseJson_(raw);
+  if (!r || r.v !== 3) return defaultSrs_();
+  // Reprend les anciens plans (minuit ou rappel nocturne) sans toucher aux niveaux ni à l’historique.
+  var times = new Map();
+  function normalize(ms) {
+    if (!times.has(ms)) times.set(ms, revisionTime_(ms));
+    return times.get(ms);
+  }
+  r.plan = Array.from(new Set((r.plan || []).map(normalize)));
+  Object.keys(r.it).forEach(function (id) {
+    var it = r.it[id];
+    if (it[1] > 0) it[1] = normalize(it[1]);
+  });
+  return r;
+}
 // Version envoyée aux pages : sans la séance en cours ni les identifiants d'opérations
 function presentSrs_(r) {
   return { it: r.it, exam: r.exam || '', plan: r.plan || [], tf: !!r.tf, cfg: !!r.cfg, mode: r.mode || 'actif', ses: (r.ses || []).slice(-MAX_SESSIONS_KEPT), syn: r.syn || {} };
@@ -248,35 +263,54 @@ function dateStart_(str) {
   return utc - tzOffsetMin_(utc) * MIN_MS;
 }
 
-// Plan de séances jusqu'au contrôle (instant de chaque séance). Contrôle demain : maintenant, +1 h, le matin du contrôle.
-// Sinon : aujourd'hui, demain, puis des écarts croissants (3, 7, 15 jours…) et toujours la veille du contrôle.
+// Jour civil représenté en UTC pour pouvoir lui ajouter des jours de calendrier,
+// puis conversion de 7 h ou 22 h avec le décalage du jour cible (heure d’été/hiver).
+function revisionDay_(ms) {
+  return Math.floor((ms + tzOffsetMin_(ms) * MIN_MS) / DAY_MS) * DAY_MS;
+}
+function revisionHour_(day, hour) {
+  var local = day + hour * 60 * MIN_MS;
+  return local - tzOffsetMin_(local) * MIN_MS;
+}
+function revisionTime_(ms) {
+  var day = revisionDay_(ms), morning = revisionHour_(day, 7);
+  if (ms < morning) return morning;
+  return ms < revisionHour_(day, 22) ? ms : revisionHour_(day + DAY_MS, 7);
+}
+
+// Plan de séances jusqu'au contrôle. Après 22 h, le prochain créneau commence à 7 h.
 function makePlan_(now, exam) {
-  var E = dateStart_(exam), today = dayStart_(now);
+  var E = dateStart_(exam), today = revisionDay_(now);
   if (!E) return [];
-  var d = Math.round((E - today) / DAY_MS);
-  if (d <= 0) return [now];
-  if (d === 1) return now + EXPRESS_GAP_MIN * MIN_MS < E ? [now, now + EXPRESS_GAP_MIN * MIN_MS, E] : [now, E];
+  var examDay = revisionDay_(E), d = (examDay - today) / DAY_MS;
+  var first = revisionTime_(now);
+  if (d <= 0) return revisionDay_(first) === today ? [first] : [];
+  if (d === 1) {
+    var morning = revisionHour_(examDay, 7), later = first + EXPRESS_GAP_MIN * MIN_MS;
+    if (first >= morning) return [morning];
+    return later < revisionHour_(today, 22) ? [first, later, morning] : [first, morning];
+  }
   var offsets = [0, 1], next = 3;
   while (next < d - 1) { offsets.push(next); next = next * 2 + 1; }
   if (offsets[offsets.length - 1] < d - 1) offsets.push(d - 1);
-  var plan = offsets.map(function (o) { return o === 0 ? now : today + o * DAY_MS; });
-  if (d === 2) plan.push(E);   // dernier coup d'œil le matin du contrôle
-  return plan;
+  var plan = offsets.map(function (o) { return o === 0 ? first : revisionHour_(today + o * DAY_MS, 7); });
+  if (d === 2) plan.push(revisionHour_(examDay, 7));
+  return Array.from(new Set(plan));
 }
 function isExpress_(r, now) {
   var E = dateStart_(r.exam);
-  return !!E && Math.round((E - dayStart_(now)) / DAY_MS) <= 1;
+  return !!E && (revisionDay_(E) - revisionDay_(now)) / DAY_MS <= 1;
 }
 // Prochaine séance du plan (au moins EXPRESS_GAP_MIN plus tard en express, sinon un autre jour), 0 s'il n'y en a plus
 function nextSlot_(r, now) {
   var express = isExpress_(r, now);
-  var min = express ? now + (EXPRESS_GAP_MIN - 1) * MIN_MS : dayStart_(now) + DAY_MS;
+  var min = express ? now + (EXPRESS_GAP_MIN - 1) * MIN_MS : revisionHour_(revisionDay_(now) + DAY_MS, 7);
   var plan = r.plan || [];
   for (var i = 0; i < plan.length; i++) if (plan[i] >= min) return plan[i];
   return 0;
 }
 function lastSlot_(r) { var p = r.plan || []; return p.length ? p[p.length - 1] : 0; }
-function examActive_(r, now) { var E = dateStart_(r.exam); return !!E && E + DAY_MS > now; }
+function examActive_(r, now) { var E = dateStart_(r.exam); return !!E && revisionDay_(E) >= revisionDay_(now); }
 
 // Échéance d'une question qui vient de passer au niveau lvl
 function dueFor_(r, lvl, now) {
@@ -287,7 +321,7 @@ function dueFor_(r, lvl, now) {
     // plus de séance prévue avant le contrôle : on revient au rythme normal
   }
   var days = lvl >= LEVEL_MAX && r.it && r.mode === 'entretien' ? MAINTENANCE_DAYS : INTERVAL_DAYS[Math.max(1, Math.min(lvl, LEVEL_MAX))];
-  return dayStart_(now) + days * DAY_MS;
+  return revisionHour_(revisionDay_(now) + days * DAY_MS, 7);
 }
 
 function seenOpSrs_(r, opId) { return !!opId && (r.ops || []).indexOf(String(opId)) >= 0; }
@@ -398,7 +432,7 @@ function applyPlan_(r, exam, testFirst, now) {
   if (exam) {
     var E = dateStart_(exam);
     if (!E) throw new Error('Date invalide.');
-    if (E < dayStart_(now) || E > now + 366 * DAY_MS) throw new Error('Choisis une date entre aujourd\'hui et dans un an.');
+    if (revisionDay_(E) < revisionDay_(now) || E > now + 366 * DAY_MS) throw new Error('Choisis une date entre aujourd\'hui et dans un an.');
   }
   r.exam = exam;
   r.plan = exam ? makePlan_(now, exam) : [];
@@ -407,7 +441,7 @@ function applyPlan_(r, exam, testFirst, now) {
   // les questions déjà travaillées suivent le nouveau plan : à revoir à la prochaine séance
   Object.keys(r.it).forEach(function (id) {
     var it = r.it[id];
-    if (it[0] > 0 && exam) it[1] = Math.min(it[1], nextSlot_(r, now) || r.plan[0] || now);
+    if (it[0] > 0 && exam) it[1] = Math.min(it[1], nextSlot_(r, now) || r.plan[0] || revisionTime_(now));
   });
 }
 
@@ -420,7 +454,7 @@ function applyMode_(r, mode, now) {
   r.mode = mode;
   if (mode !== 'actif') { r.exam = ''; r.plan = []; }
   if (mode === 'entretien') {
-    Object.keys(r.it).forEach(function (id) { var it = r.it[id]; if (it[0] > 0) it[1] = Math.max(it[1], dayStart_(now) + INTERVAL_DAYS[Math.min(it[0], LEVEL_MAX)] * DAY_MS); });
+    Object.keys(r.it).forEach(function (id) { var it = r.it[id]; if (it[0] > 0) it[1] = Math.max(it[1], revisionHour_(revisionDay_(now) + INTERVAL_DAYS[Math.min(it[0], LEVEL_MAX)] * DAY_MS, 7)); });
   }
 }
 
@@ -1124,13 +1158,14 @@ function lessonCard_(q, ids) {
 // questions difficiles, date du contrôle et plan, historique des séances.
 function lessonSummary_(quiz, r) {
   var now = Date.now();
+  var revisionOpen = revisionTime_(now) === now;
   var niveaux = [0, 0, 0, 0, 0], erreurs = 0, aReviser = 0, maj = r.maj || 0;
   var difficiles = [];
   quiz.questions.forEach(function (question) {
     var it = r.it[qid_(question)] || [0, 0, 0, 0, 0];
     niveaux[Math.min(it[0], LEVEL_MAX)]++;
     erreurs += it[2];
-    if (it[0] > 0 && it[1] <= now) aReviser++;
+    if (it[0] > 0 && it[1] <= now && revisionOpen) aReviser++;
     if (it[2] > 0) difficiles.push({ question: question.question, erreurs: it[2], sures: it[4], niveau: it[0] });
   });
   difficiles.sort(function (a, b) { return b.erreurs - a.erreurs || a.niveau - b.niveau; });
