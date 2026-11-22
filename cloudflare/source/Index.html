@@ -479,6 +479,15 @@
         .guest-focus .rv-banner, .guest-focus .sidebar, .guest-focus #whoami-name { display: none; }
         .guest-focus .whoami { padding: 0 14px; }
         .guest-focus .layout .content { width: 100%; max-width: 680px; margin: 0 auto; padding: 14px; }
+        .quiz-focus .rv-banner, .quiz-focus .sidebar, .quiz-focus #whoami-name, .quiz-focus #logout { display: none; }
+        .quiz-focus .whoami { padding: 0 12px; }
+        .quiz-focus .layout .content { display: flex; flex-direction: column; width: 100%; max-width: none; margin: 0; padding: 0; }
+        .quiz-focus .session { flex: 1; margin: 0; max-width: none; border-radius: 0; padding: 14px clamp(14px, 4vw, 48px); }
+        .memory-scene { margin: 14px 0; padding: 14px; border: 2px solid var(--line); border-radius: 14px; background: #f6f4ff; }
+        .memory-scene h4 { margin: 0 0 8px; color: var(--navy); }
+        .memory-scene p { margin: 6px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .memory-scene summary { cursor: pointer; font-weight: 800; color: var(--navy); min-height: 44px; display: flex; align-items: center; }
+        .memory-scene textarea { min-height: 90px; }
         .guest-welcome, .guest-loading { text-align: center; }
         .guest-loading { padding: 24px 14px; color: var(--navy); font-weight: 800; }
         .guest-welcome .emoji { display: block; font-size: 3rem; line-height: 1.2; }
@@ -682,6 +691,7 @@
             if (!v) return;
             const r = srsOf(quizId);
             if ((method === "answer" || method === "answerSynthese") && v.item) r.it[v.qid] = v.item;
+            else if (method === "saveMemoryCue" && v.cue) (r.memoryCues ||= {})[v.qid] = v.cue;
             else if (method === "endSession" && v.ses) r.ses = v.ses;
             else if ((method === "setLessonPlan" || method === "setLessonMode") && v.it) SRS[quizId] = v;
         }
@@ -958,6 +968,7 @@
             renderList();
         }
         function renderList() {
+            document.body.classList.remove("quiz-focus");
             stopQuizActivity();
             inQuiz = false;
             document.body.classList.remove("guest-focus");
@@ -1228,8 +1239,9 @@
             const tasks = buildTasks(opts);
             if (!tasks.length) { if (opts.quiz) openLesson(opts.quiz); else renderList(); return; }
             inQuiz = true;
+            document.body.classList.add("quiz-focus");
             S = { opts, tasks, i: 0, sid: newOp(), start: now(), seen: new Set(), firstOk: new Set(), done: new Set(), lessons: new Map(),
-                before: new Map(), back: opts.quiz ? () => openLesson(opts.quiz) : renderList };
+                before: new Map(), missed: new Set(), back: opts.quiz ? () => openLesson(opts.quiz) : renderList };
             tasks.forEach(t => { const k = key(t); if (!S.before.has(k)) S.before.set(k, levelOf(t.quiz, t.q)); S.lessons.set(t.quiz.id, t.quiz); });
             showTask();
         }
@@ -1247,7 +1259,7 @@
         }
         function showTask() {
             if (S.i >= S.tasks.length) return endSessionScreen();
-            if (guestSession) window.scrollTo(0, 0);
+            window.scrollTo(0, 0);
             const t = S.tasks[S.i];
             showQuizActivity(t.quiz.id);
             const [ico, label] = stageLabel(t);
@@ -1285,6 +1297,7 @@
         function quitSession() {
             if (S && S.seen.size) return endSessionScreen(true);
             stopQuizActivity();
+            document.body.classList.remove("quiz-focus");
             const quiz = S && S.opts.quiz;
             S = null;
             if (guestSession && quiz) openLesson(quiz); else renderList();
@@ -1293,6 +1306,8 @@
         function onAnswered(t, ok, conf, syn) {
             syncQuizActivity(true);
             const k = key(t), first = !S.seen.has(k);
+            const needsCue = !ok && !memoryCue(t) && (S.missed.has(k) || itemOf(t.quiz, t.q)[2] > 0);
+            if (!ok) S.missed.add(k);
             if (t.stage === "synthese") {
                 // autoévaluation : pas de nouvel essai dans la séance (le corrigé vient d'être lu) ; le calendrier la reprogramme
                 S.seen.add(k); S.done.add(k);
@@ -1300,7 +1315,7 @@
                 const it0 = itemOf(t.quiz, t.q);
                 if (first && ok && it0[0] === 0) srsOf(t.quiz.id).it[qid(t.q)] = [1, it0[1], it0[2], it0[3] + 1, it0[4]];
                 enqueue("answerSynthese", t.quiz.id, qid(t.q), syn.eval, syn.texte, S.sid);
-                return;
+                return needsCue;
             }
             S.seen.add(k);
             if (ok && first) S.firstOk.add(k);
@@ -1313,12 +1328,14 @@
             // mise à jour locale immédiate (le serveur confirme ensuite)
             if (first && ok && it[0] === 0) srsOf(t.quiz.id).it[qid(t.q)] = [1, it[1], it[2], it[3] + 1, it[4]];
             enqueue("answer", t.quiz.id, qid(t.q), t.stage === "qcm" ? "qcm" : "rappel", ok, conf || "", S.sid);
+            return needsCue;
         }
         function advance() { S.i++; showTask(); }
 
         // Fin de séance : bilan, enregistrement de l'historique, prochaine séance
         function endSessionScreen(stopped) {
             stopQuizActivity();
+            document.body.classList.remove("quiz-focus");
             const s = S; S = null;
             const dur = Math.round((now() - s.start) / 1000);
             const status = h("div", { class: "etape-msg", role: "status" }, "Enregistrement…");
@@ -1368,6 +1385,36 @@
         // ---------------- Affichage d'une question ----------------
         // stage 'qcm' : choix (QCM d'origine ; pour une réponse écrite, choix fabriqués avec les autres réponses de la leçon).
         // stage 'rappel' : sans choix (réponse écrite, champs, ou « QCM masqué » : réfléchir d'abord, puis voir les choix).
+        const memoryCue = t => srsOf(t.quiz.id).memoryCues?.[qid(t.q)];
+        function memorySceneForm(t, advance) {
+            const sceneId = "memory-scene-" + qid(t.q);
+            const instructions = "Choisis un lieu que tu connais. Pour chaque mot à retenir, imagine un objet ou une personne qui fait quelque chose. Décris ce que tu vois.";
+            const example = "Pour retenir « Saturne a des anneaux », imagine dans ta cuisine un ballon qui porte des bracelets géants.";
+            const input = h("textarea", { id: sceneId, class: "saisie", rows: "3", required: "", minlength: "12", maxlength: "500",
+                placeholder: "Dans ce lieu, je vois…", "aria-describedby": sceneId + "-help" });
+            const status = h("p", { role: "status" });
+            const save = h("button", { class: "btn", type: "submit" }, "Garder mon indice ➔");
+            return h("form", { class: "memory-scene", onsubmit: async event => {
+                event.preventDefault();
+                const form = event.currentTarget;
+                const text = input.value.trim();
+                if (text.length < 12) { status.textContent = "Ajoute quelques détails à ta scène."; return; }
+                save.disabled = true;
+                status.textContent = "Enregistrement…";
+                const result = await enqueue("saveMemoryCue", t.quiz.id, qid(t.q), text);
+                if (!form.isConnected) return;
+                if (result.ok) advance();
+                else { status.textContent = "Ton indice n’a pas été enregistré. Réessaie."; save.disabled = false; }
+            } },
+                readingControl("Écouter la consigne", () => ["Imagine une scène.", "À retenir.", answerOf(t.q), instructions, example]),
+                h("h4", { tabindex: "-1" }, "🧠 Imagine une scène"),
+                h("p", {}, h("strong", {}, "À retenir : "), answerOf(t.q)),
+                h("p", { id: sceneId + "-help" }, instructions),
+                h("p", { class: "hint-small" }, example),
+                h("label", { for: sceneId }, "Mon image"),
+                input, status, save);
+        }
+
         function renderQuestion(panel, t, done) {
             const q = t.q;
             const explication = q.explication ? h("div", { class: "explication", style: "display:none" }, q.explication) : null;
@@ -1390,7 +1437,7 @@
                     ok ? "Bonne réponse." : "La réponse attendue est :",
                     answerOf(q), q.explication
                 ], keepScreenForReading));
-                done(ok, conf, syn);
+                const needsCue = done(ok, conf, syn) === true;
                 const firstTry = ok && !t.retest && !syn;   // synthèse : pas de passage automatique (on relit le corrigé)
                 progressLine.textContent = syn
                     ? (syn.eval === "reussi" ? "🎉 Bravo ! Elle reviendra plus tard pour bien l'ancrer."
@@ -1403,6 +1450,12 @@
                             : t.stage === "qcm" ? "🌿 Découverte ! Elle reviendra sans choix." : `${LEVELS[Math.min(LEVEL_MAX, lvlBefore + (conf === "doute" ? 0 : 1))].ico} ${conf === "doute" ? "Juste, mais tu doutais : elle reviendra bientôt." : "Bravo, elle reviendra plus tard."}`;
                 progressLine.style.display = "block";
                 if (explication) explication.style.display = "block";
+                if (needsCue) {
+                    const form = memorySceneForm(t, go);
+                    next.before(form);
+                    form.querySelector("h4").focus();
+                    return;
+                }
                 next.style.display = "block";
                 next.focus();
                 if (firstTry && !readingUsed && window.revisionAutoNext !== false) {
@@ -1430,7 +1483,10 @@
                 const fields = [...body.querySelectorAll(".champ-label")].map(el => el.textContent);
                 return [q.question, ...options, ...fields];
             }, keepScreenForReading);
-            panel.append(...[audio, h("h3", { class: "question" }, questionContent(t.quiz.id, q)), body, progressLine, explication, next, autoBar].filter(Boolean));
+            const cue = memoryCue(t);
+            const hint = cue ? h("details", { class: "memory-scene" }, h("summary", {}, "💡 Mon indice"),
+                readingControl("Écouter mon indice", () => [cue]), h("p", {}, cue)) : null;
+            panel.append(...[audio, h("h3", { class: "question" }, questionContent(t.quiz.id, q)), hint, body, progressLine, explication, next, autoBar].filter(Boolean));
         }
 
         // Question de synthèse : l'enfant rédige, valide, découvre la réponse modèle et les éléments attendus (à cocher),
@@ -1844,6 +1900,7 @@
         function cleanError(err) { return String(err && err.message ? err.message : err).replace(/^Error:\s*/, ""); }
 
         function showLogin(message) {
+            document.body.classList.remove("quiz-focus");
             stopQuizActivity();
             me = null; guestSession = null; session = null; QUIZZES = []; FLASHCARDS = []; SRS = {}; S = null; inQuiz = false;
             content.replaceChildren();

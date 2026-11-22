@@ -114,6 +114,8 @@ L’onglet Enfants de l’administrateur principal affiche les séances visibles
 
 Les séances de quiz sont proposées de 7 h à 22 h, heure de Paris. Pour un contrôle le lendemain, le rappel à +1 h est omis s’il tombe à 22 h ou plus tard. Le rappel du matin est facultatif et commence à 7 h. Les anciens créneaux nocturnes sont normalisés à la lecture (suite 43).
 
+Pendant une séance, le lecteur masque la navigation et utilise toute la largeur. À la deuxième erreur sur une question, il demande une courte scène personnelle avant de continuer. `saveMemoryCue` enregistre l’indice dans la progression du quiz pour le relire à la demande. Voir la suite 44.
+
 ## 6. Versionné dans Git / configuré ailleurs
 - **Dans Git** : tout le code (`cloudflare/source`, `static`, `src/{worker,core,router,assets}.js`, `theme`, `build.cjs`,
   `wrangler.toml`, `package*.json`), les tests (`tests/`), la doc.
