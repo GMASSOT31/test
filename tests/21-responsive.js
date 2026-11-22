@@ -24,7 +24,7 @@ w.run('saveStudent', PW, { classe: '5B', pseudo: 'Léo', pin: '1234' }); w.run('
     const reachable = async (what, sel) => {
       await p.locator(sel).first().scrollIntoViewIfNeeded();
       const okk = await p.evaluate(sel => { const bar = document.querySelector('.sidebar').getBoundingClientRect(); const r = document.querySelector(sel).getBoundingClientRect();
-        if (innerWidth >= 700) return r.bottom <= innerHeight + 1;
+        if (!bar.height || innerWidth >= 700) return r.bottom <= innerHeight + 1;
         if (r.bottom > bar.top + 1) window.scrollBy(0, r.bottom - bar.top + 10);
         const r2 = document.querySelector(sel).getBoundingClientRect(); return r2.bottom <= bar.top + 1 && r2.top >= 0; }, sel);
       ok(okk, `${width}px · ${what} : atteignable, pas caché par la barre du bas`);

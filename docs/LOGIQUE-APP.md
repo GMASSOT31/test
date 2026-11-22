@@ -130,6 +130,8 @@ parent (suivi, ou étape 3 de la création IA). Bornes : d'aujourd'hui à 1 an.
 - **Révision du jour** (accueil) : les questions à revoir de **toutes** les leçons actives, les plus anciennes d'abord, 30 au plus, **mélangées**.
 - Passage automatique à la question suivante après une bonne réponse du premier coup (1 s, 1,8 s s'il y a une explication).
 
+Après deux erreurs sur une même question, une consigne invite l’élève à associer les mots à retenir à des éléments d’une scène familière. L’indice est enregistré sous `memoryCues[idQuestion]` dans la progression du quiz. Il s’affiche à la demande lors des rappels suivants et ne figure pas dans le suivi parent.
+
 ### 4.5 bis Questions de synthèse (QUIZy Cloudflare, depuis le 16/11/2026)
 - Type de question `{ id, question, synthese: true, modele, attendus:[2..5], explication? }` (10 au plus par leçon, en plus des
   60 questions). Générées par l'IA à la création (15 % du nombre de questions, arrondi au-dessus), modifiables dans l'éditeur.

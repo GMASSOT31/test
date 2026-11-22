@@ -223,7 +223,22 @@ function readSrs_(raw) {
 }
 // Version envoyée aux pages : sans la séance en cours ni les identifiants d'opérations
 function presentSrs_(r) {
-  return { it: r.it, exam: r.exam || '', plan: r.plan || [], tf: !!r.tf, cfg: !!r.cfg, mode: r.mode || 'actif', ses: (r.ses || []).slice(-MAX_SESSIONS_KEPT), syn: r.syn || {} };
+  var data = { it: r.it, exam: r.exam || '', plan: r.plan || [], tf: !!r.tf, cfg: !!r.cfg, mode: r.mode || 'actif', ses: (r.ses || []).slice(-MAX_SESSIONS_KEPT), syn: r.syn || {} };
+  if (r.memoryCues) data.memoryCues = r.memoryCues;
+  return data;
+}
+
+function saveMemoryCue(classe, pseudo, pin, quizId, questionId, text) {
+  return withSrs_(classe, pseudo, pin, quizId, function (r, quiz) {
+    if (!/^[0-9a-f]{8}$/.test(String(questionId)) || !quiz.questions.some(function (q) { return qid_(q) === questionId; })) {
+      throw new Error('Question inconnue.');
+    }
+    var cue = str_(text, 500);
+    if (cue.length < 12) throw new Error('Décris ta scène en quelques mots.');
+    if (!r.memoryCues) r.memoryCues = {};
+    r.memoryCues[questionId] = cue;
+    return { qid: questionId, cue: cue };
+  });
 }
 
 // Passage au parcours v3 : une seule fois, on efface les anciennes progressions, parcours et compteurs (décision du 8/11/2026).
