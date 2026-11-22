@@ -160,6 +160,9 @@
         .progress { display: flex; justify-content: space-between; font-size: .9rem; font-weight: 700; color: var(--muted); margin-bottom: 18px; }
         .progress .score { color: var(--violet); }
         .question { font-size: 1.35rem; font-weight: 800; color: var(--navy); text-align: center; margin: 0 0 22px; line-height: 1.35; }
+        .read-aloud { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-bottom: 6px; }
+        .read-aloud button { min-width: 44px; min-height: 44px; padding: 4px; margin: 0; }
+        .read-aloud-error { font-size: .85rem; color: var(--ink); }
         .options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .option {
             padding: 14px 16px;
@@ -718,6 +721,63 @@
                 alt: cards, width: "760", height: outs ? "420" : "510"
             })];
         }
+        // Lecture à la demande, avec la voix fournie par l’appareil.
+        let speech = null;
+        function stopReading() {
+            if (!speech) return;
+            const current = speech;
+            speech = null;
+            current.reset();
+            window.speechSynthesis.cancel();
+        }
+        new MutationObserver(() => {
+            if (speech && !speech.button.isConnected) stopReading();
+        }).observe(content, { childList: true, subtree: true });
+        document.addEventListener("visibilitychange", () => { if (document.hidden) stopReading(); });
+        window.addEventListener("pagehide", stopReading);
+
+        function readingControl(label, readText, onStart) {
+            if (!window.speechSynthesis || typeof window.SpeechSynthesisUtterance !== "function") return null;
+            const status = h("span", { class: "read-aloud-error", role: "status" });
+            const icon = h("span", { "aria-hidden": "true" }, "🔊");
+            const button = h("button", { class: "btn secondary", type: "button", "aria-label": label, title: label }, icon);
+            function reset() {
+                button.setAttribute("aria-label", label);
+                button.title = label;
+                icon.textContent = "🔊";
+            }
+            button.addEventListener("click", () => {
+                if (speech?.button === button) { stopReading(); return; }
+                stopReading();
+                status.textContent = "";
+                const parts = readText().filter(Boolean).map(text => text.trim()).filter(Boolean);
+                if (!parts.length) return;
+                const current = { button, reset, utterance: null };
+                speech = current;
+                icon.textContent = "⏹";
+                button.setAttribute("aria-label", "Arrêter la lecture");
+                button.title = "Arrêter la lecture";
+                if (onStart) onStart();
+                function nextPart() {
+                    if (speech !== current) return;
+                    const text = parts.shift();
+                    if (!text) { speech = null; reset(); return; }
+                    const utterance = new window.SpeechSynthesisUtterance(text);
+                    current.utterance = utterance;
+                    utterance.lang = "fr-FR";
+                    utterance.rate = .9;
+                    utterance.onend = nextPart;
+                    utterance.onerror = () => {
+                        if (speech !== current) return;
+                        stopReading();
+                        status.textContent = "La lecture audio est indisponible sur cet appareil.";
+                    };
+                    window.speechSynthesis.speak(utterance);
+                }
+                nextPart();
+            });
+            return h("div", { class: "read-aloud" }, status, button);
+        }
         // Mélange de Fisher-Yates sur une copie
         function shuffle(list) {
             const a = list.slice();
@@ -1159,6 +1219,7 @@
                 const nextBtn = h("button", { class: "btn", onclick: () => { S.i++; showTask(); } }, guestSession ? "Suivant ➔" : "J'ai lu, carte suivante ➔");
                 content.replaceChildren(h("div", { class: "panel session" }, head, bar, lessonName,
                     h("div", { class: "flashcard flipped learn" },
+                        readingControl("Écouter la carte", () => [t.q.question, answerOf(t.q), t.q.explication]),
                         h("div", { class: "face-label" }, "À retenir"),
                         h("div", { class: "face-text" }, questionContent(t.quiz.id, t.q)),
                         h("div", { class: "face-answer" }, answerOf(t.q)),
@@ -1260,11 +1321,21 @@
             const progressLine = h("div", { class: "mastery-line", style: "display:none" });
             const next = h("button", { class: "btn next-btn", style: "display:none", onclick: () => go() }, "Continuer ➔");
             const autoBar = h("div", { class: "auto-next", style: "display:none", "aria-hidden": "true" });
-            let advanced = false, timer = null, settled = false;
+            let advanced = false, timer = null, settled = false, readingUsed = false;
             const go = () => { if (advanced) return; advanced = true; clearTimeout(timer); advance(); };
+            function keepScreenForReading() {
+                readingUsed = true;
+                clearTimeout(timer);
+                autoBar.style.display = "none";
+            }
             function settle(ok, conf, syn) {
                 if (settled) return;
+                stopReading();
                 settled = true;
+                if (audio) audio.replaceWith(readingControl("Écouter la correction", () => [
+                    ok ? "Bonne réponse." : "La réponse attendue est :",
+                    answerOf(q), q.explication
+                ], keepScreenForReading));
                 done(ok, conf, syn);
                 const firstTry = ok && !t.retest && !syn;   // synthèse : pas de passage automatique (on relit le corrigé)
                 progressLine.textContent = syn
@@ -1280,7 +1351,7 @@
                 if (explication) explication.style.display = "block";
                 next.style.display = "block";
                 next.focus();
-                if (firstTry && window.revisionAutoNext !== false) {
+                if (firstTry && !readingUsed && window.revisionAutoNext !== false) {
                     const delay = explication ? 1800 : 1000;
                     autoBar.style.animationDuration = delay + "ms";
                     autoBar.style.display = "block";
@@ -1297,7 +1368,15 @@
             } else if (t.stage === "qcm") body = choiceBody(q, shuffle(q.options.map((text, i) => ({ text, ok: i === q.correct }))), settle);
             else if (Array.isArray(q.rappel) && q.rappel.length) body = typedBody(q, q.rappel, settle, q.options[q.correct]);
             else body = maskedBody(q, harderOptions(t.quiz, q), settle);
-            panel.append(...[h("h3", { class: "question" }, questionContent(t.quiz.id, q)), body, progressLine, explication, next, autoBar].filter(Boolean));
+            const audio = readingControl("Écouter la question", () => {
+                if (q.synthese && body.querySelector(".syn-corrige")) {
+                    return [q.question, "Réponse modèle.", q.modele, "Éléments attendus.", ...q.attendus];
+                }
+                const options = [...body.querySelectorAll(".option")].map((el, i) => `Proposition ${i + 1}. ${el.textContent}`);
+                const fields = [...body.querySelectorAll(".champ-label")].map(el => el.textContent);
+                return [q.question, ...options, ...fields];
+            }, keepScreenForReading);
+            panel.append(...[audio, h("h3", { class: "question" }, questionContent(t.quiz.id, q)), body, progressLine, explication, next, autoBar].filter(Boolean));
         }
 
         // Question de synthèse : l'enfant rédige, valide, découvre la réponse modèle et les éléments attendus (à cocher),
@@ -1604,6 +1683,7 @@
                     const flip = () => { flipped = true; draw(); };
                     const front = c.question ? questionContent(c.quizId, c.question) : c.recto;
                     stage.replaceChildren(
+                        ...[readingControl("Écouter la carte", () => [c.recto])].filter(Boolean),
                         h("button", { class: "flashcard", "aria-label": Array.isArray(front) ? c.recto + " Voir la réponse" : "Voir la réponse", onclick: flip },
                             h("div", { class: "face-label" }, "Question"),
                             h("div", { class: "face-text" }, front),
@@ -1620,6 +1700,7 @@
                     h("button", { class: "btn eval-btn hesite", onclick: choose("hesite") }, "🤔 Hésité"),
                     h("button", { class: "btn eval-btn trouve", onclick: choose("trouve") }, "✅ Trouvé"));
                 stage.replaceChildren(
+                    ...[readingControl("Écouter la réponse", () => [c.verso, c.explication])].filter(Boolean),
                     h("div", { class: "flashcard flipped", role: "group", "aria-label": "Réponse" },
                         h("div", { class: "face-label" }, "Réponse"),
                         h("div", { class: "face-text" }, c.verso),
