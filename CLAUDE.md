@@ -112,9 +112,9 @@ Dans l’onglet Leçons, l’administrateur crée des disciplines et classe les 
 
 L’onglet Enfants de l’administrateur principal affiche les séances visibles de ses enfants. La page élève envoie un signal au début, toutes les 35 secondes et après une réponse. Le cache « quiz-visible » expire après 75 secondes et le tableau se rafraîchit toutes les 25 secondes. Les comptes invités sont exclus et aucun historique de ce signal n’est exporté. Voir la suite 41.
 
-Les séances de quiz sont proposées de 7 h à 22 h, heure de Paris. Pour un contrôle le lendemain, le rappel à +1 h est omis s’il tombe à 22 h ou plus tard. Le rappel du matin est facultatif et commence à 7 h. Les anciens créneaux nocturnes sont normalisés à la lecture (suite 43).
+Les rappels sont programmés entre 7 h et 22 h, heure de Paris. L’élève peut commencer une séance à toute heure. Pour un contrôle le lendemain, le rappel à +1 h est omis s’il tombe à 22 h ou plus tard. Le rappel du matin est facultatif et commence à 7 h. Les anciens créneaux nocturnes sont normalisés à la lecture (suite 43).
 
-Pendant une séance, le lecteur masque la navigation et utilise toute la largeur. À la deuxième erreur sur une question, il demande une courte scène personnelle avant de continuer. `saveMemoryCue` enregistre l’indice dans la progression du quiz pour le relire à la demande. Voir la suite 44.
+Dès l’ouverture d’une leçon, le lecteur masque la navigation et utilise toute la largeur, y compris pendant la configuration et la séance. À la deuxième erreur sur une question, il demande une courte scène personnelle avant de continuer. `saveMemoryCue` enregistre l’indice dans la progression du quiz pour le relire à la demande. Voir la suite 44.
 
 ## 6. Versionné dans Git / configuré ailleurs
 - **Dans Git** : tout le code (`cloudflare/source`, `static`, `src/{worker,core,router,assets}.js`, `theme`, `build.cjs`,

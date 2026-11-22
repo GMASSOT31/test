@@ -49,9 +49,12 @@ const { makeWorldCf, install, login, LEO, PW, page, finishSession, ok, summary }
     for (const time of [t('2026-11-22T21:00:00Z'), t('2026-11-22T23:00:00Z')]) {
       await reload(time);
       await p.locator('.card.lecon').click();
-      ok(await p.getByText(/Les séances sont proposées de 7 h à 22 h/).isVisible() &&
-        await p.locator('.lesson-screen .session-start').count() === 0,
-      'aucune séance proposée à ' + new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit' }).format(time));
+      const startButton = p.getByRole('button', { name: 'Séance bonus', exact: false });
+      await startButton.click();
+      ok(await p.locator('.session-head').isVisible() && srs().it[question][1] === morning,
+        'séance volontaire possible à ' + new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit' }).format(time) +
+        ', sans avancer le rappel de 7 h');
+      await p.locator('.session-head .back').click();
     }
     await reload(morning);
     ok(await p.getByText('Ta révision du jour').isVisible(), 'à 7 h, la révision du matin redevient disponible');

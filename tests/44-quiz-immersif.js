@@ -1,6 +1,6 @@
 // cible: cloudflare
 const { chromium } = require('playwright');
-const { makeWorld, install, login, LEO, PW, page, startLesson, ok, summary } = require('./harness');
+const { makeWorld, install, login, LEO, PW, page, ok, summary } = require('./harness');
 
 (async () => {
   const w = makeWorld();
@@ -20,14 +20,19 @@ const { makeWorld, install, login, LEO, PW, page, startLesson, ok, summary } = r
     const student = await ctx.newPage();
     await student.goto(page('Index.html'));
     await login(student, LEO);
-    await startLesson(student, 'Repère de mémoire', { tf: true });
-    const fitsScreen = async width => {
+    const fitsScreen = async (width, screen) => {
       await student.setViewportSize({ width, height: 720 });
-      const bounds = await student.locator('.session').boundingBox();
+      const bounds = await student.locator(screen).boundingBox();
       return Math.round(bounds.x) === 0 && Math.round(bounds.width) === width &&
         await student.locator('.rv-banner').isHidden() && await student.locator('.sidebar').isHidden();
     };
-    ok(await fitsScreen(360) && await fitsScreen(900), 'la séance occupe toute la largeur sur téléphone et tablette');
+    await student.locator('.card.lecon').click();
+    ok(await fitsScreen(360, '.setup') && await fitsScreen(900, '.setup'), 'la première ouverture masque déjà les bandeaux sur téléphone et tablette');
+    await student.getByRole('button', { name: 'Pas de contrôle prévu' }).click();
+    await student.getByRole('button', { name: /Oui, je l.ai déjà travaillée/ }).click();
+    await student.locator('.setup .big-btn').click();
+    await student.locator('.session').waitFor();
+    ok(await fitsScreen(360, '.session') && await fitsScreen(900, '.session'), 'la séance occupe toute la largeur sur téléphone et tablette');
     await student.getByRole('button', { name: 'Mars', exact: true }).click();
     ok(await student.locator('.next-btn').isVisible(), 'la première erreur garde le parcours habituel');
     await student.locator('.next-btn').click();
@@ -47,6 +52,10 @@ const { makeWorld, install, login, LEO, PW, page, startLesson, ok, summary } = r
     ok(await hint.getByText(cue, { exact: true }).isVisible(), 'la scène personnelle réapparaît à la question suivante');
     await student.getByRole('button', { name: 'Arrêter', exact: false }).click();
     ok(await student.locator('.rv-banner').isVisible() && await student.locator('.sidebar').isVisible(), 'le bilan rétablit la navigation');
+    await student.getByRole('button', { name: 'Voir la leçon', exact: true }).click();
+    ok(await fitsScreen(900, '.lesson-screen'), 'une leçon déjà configurée masque aussi les bandeaux dès l’ouverture');
+    await student.getByRole('button', { name: 'Retour aux leçons', exact: false }).click();
+    ok(await student.locator('.sidebar').isVisible(), 'quitter la leçon rétablit la navigation');
     const stored = w.run('getStudentData', ...creds).srs[id];
     ok(stored.memoryCues[qid] === cue && stored.it[qid][2] === 1, 'l’indice est conservé séparément du compteur de progression');
     ok(!JSON.stringify(w.run('adminData', owner).progress).includes(cue), 'la description ne figure pas dans le suivi parent');
