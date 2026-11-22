@@ -1855,6 +1855,13 @@
         const hasServer = !!(window.google && google.script && google.script.run);
         const $ = id => document.getElementById(id);
         let me = null, guestSession = null;
+        let loginRequest = 0;
+
+        function resetLoginRequest() {
+            loginRequest++;
+            $("login-btn").disabled = false;
+            $("login-btn").textContent = "Entrer 🚀";
+        }
 
         function guestInvitationPanel() {
             const panel = h("section", { class: "etape-intro" },
@@ -1910,12 +1917,14 @@
             $("login").hidden = false;
             $("login-error").textContent = message || "";
             $("login-pin").value = "";
-            $("login-btn").disabled = false;
+            resetLoginRequest();
             try { sessionStorage.removeItem(SESSION_KEY); } catch (e) { /* ignoré */ }
             updateCounts();
         }
 
         function enterApp(data, creds) {
+            resetLoginRequest();
+            $("login-pin").value = "";
             me = data.student;
             guestSession = data.guest || null;
             QUIZZES = data.quizzes;
@@ -1940,24 +1949,47 @@
             if (window.QuizyInstallation && !guestSession) window.QuizyInstallation.proposer();
         }
 
-        function connect(creds, silent) {
+        function connect(creds, silent, manual = false) {
             if (!hasServer) { showLogin("La connexion n'est disponible que depuis le script déployé."); return; }
             if (creds.classe === "@invitation") {
                 document.body.classList.add("guest-focus");
                 $("login").hidden = true;
                 $("guest-loading").hidden = false;
             }
+            const request = ++loginRequest;
             $("login-btn").disabled = true;
-            google.script.run
-                .withSuccessHandler(data => enterApp(data, creds))
-                .withFailureHandler(err => { const m = cleanError(err); showLogin(silent ? "" : m); if (!silent) echecProfil(m); })
-                .getStudentData(creds.classe, creds.pseudo, creds.pin);
+            $("login-btn").textContent = "Connexion…";
+            function attempt(n) {
+                if (request !== loginRequest) return;
+                google.script.run
+                    .withSuccessHandler(data => { if (request === loginRequest) enterApp(data, creds); })
+                    .withFailureHandler(err => {
+                        if (request !== loginRequest) return;
+                        const message = cleanError(err);
+                        const transient = /^NetworkError:|^Serveur temporairement indisponible \(50[234]\)\./.test(message);
+                        if (transient && n < 3) {
+                            setTimeout(() => attempt(n + 1), n * 500);
+                            return;
+                        }
+                        if (transient && manual) {
+                            resetLoginRequest();
+                            $("login-error").textContent = "Connexion interrompue. Tu peux réessayer sans ressaisir ton PIN.";
+                            return;
+                        }
+                        showLogin(silent ? "" : message);
+                        if (!silent && !transient) echecProfil(message);
+                    })
+                    .getStudentData(creds.classe, creds.pseudo, creds.pin);
+            }
+            attempt(1);
         }
 
         $("login-form").addEventListener("submit", e => {
             e.preventDefault();
+            if ($("login-btn").disabled) return;
             $("login-error").textContent = "";
-            connect({ classe: $("login-classe").value, pseudo: $("login-pseudo").value, pin: $("login-pin").value }, false);
+            $("login-profil-retrait").hidden = true;
+            connect({ classe: $("login-classe").value, pseudo: $("login-pseudo").value, pin: $("login-pin").value }, false, true);
         });
         $("logout").addEventListener("click", () => { formulaireComplet(false); showLogin(""); });
 
@@ -1967,6 +1999,7 @@
         const PROFILS = window.QuizyProfils && window.QuizyProfils.actif() ? window.QuizyProfils : null;
         let profilChoisi = null;
         function afficherQuiEsTu() {
+            resetLoginRequest();
             if (!PROFILS || !PROFILS.lire().length) { formulaireComplet(false); return; }
             profilChoisi = null;
             $("login-form").hidden = true; $("login-profil-retrait").hidden = true;
@@ -1980,6 +2013,7 @@
             const premier = $("who").querySelector(".qp-profil"); if (premier) premier.focus();
         }
         function utiliserProfil(p) {
+            resetLoginRequest();
             profilChoisi = p;
             $("who").hidden = true; $("login-form").hidden = false;
             $("login-classe").value = p.classe; $("login-pseudo").value = p.pseudo; $("login-pin").value = "";
