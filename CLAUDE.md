@@ -109,6 +109,8 @@ Fonctions client dans `cloudflare/source/Index.html` (élève) et `cloudflare/so
 
 Dans l’onglet Leçons, l’administrateur crée des disciplines et classe les éléments via « Gérer ». Les quatre rubriques restent distinctes. Un bouton crayon permet de renommer une discipline en conservant son classement. Les fonctions `createLessonDiscipline`, `renameLessonDiscipline` et `classifyLesson` enregistrent ce classement séparément et `adminData` le renvoie uniquement à l’administrateur principal. Le classement est inclus dans la sauvegarde. Voir la suite 39.
 
+L’onglet Enfants de l’administrateur principal affiche les séances visibles de ses enfants. La page élève envoie un signal au début, toutes les 35 secondes et après une réponse. Le cache « quiz-visible » expire après 75 secondes et le tableau se rafraîchit toutes les 25 secondes. Les comptes invités sont exclus et aucun historique de ce signal n’est exporté. Voir la suite 41.
+
 ## 6. Versionné dans Git / configuré ailleurs
 - **Dans Git** : tout le code (`cloudflare/source`, `static`, `src/{worker,core,router,assets}.js`, `theme`, `build.cjs`,
   `wrangler.toml`, `package*.json`), les tests (`tests/`), la doc.
