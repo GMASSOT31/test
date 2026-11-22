@@ -11,6 +11,9 @@ export function serveAsset(request, FILES) {
   const f = Object.prototype.hasOwnProperty.call(FILES, p) ? FILES[p] : null;
   if (!f) return new Response('Page introuvable', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
   let body = f.body;
+  if (p === '/index.html' && url.searchParams.get('invitation') === '1') {
+    body = body.replace(/<!-- apercu-partage -->[\s\S]*?<!-- fin-apercu-partage -->/, () => f.invitationPreview);
+  }
   if (!f.text) { if (!bin.has(p)) bin.set(p, Uint8Array.from(atob(f.body), c => c.charCodeAt(0))); body = bin.get(p); }
   const headers = { 'content-type': f.type, 'cache-control': f.type.startsWith('image/') ? 'public, max-age=86400' : 'no-cache', 'x-content-type-options': 'nosniff' };
   return new Response(request.method === 'HEAD' ? null : body, { headers });

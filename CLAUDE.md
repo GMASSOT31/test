@@ -83,6 +83,7 @@ morcelées `~0, ~1…`), `override_<id>` (leçon intégrée modifiée ; originau
 - Élève invité : lien à durée limitée, vérifié à chaque accès au serveur. Il donne accès à une seule leçon et à sa progression.
   Lien `/#quiz=<id>.<secret>` (id = `invite-<32 hex>`, secret = 32 hex) → `connect({ classe: '@invitation', pseudo: id, pin: secret })` (`Index.html`) →
   `authStudent_` reconnaît `@invitation` via `guestById_` (empreinte + expiration). Lien parent : `/parents#invitation=<code>`.
+  Les nouveaux liens ajoutent `?invitation=1` pour sélectionner la vignette « À toi de jouer ! » ; le fragment reste côté navigateur. Sans ce paramètre, la page sert la vignette générale « Révise en jouant ! ».
 - Parent / administrateur : `checkAdmin_(cred)` → `{owner, fam, pseudo, famille}` ; 8 erreurs → blocage 5 min.
 - Cloisonnement par famille : `familyStudents_`, `ownedBy_`, `visibleQuiz_`, `visibleBuiltin_`, `shares_`.
 - Administrateur principal seulement : `ownerOnly_` (leçons intégrées, code d'invitation, familles, export).

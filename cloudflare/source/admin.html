@@ -2009,7 +2009,7 @@
                 status.textContent = "Création du lien…";
                 try {
                     const invitation = await server("createQuizInvitation", pw(), kind, id, pseudo.value, exam.value);
-                    const url = location.origin + "/#quiz=" + invitation.link;
+                    const url = location.origin + "/?invitation=1#quiz=" + invitation.link;
                     const text = "Voici ton quiz QUIZy pour réviser « " + titre + " ». Ouvre le lien pour commencer.";
                     const link = h("input", { type: "url", readonly: "", "aria-label": "Lien du quiz invité" });
                     link.value = url;
