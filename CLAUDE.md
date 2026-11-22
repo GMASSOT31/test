@@ -83,6 +83,7 @@ morcelées `~0, ~1…`), `override_<id>` (leçon intégrée modifiée ; originau
 - Élève invité : lien à durée limitée, vérifié à chaque accès au serveur. Il donne accès à une seule leçon et à sa progression.
   Lien `/#quiz=<id>.<secret>` (id = `invite-<32 hex>`, secret = 32 hex) → `connect({ classe: '@invitation', pseudo: id, pin: secret })` (`Index.html`) →
   `authStudent_` reconnaît `@invitation` via `guestById_` (empreinte + expiration). Lien parent : `/parents#invitation=<code>`.
+  Les nouveaux liens ajoutent `?invitation=1` pour sélectionner la vignette « À toi de jouer ! » ; le fragment reste côté navigateur. Sans ce paramètre, la page sert la vignette générale « Révise en jouant ! ».
 - Parent / administrateur : `checkAdmin_(cred)` → `{owner, fam, pseudo, famille}` ; 8 erreurs → blocage 5 min.
 - Cloisonnement par famille : `familyStudents_`, `ownedBy_`, `visibleQuiz_`, `visibleBuiltin_`, `shares_`.
 - Administrateur principal seulement : `ownerOnly_` (leçons intégrées, code d'invitation, familles, export).
@@ -108,6 +109,8 @@ Fonctions client dans `cloudflare/source/Index.html` (élève) et `cloudflare/so
 ⚠️ **Import** (`/setup/import`) **remplace toutes les données** : jamais en production sans accord explicite.
 
 Dans l’onglet Leçons, l’administrateur crée des disciplines et classe les éléments via « Gérer ». Les quatre rubriques restent distinctes. Un bouton crayon permet de renommer une discipline en conservant son classement. Les fonctions `createLessonDiscipline`, `renameLessonDiscipline` et `classifyLesson` enregistrent ce classement séparément et `adminData` le renvoie uniquement à l’administrateur principal. Le classement est inclus dans la sauvegarde. Voir la suite 39.
+
+L’onglet Enfants de l’administrateur principal affiche les séances visibles de ses enfants. La page élève envoie un signal au début, toutes les 35 secondes et après une réponse. Le cache « quiz-visible » expire après 75 secondes et le tableau se rafraîchit toutes les 25 secondes. Les comptes invités sont exclus et aucun historique de ce signal n’est exporté. Voir la suite 41.
 
 ## 6. Versionné dans Git / configuré ailleurs
 - **Dans Git** : tout le code (`cloudflare/source`, `static`, `src/{worker,core,router,assets}.js`, `theme`, `build.cjs`,

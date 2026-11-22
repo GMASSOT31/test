@@ -42,6 +42,8 @@ en morceaux `<clé>~0, <clé>~1…` avec une tête `{ _chunks, id, ajoute }`).
 | `ADMIN_PASS_HASH` | `sel:hash` quand l'admin a changé son mot de passe depuis l'appli (`ADMIN_PASSWORD` est alors retiré) |
 | `INVITE_CODE` | code d'invitation `XXXX-XXXX` (absent = inscriptions fermées) |
 
+Le cache temporaire `quiz-visible|<idÉlève>` porte le quiz visible, le dernier signal et la dernière réponse signalée. Il expire après 75 secondes, reste limité à l’administrateur principal pour ses propres enfants et ne figure pas dans les exports.
+
 **Famille** : champ `fam` = id du parent invité ; absent = famille de l'administrateur principal.
 Les identifiants (`id`) sont des « slugs » du pseudo / titre, rendus uniques (`leo`, `leo-2`…).
 

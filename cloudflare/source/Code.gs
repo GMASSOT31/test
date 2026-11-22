@@ -74,6 +74,7 @@ var CHUNK_CHARS = 3000;     // taille d'un morceau (3 octets au pire par caract�
 var MAX_ITEM_CHARS = 250000; // plafond de sécurité pour un quiz ou un paquet
 var MAX_PIN_FAILS = 5;      // erreurs de PIN avant blocage temporaire
 var LOCK_SECONDS = 300;     // durée du blocage (5 minutes)
+var QUIZ_ACTIVITY_SECONDS = 75;
 
 // ---------------- Côté élève ----------------
 
@@ -95,6 +96,38 @@ function getStudentData(classe, pseudo, pin) {
   };
   if (st.quiz) data.guest = { parentCode: st.parentUsed ? '' : guestParentCode_(st.id, pin), helpful: st.helpful };
   return data;
+}
+
+// Signal éphémère d’une séance visible. Le cache ne fait pas partie des sauvegardes.
+function reportQuizActivity(classe, pseudo, pin, sid, quizId, answered) {
+  if (!/^[a-z0-9]{8,40}$/.test(String(sid))) throw new Error('Séance invalide.');
+  var st = authStudent_(classe, pseudo, pin);
+  if (st.quiz) return false;
+  var cache = CacheService.getScriptCache();
+  var key = 'quiz-visible|' + st.id;
+  var previous = parseJson_(cache.get(key));
+  if (quizId === '') {
+    if (previous && previous.sid === sid) cache.remove(key);
+    return true;
+  }
+  var quiz = quizzesOf_(st.id).find(function (q) { return q.id === quizId; });
+  if (!quiz) throw new Error('Quiz inaccessible.');
+  var time = Date.now();
+  var lastAnswer = previous && previous.sid === sid && previous.quizId === quizId ? previous.lastAnswer : null;
+  cache.put(key, JSON.stringify({ sid: sid, quizId: quizId, titre: quiz.titre, seenAt: time,
+    lastAnswer: answered === true ? time : lastAnswer }), QUIZ_ACTIVITY_SECONDS);
+  return true;
+}
+
+function getQuizActivity(cred) {
+  var me = ownerOnly_(cred);
+  var cache = CacheService.getScriptCache();
+  var active = {};
+  familyStudents_(me).forEach(function (st) {
+    var seen = parseJson_(cache.get('quiz-visible|' + st.id));
+    if (seen) active[st.id] = { titre: seen.titre, seenAt: seen.seenAt, lastAnswer: seen.lastAnswer };
+  });
+  return active;
 }
 
 // Invitations à une seule leçon, indépendantes des comptes élèves et des attributions ordinaires.
@@ -942,6 +975,7 @@ function checkOwned_(prefix, id, me) {
 function deleteStudentCore_(id) {
   var store = PropertiesService.getScriptProperties();
   store.deleteProperty(STUDENT_PREFIX + id);
+  CacheService.getScriptCache().remove('quiz-visible|' + id);
   deleteProgress_(id, 'all');
   var assigned = builtinAssign_();
   Object.keys(assigned).forEach(function (k) { assigned[k] = assigned[k].filter(function (x) { return x !== id; }); });

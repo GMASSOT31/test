@@ -201,6 +201,8 @@
         .discipline-group .builtin { margin-inline: 4px; }
         .discipline-count { margin-inline-start: 8px; color: var(--muted); }
         .discipline-picker { margin-bottom: 12px; }
+        .kid-activity { display: block; margin-top: 4px; color: var(--muted); font-size: .82rem; overflow-wrap: anywhere; }
+        .kid-activity.active { color: #07603b; font-weight: 800; }
         .discipline-heading { position: relative; }
         .discipline-heading summary { padding-inline-end: 56px; }
         .discipline-entry { display: flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
@@ -1077,6 +1079,7 @@
             const nav = tab in NAV_OF ? NAV_OF[tab] : tab;
             NAV.forEach(t => $("tab-" + t).setAttribute("aria-selected", String(t === nav)));
             window.scrollTo({ top: 0 });
+            if (tab === "programmes") refreshQuizActivity();
         }
 
         // ---------- déverrouillage et chargement ----------
@@ -1112,6 +1115,7 @@
             openDisciplines.clear();
             $("discipline-tools").open = false;
             $("discipline-form").reset();
+            activeQuizzes = null;
             DATA = { moi: { owner: false, pseudo: "" }, students: [], quizzes: [], decks: [], builtins: [], progress: {}, now: Date.now() };
             renderAll();
             $("admin-area").hidden = true;
@@ -2005,7 +2009,7 @@
                 status.textContent = "Création du lien…";
                 try {
                     const invitation = await server("createQuizInvitation", pw(), kind, id, pseudo.value, exam.value);
-                    const url = location.origin + "/#quiz=" + invitation.link;
+                    const url = location.origin + "/?invitation=1#quiz=" + invitation.link;
                     const text = "Voici ton quiz QUIZy pour réviser « " + titre + " ». Ouvre le lien pour commencer.";
                     const link = h("input", { type: "url", readonly: "", "aria-label": "Lien du quiz invité" });
                     link.value = url;
@@ -2333,7 +2337,38 @@
             renderGuide();
             const kids = DATA.students.slice().sort((a, b) => a.pseudo.localeCompare(b.pseudo, "fr", { sensitivity: "base" }));
             $("prog-list").replaceChildren(...kids.map((s, i) => studentCard(s, i)));
+            paintQuizActivity();
         }
+
+        let activeQuizzes = null, loadingQuizActivity = false;
+        function paintQuizActivity() {
+            $("prog-list").querySelectorAll(".kid-activity").forEach(status => {
+                const active = activeQuizzes?.[status.closest("[data-student]").dataset.student];
+                status.hidden = activeQuizzes === null;
+                status.classList.toggle("active", !!active);
+                status.textContent = active
+                    ? "🟢 Quiz ouvert : " + active.titre + " · " +
+                        (active.lastAnswer ? "réponse à " + activityTime(active.lastAnswer) : "signal à " + activityTime(active.seenAt))
+                    : "Aucun quiz détecté";
+            });
+        }
+        const activityTime = time => new Intl.DateTimeFormat("fr-FR", {
+            hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris"
+        }).format(time);
+        async function refreshQuizActivity() {
+            if (document.hidden || $("admin-area").hidden || $("pane-programmes").hidden || !DATA?.moi?.owner || loadingQuizActivity) return;
+            const current = DATA;
+            loadingQuizActivity = true;
+            try {
+                const active = await server("getQuizActivity", pw());
+                if (DATA === current) { activeQuizzes = active; paintQuizActivity(); }
+            } catch (error) {
+                if (DATA === current) { activeQuizzes = null; paintQuizActivity(); }
+            } finally {
+                loadingQuizActivity = false;
+            }
+        }
+        setInterval(refreshQuizActivity, 25000);
         // ACCORDÉON : un enfant = une ligne (initiale, nom, nombre de leçons, prochain contrôle, %) ; on la touche pour déplier
         // ses leçons (une ligne chacune, titre court). Une leçon touchée montre son détail (date du contrôle d'abord).
         // Pied de fiche : « 📚 Choisir ses leçons » (cases enregistrées tout de suite) et « ⚙️ Compte » (modifier, PIN, supprimer).
@@ -2369,7 +2404,8 @@
                 h("button", { class: "kid-head", type: "button", "aria-expanded": String(open), title: open ? "Replier" : "Voir ses leçons",
                     onclick: () => { setKidOpen(s.id, !open); renderProgrammes(); } },
                     h("span", { class: "avatar", style: "background:" + AVATAR_COLORS[index % AVATAR_COLORS.length], "aria-hidden": "true" }, s.pseudo.charAt(0).toUpperCase()),
-                    h("span", { class: "kid-who" }, h("strong", { class: "st-name" }, s.pseudo), h("span", { class: "kid-sub" }, sub)),
+                    h("span", { class: "kid-who" }, h("strong", { class: "st-name" }, s.pseudo), h("span", { class: "kid-sub" }, sub),
+                        DATA.moi.owner ? h("span", { class: "kid-activity", hidden: "" }) : null),
                     r.lecons ? h("span", { class: "st-pct " + pctClass(r.avancement), title: "Avancement moyen sur ses " + r.lecons + " leçon" + (r.lecons > 1 ? "s" : "") }, r.avancement + " %") : null,
                     h("span", { class: "chev", "aria-hidden": "true" }, open ? "▴" : "▾")));
             if (!open) return card;
@@ -2983,6 +3019,7 @@ ${UX_STYLES}` }
         $("export-copy").addEventListener("click", copyExport);
         // retour sur l'appli (téléphone) : les données se mettent à jour toutes seules
         document.addEventListener("visibilitychange", () => {
+            refreshQuizActivity();
             if (document.visibilityState === "visible" && !$("admin-area").hidden && Date.now() - lastLoad > 60000) reload().catch(() => {});
         });
 
