@@ -34,6 +34,7 @@ const { makeWorld, install, page, PW, ok, summary, finishSession } = require('./
     const link = await form.getByLabel('Lien du quiz invité').inputValue();
     await admin.locator('#quiz-invitations summary', { hasText: 'Lune' }).waitFor();
     ok(await admin.locator('#quiz-invitations').evaluate(el => el.open), 'le nouvel invité apparaît dans Les orphelins');
+    ok(new URL(link).searchParams.get('invitation') === '1', 'le lien partagé sélectionne la vignette d’invitation');
     const [id, secret] = new URL(link).hash.slice(6).split('.');
     const args = ['@invitation', id, secret];
     const invited = () => w.run('getStudentData', ...args);

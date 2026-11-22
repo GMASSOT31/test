@@ -70,6 +70,28 @@ let eleve = applyTheme(read('Index.html'), 'eleve');
 eleve = replaceOnce(eleve, '<title>QUIZy</title>', head('manifest.webmanifest', 'QUIZy'), 'titre de la page élève');
 eleve = eleve.replace(EXEC, m => '/exec').replace('href="/exec?p=admin"', 'href="/parents"');
 
+function sharePreview({ title, description, image, alt }) {
+  return `<!-- apercu-partage -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="QUIZy">
+    <meta property="og:locale" content="fr_FR">
+    <meta property="og:title" content="${title}">
+    <meta property="og:description" content="${description}">
+    <meta property="og:image" content="https://quizy.gabriel-massot31.workers.dev/${image}">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="${alt}">
+    <meta name="twitter:card" content="summary_large_image">
+    <!-- fin-apercu-partage -->`;
+}
+eleve = replaceOnce(eleve, '<!-- apercu-partage -->', sharePreview({
+  title: 'QUIZy · Révise en jouant !',
+  description: 'Des quiz et des cartes de révision pour apprendre à ton rythme.',
+  image: 'quizy-apercu-site.png',
+  alt: 'QUIZy. Révise en jouant ! Un quiz et une carte de révision illustrés.',
+}), 'aperçu de partage du site');
+
 let parents = applyTheme(read('admin.html'), 'parents');
 parents = replaceOnce(parents, '<title>QUIZy · Parents</title>', head('manifest-parents.webmanifest', 'QUIZy · Parents'), 'titre de l\'espace parents');
 parents = parents.replace(EXEC, '/exec').replace('href="/exec"', 'href="/"');
@@ -88,4 +110,10 @@ for (const f of fs.readdirSync(OUT).sort()) {
   const ext = f.split('.').pop(), buf = fs.readFileSync(path.join(OUT, f)), text = ext !== 'png' && ext !== 'ico';
   files['/' + f] = { type: MIME[ext] || 'application/octet-stream', text, body: text ? buf.toString('utf8') : buf.toString('base64') };
 }
+files['/index.html'].invitationPreview = sharePreview({
+  title: 'QUIZy · À toi de jouer !',
+  description: 'Ouvre ton lien pour commencer ton quiz sur QUIZy.',
+  image: 'quizy-apercu-invitation.png',
+  alt: 'QUIZy. À toi de jouer ! Deux cartes illustrées, avec un point d’interrogation et une coche.',
+});
 fs.writeFileSync(path.join(ROOT, 'src', 'files.gen.js'), '// FICHIER GÉNÉRÉ par build.cjs (contenu de public/) : ne pas modifier à la main.\nexport const FILES = ' + JSON.stringify(files) + ';\n');
