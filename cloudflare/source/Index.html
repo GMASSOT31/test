@@ -321,7 +321,6 @@
         .daily-txt strong { font-size: 1.15rem; }
         .daily-txt span { font-weight: 600; opacity: .9; }
         .daily-btn { background: var(--gold); color: var(--navy); }
-        .revision-closed .session-start { display: none; }
         .exam-badge { position: absolute; top: 10px; right: 10px; font-size: .78rem; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: #eef2ff; color: var(--navy); }
         .exam-badge.hot { background: #ffe1ea; color: #b4123f; }
         .lvl-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: #eceff7; margin: 10px 0 2px; }
@@ -482,7 +481,7 @@
         .quiz-focus .rv-banner, .quiz-focus .sidebar, .quiz-focus #whoami-name, .quiz-focus #logout { display: none; }
         .quiz-focus .whoami { padding: 0 12px; }
         .quiz-focus .layout .content { display: flex; flex-direction: column; width: 100%; max-width: none; margin: 0; padding: 0; }
-        .quiz-focus .session { flex: 1; margin: 0; max-width: none; border-radius: 0; padding: 14px clamp(14px, 4vw, 48px); }
+        .quiz-focus .content > .panel { flex: 1; margin: 0; max-width: none; border-radius: 0; padding: 14px clamp(14px, 4vw, 48px); }
         .memory-scene { margin: 14px 0; padding: 14px; border: 2px solid var(--line); border-radius: 14px; background: #f6f4ff; }
         .memory-scene h4 { margin: 0 0 8px; color: var(--navy); }
         .memory-scene p { margin: 6px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -838,16 +837,6 @@
         const revisionClock = new Intl.DateTimeFormat("fr-FR", {
             timeZone: "Europe/Paris", hour: "2-digit", hourCycle: "h23"
         });
-        function revisionOpen() {
-            const hour = Number(revisionClock.format(now()).match(/\d+/)[0]);
-            return hour >= 7 && hour < 22;
-        }
-        const revisionPause = "Les séances sont proposées de 7 h à 22 h (heure de Paris).";
-        function updateRevisionWindow() {
-            document.body.classList.toggle("revision-closed", !revisionOpen());
-        }
-        setInterval(updateRevisionWindow, 15000);
-        document.addEventListener("visibilitychange", updateRevisionWindow);
         function optionalMorning(quiz, time) {
             const plan = srsOf(quiz.id).plan || [];
             return plan.includes(time) && dayStart(time) === dateMs(srsOf(quiz.id).exam) &&
@@ -862,7 +851,7 @@
         function itemOf(quiz, q) { return srsOf(quiz.id).it[qid(q)] || [0, 0, 0, 0, 0]; }
         function levelOf(quiz, q) { return Math.min(LEVEL_MAX, itemOf(quiz, q)[0]); }
         function isDue(quiz, q) { const it = itemOf(quiz, q); return it[0] > 0 && it[1] <= now(); }
-        function dueList(quiz) { return revisionOpen() ? quiz.questions.filter(q => isDue(quiz, q)).sort((a, b) => itemOf(quiz, a)[1] - itemOf(quiz, b)[1]) : []; }
+        function dueList(quiz) { return quiz.questions.filter(q => isDue(quiz, q)).sort((a, b) => itemOf(quiz, a)[1] - itemOf(quiz, b)[1]); }
         // nouvelles questions à découvrir (cartes puis QCM) : les questions de synthèse arrivent à part (voir synthesesPourSeance)
         function newList(quiz) { return quiz.questions.filter(q => !q.synthese && itemOf(quiz, q)[0] === 0); }
         function synthesesOf(quiz) { return quiz.questions.filter(q => q.synthese); }
@@ -905,7 +894,7 @@
             return plan.map((s, i) => {
                 const end = i + 1 < plan.length ? plan[i + 1] : s + DAY;
                 const done = starts.some(x => x >= s - 10 * 60000 && x < end);
-                return { at: s, done, current: !done && revisionOpen() && s <= t && t < end,
+                return { at: s, done, current: !done && s <= t && t < end,
                     label: optionalMorning(quiz, s) ? "Le matin du contrôle (facultatif)" : slotLabel(s, i, plan) };
             });
         }
@@ -995,12 +984,12 @@
             if (QUIZZES.length === 0) { content.append(h("div", { class: "empty" }, "Aucune leçon pour le moment.")); return; }
             const due = dailyTasksCount();
             const lessons = activeLessons().filter(q => dueList(q).length).length;
-            content.append(!revisionOpen() ? h("div", { class: "daily done" }, revisionPause) : due
+            content.append(due
                 ? h("div", { class: "daily" },
                     h("div", { class: "daily-txt" },
                         h("strong", {}, "🎯 Ta révision du jour"),
                         h("span", {}, `${plural(Math.min(due, 30), "question", "questions")}${lessons > 1 ? " de " + lessons + " leçons" : ""} · environ ${Math.max(2, Math.round(Math.min(due, 30) * 0.4))} min`)),
-                    h("button", { class: "btn daily-btn session-start", onclick: () => startSession({ mixed: true }) }, "C'est parti ➔"))
+                    h("button", { class: "btn daily-btn", onclick: () => startSession({ mixed: true }) }, "C'est parti ➔"))
                 : h("div", { class: "daily done" }, h("div", { class: "daily-txt" }, h("strong", {}, "✅ Rien à réviser pour l'instant"),
                     h("span", {}, "Choisis une leçon pour découvrir de nouvelles questions ou faire une séance bonus."))));
             const sorted = QUIZZES.slice().sort((a, b) => lessonRank(a) - lessonRank(b));
@@ -1020,21 +1009,22 @@
                 h("div", { class: "meta" }, `${q.matiere} · ${q.questions.length} questions`),
                 levelBar(q),
                 h("div", { class: "etape" }, st.statut),
-                h("span", { class: "action-pill" }, revisionOpen() ? st.action : "Voir la leçon"));
+                h("span", { class: "action-pill" }, st.action));
         }
 
         // ---------------- Écran d'une leçon ----------------
         function openGuestLesson(quiz) {
+            document.body.classList.add("quiz-focus");
             document.body.classList.add("guest-focus");
             const total = quiz.questions.length;
             const learned = quiz.questions.filter(q => levelOf(quiz, q) > 0).length;
             const review = dueList(quiz).length || newList(quiz).length;
-            const start = h("button", { class: "btn big-btn session-start", onclick: () => startSession({ quiz, bonus: !review }) },
+            const start = h("button", { class: "btn big-btn", onclick: () => startSession({ quiz, bonus: !review }) },
                 h("span", { "aria-hidden": "true" }, "▶ "), "C’est parti !");
             content.replaceChildren(h("section", { class: "panel lesson-screen guest-welcome", "aria-labelledby": "guest-quiz-title" },
                 h("span", { class: "emoji", "aria-hidden": "true" }, quiz.emoji || "🎯"),
                 h("h2", { id: "guest-quiz-title" }, quiz.titre),
-                revisionOpen() ? start : h("p", { class: "etape-msg", role: "status" }, revisionPause),
+                start,
                 h("div", { class: "guest-progress" }, h("span", { "aria-hidden": "true" }, "⭐ "),
                     `${learned} / ${total} ${learned === 1 ? "question réussie" : "questions réussies"}`),
                 progressBar(learned, total, "Questions réussies"),
@@ -1044,6 +1034,8 @@
         }
 
         function openLesson(quiz, detailed = false) {
+            document.body.classList.add("quiz-focus");
+            window.scrollTo(0, 0);
             inQuiz = true;
             if (guestSession && !detailed && isConfigured(quiz) && !["archive", "apres"].includes(lessonState(quiz).kind)) return openGuestLesson(quiz);
             document.body.classList.remove("guest-focus");
@@ -1085,12 +1077,11 @@
             parts.push(h("div", { class: "lesson-levels" }, levelBar(quiz, true), levelLegend(quiz)));
             const due = dueList(quiz).length, fresh = newList(quiz).length;
             const main = due || fresh
-                ? h("button", { class: "btn big-btn session-start", onclick: () => startSession({ quiz }) }, due ? `▶ Réviser maintenant (${plural(due, "question", "questions")})` : `▶ Découvrir la suite (${plural(fresh, "question", "questions")})`)
-                : h("button", { class: "btn big-btn session-start", onclick: () => startSession({ quiz, bonus: true }) }, "▶ Séance bonus");
-            const open = revisionOpen();
-            parts.push(h("div", { class: "etape-msg", role: "status" }, h("strong", {}, open ? st.statut : revisionPause),
-                open && !due && !fresh ? h("div", { class: "hint-small" }, "Ta mémoire travaille d'ici là. Une séance bonus est possible : tes erreurs y comptent, mais elle ne fait pas avancer le plan.") : null));
-            parts.push(h("div", { class: "actions" }, open ? main : null,
+                ? h("button", { class: "btn big-btn", onclick: () => startSession({ quiz }) }, due ? `▶ Réviser maintenant (${plural(due, "question", "questions")})` : `▶ Découvrir la suite (${plural(fresh, "question", "questions")})`)
+                : h("button", { class: "btn big-btn", onclick: () => startSession({ quiz, bonus: true }) }, "▶ Séance bonus");
+            parts.push(h("div", { class: "etape-msg", role: "status" }, h("strong", {}, st.statut),
+                !due && !fresh ? h("div", { class: "hint-small" }, "Ta mémoire travaille d'ici là. Une séance bonus est possible : tes erreurs y comptent, mais elle ne fait pas avancer le plan.") : null));
+            parts.push(h("div", { class: "actions" }, main,
                 h("button", { class: "btn secondary", onclick: () => startDeck(deckOf(quiz), { back: "← Retour à la leçon", onBack: () => openLesson(quiz) }) }, "🃏 Voir les cartes")));
             content.replaceChildren(h("div", { class: "panel lesson-screen" }, parts));
         }
@@ -1113,7 +1104,7 @@
             const options = [["Demain", isoDate(dayStart(t) + DAY + 2 * HOUR)], ["Après-demain", isoDate(dayStart(t) + 2 * DAY + 2 * HOUR)],
                 ["Dans une semaine", isoDate(dayStart(t) + 7 * DAY + 2 * HOUR)], ["Pas de contrôle prévu", ""]];
             const dateInput = h("input", { type: "date", class: "saisie date", min: isoDate(t), "aria-label": "Autre date" });
-            const go = h("button", { class: "btn big-btn", disabled: "disabled", onclick: save }, editing || !revisionOpen() ? "Enregistrer" : "C'est parti ➔");
+            const go = h("button", { class: "btn big-btn", disabled: "disabled", onclick: save }, editing ? "Enregistrer" : "C'est parti ➔");
             const status = h("div", { class: "etape-msg", role: "status", style: "display:none" });
             const examBtns = options.map(([label, value]) => h("button", { class: "choice", "data-value": value, onclick: () => { exam = value; dateInput.value = ""; refresh(); } }, label));
             dateInput.addEventListener("change", () => { exam = dateInput.value || null; refresh(); });
@@ -1133,7 +1124,7 @@
                 status.style.display = "block"; status.textContent = "Enregistrement…";
                 enqueue("setLessonPlan", quiz.id, exam, tf).then(res => {
                     if (!res.ok) { status.textContent = "⚠️ " + res.error; go.removeAttribute("disabled"); return; }
-                    if (editing || !revisionOpen()) openLesson(quiz); else startSession({ quiz });
+                    if (editing) openLesson(quiz); else startSession({ quiz });
                 });
             }
             content.replaceChildren(h("div", { class: "panel setup" },
@@ -1235,7 +1226,6 @@
             return tasks;
         }
         function startSession(opts) {
-            if (!revisionOpen()) { if (opts.quiz) openLesson(opts.quiz); else renderList(); return; }
             const tasks = buildTasks(opts);
             if (!tasks.length) { if (opts.quiz) openLesson(opts.quiz); else renderList(); return; }
             inQuiz = true;
@@ -1357,7 +1347,6 @@
                 let up = 0;
                 s.before.forEach((lvl, k) => { const [qzId, id] = k.split("|"); const it = srsOf(qzId).it[id]; if (it && it[0] > lvl) up++; });
                 const lines = [];
-                if (!revisionOpen()) lines.push(revisionPause);
                 if (up) lines.push(`📈 ${plural(up, "question a progressé", "questions ont progressé")} d'un niveau.`);
                 if (s.opts.bonus) lines.push("Séance bonus : tes réussites renforcent ta mémoire, le plan reste le même.");
                 const actions = h("div", { class: "actions" });
@@ -1367,8 +1356,8 @@
                     else if (nt) lines.push(optionalMorning(quiz, nt)
                         ? "🗓️ Révision facultative le matin du contrôle, à partir de 7 h."
                         : `🗓️ Prochaine séance : ${whenLabel(nt)}. Ta mémoire travaille d'ici là !`);
-                    const canContinue = revisionOpen() && (fresh || due) && !stopped;
-                    if (canContinue) actions.append(h("button", { class: "btn session-start", onclick: () => startSession({ quiz }) }, due ? "Continuer" : `Découvrir ${Math.min(fresh, NEW_BLOCK)} nouvelles questions`));
+                    const canContinue = (fresh || due) && !stopped;
+                    if (canContinue) actions.append(h("button", { class: "btn", onclick: () => startSession({ quiz }) }, due ? "Continuer" : `Découvrir ${Math.min(fresh, NEW_BLOCK)} nouvelles questions`));
                     actions.append(h("button", { class: canContinue ? "btn secondary" : "btn", onclick: () => openLesson(quiz) }, "Voir la leçon"));
                 } else {
                     const left = dailyTasksCount();
@@ -1931,7 +1920,6 @@
             FLASHCARDS = data.decks;
             SRS = data.srs || {};
             clockSkew = data.now ? data.now - Date.now() : 0;
-            updateRevisionWindow();
             session = creds;
             try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(creds)); } catch (e) { /* ignoré */ }
             if (!guestSession) try { localStorage.setItem(LAST_KEY, JSON.stringify({ classe: creds.classe, pseudo: creds.pseudo })); } catch (e) { /* ignoré */ }

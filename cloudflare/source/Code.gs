@@ -1173,14 +1173,13 @@ function lessonCard_(q, ids) {
 // questions difficiles, date du contrôle et plan, historique des séances.
 function lessonSummary_(quiz, r) {
   var now = Date.now();
-  var revisionOpen = revisionTime_(now) === now;
   var niveaux = [0, 0, 0, 0, 0], erreurs = 0, aReviser = 0, maj = r.maj || 0;
   var difficiles = [];
   quiz.questions.forEach(function (question) {
     var it = r.it[qid_(question)] || [0, 0, 0, 0, 0];
     niveaux[Math.min(it[0], LEVEL_MAX)]++;
     erreurs += it[2];
-    if (it[0] > 0 && it[1] <= now && revisionOpen) aReviser++;
+    if (it[0] > 0 && it[1] <= now) aReviser++;
     if (it[2] > 0) difficiles.push({ question: question.question, erreurs: it[2], sures: it[4], niveau: it[0] });
   });
   difficiles.sort(function (a, b) { return b.erreurs - a.erreurs || a.niveau - b.niveau; });
