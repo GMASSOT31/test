@@ -52,6 +52,7 @@ const URL_ = page('Index.html');
   ok(!(await p.evaluate(() => JSON.stringify(QUIZZES))).includes('Maths'), 'aucune trace du quiz d\'Emma dans la page de Léo');
 
   // ---- 4. déconnexion puis Emma sur le MÊME appareil ----
+  if (TARGET === 'cloudflare') await p.getByRole('button', { name: '✕ Arrêter' }).click();
   await p.evaluate(() => revisionFlush()); await p.click('#logout');
   ok(await p.locator('#login').isVisible() && !(await p.locator('#app').isVisible()), 'déconnexion : retour à l\'écran de connexion');
   ok((await p.locator('#login-classe').inputValue()) === '5B' && (await p.locator('#login-pseudo').inputValue()) === 'Léo' && (await p.locator('#login-pin').inputValue()) === '', 'classe et pseudo préremplis, PIN jamais conservé');
@@ -103,6 +104,7 @@ const URL_ = page('Index.html');
   await p2.close();
 
   // ---- 9. élève sans aucun quiz attribué ----
+  if (TARGET === 'cloudflare') await p.getByRole('button', { name: '✕ Arrêter' }).click();
   w.run('saveStudent', PW, { classe: '6A', pseudo: 'Nina', pin: '2468' });
   await p.click('#logout'); await p.fill('#login-classe', '6A'); await p.fill('#login-pseudo', 'Nina'); await p.fill('#login-pin', '2468'); await p.click('#login-btn'); await p.waitForSelector('#app:not([hidden])');
   ok((await p.locator('.empty').innerText()).includes('Aucune leçon'), 'élève sans quiz : « ' + await p.locator('.empty').innerText() + ' »');
