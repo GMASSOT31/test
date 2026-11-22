@@ -24,6 +24,7 @@ const same = (a, b) => JSON.stringify(clean(a)) === JSON.stringify(clean(b));
 (async () => {
   // ---------- 1. une vraie famille sur l'appli Apps Script ----------
   const A = makeWorldAs({ ADMIN_PASSWORD: 'secret' });
+  A.advance(Date.parse('2026-11-20T12:00:00Z') - A.now());
   const ADM = { pseudo: 'Papa', password: 'secret' };
   A.run('adminData', ADM);                                                   // 1re connexion : ADMIN_PSEUDO = Papa
   A.run('saveStudent', ADM, { classe: '5B', pseudo: 'Léo', pin: '1234' });
@@ -79,11 +80,21 @@ const same = (a, b) => JSON.stringify(clean(a)) === JSON.stringify(clean(b));
 
   // ---------- 3. côte à côte ----------
   const NEW = { pseudo: 'Papa', password: 'nouveau-mdp-1' };
+  // Le stockage importé reste identique ; à l’affichage, les anciens créneaux suivent les nouveaux horaires.
+  function withReviewHours(data) {
+    const adjustPlan = item => { item.plan = Array.from(new Set(item.plan.map(C.ctx.revisionTime_))); };
+    Object.values(data.srs || {}).forEach(item => {
+      adjustPlan(item);
+      Object.values(item.it).forEach(values => { if (values[1] > 0) values[1] = C.ctx.revisionTime_(values[1]); });
+    });
+    Object.values(data.progress || {}).forEach(list => list.forEach(adjustPlan));
+    return data;
+  }
   for (const [nom, cr] of [['Léo', L], ['Emma', E], ['Zoé', Z]])
-    ok(same(A.run('getStudentData', ...cr), C.run('getStudentData', ...cr)), nom + ' : connexion avec son PIN habituel, mêmes leçons, paquets et progression qu\'avant');
+    ok(same(withReviewHours(A.run('getStudentData', ...cr)), C.run('getStudentData', ...cr)), nom + ' : connexion avec son PIN habituel, mêmes leçons, paquets et progression qu\'avant');
   ok(C.try('getStudentData', '5B', 'Léo', '0000').err === 'Classe, pseudo ou PIN incorrect.', 'mauvais PIN toujours refusé');
-  ok(same(A.run('adminData', ADM), C.run('adminData', NEW)), 'espace parents (administrateur) : enfants, leçons, attributions, suivi, familles identiques');
-  ok(same(A.run('adminData', MM), C.run('adminData', MM)), 'famille invitée : connexion avec son mot de passe habituel, mêmes données');
+  ok(same(withReviewHours(A.run('adminData', ADM)), C.run('adminData', NEW)), 'espace parents (administrateur) : enfants, leçons, attributions, suivi, familles identiques');
+  ok(same(withReviewHours(A.run('adminData', MM)), C.run('adminData', MM)), 'famille invitée : connexion avec son mot de passe habituel, mêmes données');
   ok(C.try('adminData', ADM).err === 'Pseudo ou mot de passe incorrect.', 'l\'ancien mot de passe administrateur ne marche pas (il a été choisi à l\'installation)');
   ok(C.run('getStudentData', ...L).quizzes.find(q => q.titre === 'Grand quiz : sciences').questions.length === 60 &&
     C.run('getStudentData', ...E).quizzes.find(q => q.id === 'musique-carnaval').titre.endsWith('(modifié)'), 'éléments en morceaux recollés : leçon de 60 questions, leçon fournie modifiée');
