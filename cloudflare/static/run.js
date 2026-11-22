@@ -7,7 +7,10 @@
     fetch('/api/' + encodeURIComponent(name), {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(args), credentials: 'same-origin', cache: 'no-store'
     })
-      .then(function (r) { return r.json().catch(function () { throw new Error('Réponse illisible du serveur (' + r.status + ').'); }); })
+      .then(function (r) {
+        if ([502, 503, 504].includes(r.status)) throw new Error('Serveur temporairement indisponible (' + r.status + ').');
+        return r.json().catch(function () { throw new Error('Réponse illisible du serveur (' + r.status + ').'); });
+      })
       .then(function (d) {
         if (d && typeof d.error === 'string') { if (onKo) onKo(new Error(d.error)); }
         else if (onOk) onOk(d ? d.value : null);

@@ -92,7 +92,8 @@ function startServer() {
 function makeWorldCf(initial = { ADMIN_PASSWORD: 'secret' }, { timeZone, env = {}, now: start } = {}) {
   const { DatabaseSync, core } = cfLoad();
   startServer();
-  let now = start || Date.now();
+  // Les parcours de séance sont ouverts à midi. Les tests d’horaires fournissent leur propre instant.
+  let now = start ?? new Date().setUTCHours(12, 0, 0, 0);
   class FakeDate extends Date { static now() { return now; } }
   const db = new DatabaseSync(':memory:');
   // fuseau : comme le harnais Apps Script (fuseau du processus), sauf demande explicite (ex. 'Europe/Paris' pour la vraie appli)
