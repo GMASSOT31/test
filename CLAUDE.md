@@ -112,6 +112,8 @@ Dans l’onglet Leçons, l’administrateur crée des disciplines et classe les 
 
 L’onglet Enfants de l’administrateur principal affiche les séances visibles de ses enfants. La page élève envoie un signal au début, toutes les 35 secondes et après une réponse. Le cache « quiz-visible » expire après 75 secondes et le tableau se rafraîchit toutes les 25 secondes. Les comptes invités sont exclus et aucun historique de ce signal n’est exporté. Voir la suite 41.
 
+En rappel écrit d’un QCM, le lecteur accepte les variantes courtes et la réponse complète affichée dans le corrigé (suite 42).
+
 ## 6. Versionné dans Git / configuré ailleurs
 - **Dans Git** : tout le code (`cloudflare/source`, `static`, `src/{worker,core,router,assets}.js`, `theme`, `build.cjs`,
   `wrangler.toml`, `package*.json`), les tests (`tests/`), la doc.

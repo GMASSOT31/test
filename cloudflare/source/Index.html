@@ -1500,6 +1500,7 @@
         // Réponse écrite : une seule validation (ou « Je ne sais pas ») ; la bonne réponse s'affiche en cas d'erreur
         function typedBody(q, accepted, settle, shown) {
             let done = false;
+            const answers = shown ? [...accepted, shown] : accepted;
             const input = h("input", { type: "text", class: "saisie", placeholder: "Écris ta réponse…", autocomplete: "off", autocapitalize: "off", spellcheck: "false", "aria-label": "Ta réponse" });
             const feedback = h("div", { class: "feedback", role: "status" });
             const check = h("button", { class: "btn", onclick: validate }, "Valider ✔️");
@@ -1513,7 +1514,7 @@
                 feedback.textContent = ok ? "🎉 Bonne réponse !" : "La réponse : " + (shown || accepted[0]);
                 settle(ok);
             }
-            function validate() { if (!done && norm(input.value)) finish(matches(input.value, accepted)); }
+            function validate() { if (!done && norm(input.value)) finish(matches(input.value, answers)); }
             input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); validate(); } });
             focusFirst(input);
             return h("div", {}, input, feedback, h("div", { class: "saisie-actions" }, check, idk));

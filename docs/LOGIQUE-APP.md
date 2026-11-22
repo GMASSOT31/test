@@ -56,6 +56,7 @@ Les identifiants (`id`) sont des « slugs » du pseudo / titre, rendus uniques (
 - Corriger l'énoncé ou la réponse garde l'`id`, donc la progression.
 - Comparaison des réponses écrites : insensible à la casse, aux accents, à la ponctuation et aux espaces ; un nombre décimal
   « 0,25 » = « 0.25 » (mais ≠ « 25 »).
+- En rappel écrit d’un QCM, la réponse complète affichée dans le corrigé est acceptée en plus des variantes courtes.
 - Limites : 60 questions par leçon, énoncé 300 car., réponse 150, explication 400, 150 cartes par paquet.
 
 ---
