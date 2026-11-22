@@ -103,6 +103,8 @@ const api = async (fn, ...args) => (await post('/api/' + fn, args)).json();
   await c.addInitScript('window.revisionAutoNext = false; window.QUIZY_PROFILS = false;');   // profils : suite 32
   const errs = []; const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message));
   await p.goto(BASE + '/'); await login(p, LEO);
+  // Le Worker réel conserve son horloge ; la séance navigateur se déroule pendant les heures d’ouverture.
+  await p.evaluate(() => { clockSkew = new Date().setUTCHours(12, 0, 0, 0) - Date.now(); updateRevisionWindow(); });
   ok((await p.locator('.card h3').allInnerTexts()).length === 2, 'page élève (téléphone) : Léo voit ses 2 leçons');
   await startLesson(p, 'Byzance', { tf: false });
   let n = 0; while (await p.locator('.session-head').count() && n < 12) { await answerCurrent(p, n !== 7); n++; }
