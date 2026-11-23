@@ -1,4 +1,6 @@
-# Migrer QUIZy de Google Apps Script vers Cloudflare
+# Historique de la migration de QUIZy vers Cloudflare
+
+La migration est terminée. Le guide actuel se trouve dans [CLAUDE.md](../CLAUDE.md). Pour reprendre le développement, utiliser [docs/REPRISE.md](REPRISE.md). Les étapes ci-dessous décrivent le transfert de novembre 2026.
 
 **Nom de l'application : QUIZy** (décision de l'utilisateur, 16/11/2026). Partout : titre des pages et des onglets, nom de
 l'appli installée sur l'écran d'accueil (manifest : `name` et `short_name` « QUIZy »), Worker `quizy`, adresse
@@ -12,7 +14,7 @@ sans son accord explicite.
 
 ## État (16/11/2026)
 - ✅ Version Cloudflare construite et testée en local (branche `cloudflare-migration`) : les 24 suites passent sur les deux versions,
-  + export (28), import (29), fuseau (30), bout en bout sur `wrangler dev` (31). Détails techniques : `docs/REPRISE.md` §5 bis.
+  + export (28), import (29), fuseau (30), bout en bout sur `wrangler dev` (31). Détails techniques : `CLAUDE.md` §4.
 - ✅ Bouton « 💾 Exporter toutes les données » (menu 👤, administrateur principal) ajouté à l'espace parents.
 - ✅ En ligne : **https://quizy.gabriel-massot31.workers.dev** (compte `f4ec7fb04d7a99f9e990a5396cf4319d`, Durable Object créé en
   Europe de l'Ouest). Base vide : toutes les pages mènent à `/installer`. Code d'installation = secret `INSTALL_CODE` du Worker.
@@ -110,19 +112,6 @@ Branche, code (`cloudflare/` : `wrangler.toml`, `src/worker.js`, `src/store.js`,
 
 ---
 
-## 7. Message à donner à la nouvelle session
+## Reprendre le développement
 
-```
-Je veux migrer mon application de révision QUIZy (dépôt GMASSOT31/test, dossier apps-script/) de Google Apps Script vers
-Cloudflare Workers, sans rien changer à son fonctionnement. L'appli s'appelle QUIZy (titres, appli installable, Worker « quizy »). Lis d'abord, en entier : docs/LOGIQUE-APP.md (toute la logique,
-à respecter à la lettre), docs/MIGRATION-CLOUDFLARE.md (le plan à suivre) et docs/REPRISE.md (règles et procédures).
-
-Règles : réponds en français ; sois autonome (branche, code, tests, commit, push, déploiement, vérification en ligne, PR et
-fusion) ; quand tu dois me demander quelque chose, utilise AskUserQuestion avec au moins 2 choix ; je travaille depuis mon
-téléphone ; ne me demande jamais de jeton ni de mot de passe dans le chat (utilise le formulaire sécurisé request_credential
-pour le jeton Cloudflare) ; ne supprime ni ne modifie aucune donnée réelle sans mon accord explicite ; l'application Apps Script
-actuelle (Apps Script) ne doit JAMAIS être désactivée, bloquée ni redirigée : elle reste en ligne et utilisable.
-
-Commence par construire et tester la version Cloudflare en local (les 24 suites de tests doivent passer), puis demande-moi
-le jeton Cloudflare pour la mettre en ligne.
-```
+Utiliser le [prompt de passation](REPRISE.md#prompt-à-copier-dans-claude-code-ou-codex) et la procédure Cloudflare actuelle. L’ancienne application Apps Script est figée et reste en ligne.
