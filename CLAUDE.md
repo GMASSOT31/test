@@ -21,7 +21,7 @@ Passation vérifiée le 25 novembre 2026. Voir [docs/REPRISE.md](docs/REPRISE.md
 | Dépôt GitHub | https://github.com/GMASSOT31/test |
 | Dossier de l'application | `cloudflare/` (sources à modifier : `cloudflare/source/`, `cloudflare/static/`, `cloudflare/src/`, `cloudflare/theme/`) |
 | Branche principale | `main` (branche par défaut, vérifié) |
-| Branche de production | Déploiement manuel avec Wrangler depuis main après fusion. Version vérifiée le 25 novembre : a2776710-0196-45ba-89e4-cac0c1a85296 à 100 %, PR nº 67 (ed2e7ce). Les deux pages publiques correspondent à la compilation. |
+| Branche de production | Déploiement manuel avec Wrangler depuis main après fusion. Version vérifiée le 25 novembre : 38a3b32f-2d90-4a67-9072-416a86d6d71b à 100 %, PR nº 70 (00e051e). Les deux pages publiques correspondent à la compilation. |
 | Site public | https://quizy.gabriel-massot31.workers.dev (élève `/`, parents `/parents`, installation `/installer`) |
 | Hébergeur | Cloudflare Workers, offre gratuite |
 | Projet | Worker **`quizy`** (`cloudflare/wrangler.toml`), compte Cloudflare `f4ec7fb04d7a99f9e990a5396cf4319d`, sous-domaine `gabriel-massot31.workers.dev` |
@@ -147,7 +147,7 @@ l’accès dans son navigateur. Le dossier de configuration reste en dehors du d
 ```bash
 cd cloudflare && npm ci                 # dépendances (wrangler 4, mermaid pour la suite 34)
 node build.cjs                          # construction seule → public/ + src/*.gen.js
-cd .. && node tests/run-all.cjs         # toutes les suites (cible cloudflare) — 41 suites, 1 109 contrôles, 0 échec sur ed2e7ce
+cd .. && node tests/run-all.cjs         # toutes les suites (cible cloudflare) — 43 suites, 1 163 contrôles, 0 échec sur 00e051e
 QUIZY_TARGET=cloudflare node tests/36-installation.js   # une suite
 cd cloudflare && npx wrangler dev       # site local (base locale vide → /installer ; mettre INSTALL_CODE dans .dev.vars)
 npx wrangler deploy                     # ⚠️ MISE EN LIGNE immédiate, données réelles (construit avant d'envoyer)

@@ -7,14 +7,14 @@ Passation entre Claude Code et Codex. [CLAUDE.md](../CLAUDE.md) décrit le dép�
 | Élément | État |
 |---|---|
 | Dépôt et application | GMASSOT31/test, sources sous cloudflare/ |
-| Dernier main applicatif | ed2e7ce, fusion de la PR nº 67 |
-| Production | Worker quizy, version a2776710-0196-45ba-89e4-cac0c1a85296, publiée le 22 novembre à 22 h 49, heure de Paris |
-| Vérification | Les pages publiques élève et parents correspondent octet par octet à leur compilation depuis ed2e7ce. Aucun compte réel utilisé |
-| Dernière suite complète | 41 suites Cloudflare, 1 109 contrôles réussis sur le même contenu que ed2e7ce |
+| Dernier main applicatif | 00e051e, fusion de la PR nº 70 |
+| Production | Worker quizy, version 38a3b32f-2d90-4a67-9072-416a86d6d71b, publiée le 25 novembre depuis 00e051e |
+| Vérification | Les pages publiques élève et parents correspondent octet par octet à leur compilation depuis 00e051e. Aucun compte réel utilisé |
+| Dernière suite complète | 43 suites Cloudflare, 1 163 contrôles, 0 échec sur 00e051e |
 
 [Quizy](https://quizy.gabriel-massot31.workers.dev/) · [Espace parents](https://quizy.gabriel-massot31.workers.dev/parents)
 
-La dernière tâche applicative documentée est terminée et déployée. La documentation de passation est disponible sur `docs/passation-claude-code` et attend sa fusion dans `main`. Claude Code peut déjà la lire sur cette branche, puis partir de `origin/main` pour la prochaine demande.
+La dernière tâche applicative documentée est terminée et déployée. La documentation de passation est fusionnée dans `main` : partir de `origin/main` pour la prochaine demande. Aucune tâche ouverte, aucun test rouge connu.
 
 ## Changements récents
 
@@ -27,6 +27,9 @@ La dernière tâche applicative documentée est terminée et déployée. La docu
 | [63](https://github.com/GMASSOT31/test/pull/63), [67](https://github.com/GMASSOT31/test/pull/67) | Rappels entre 7 h et 22 h, heure de Paris. Séances volontaires à toute heure. Contrôle demain : rappel à +1 h seulement avant 22 h, rappel facultatif dès 7 h |
 | [65](https://github.com/GMASSOT31/test/pull/65), [67](https://github.com/GMASSOT31/test/pull/67) | Immersion dès l’ouverture de la leçon. Après deux erreurs sur une question, l’enfant décrit une scène personnelle et peut la relire ou l’écouter au rappel |
 | [66](https://github.com/GMASSOT31/test/pull/66) | Jusqu’à deux relances pour une panne transitoire de connexion. Un refus du PIN efface la saisie et conserve le blocage normal |
+| [68](https://github.com/GMASSOT31/test/pull/68) | Images dans les questions : avec l’énoncé et avec la correction, ajoutées dans l’éditeur ou dessinées par l’IA (figure SVG), sinon suggérées. Stockées dans la table `media`, incluses dans l’export |
+| [69](https://github.com/GMASSOT31/test/pull/69) | Nettoyage automatique des images dès 90 % des 400 Mo : inutilisées les plus anciennes, puis utilisées les plus anciennes, jusqu’à 80 % |
+| [70](https://github.com/GMASSOT31/test/pull/70) | Fiche enfant repliée compacte : la ligne de suivi n’apparaît que pendant un quiz ouvert (suite 21 de nouveau verte) |
 
 **Décision à conserver.** La branche fix/reponses-espagnol à 2e2992a contient une proposition rejetée par l’utilisateur. Elle acceptait automatiquement la réponse complète du QCM en rappel écrit, ce qui facilitait le copier-coller. Elle reste hors de main. Ne pas la fusionner ni réintroduire ce comportement.
 
