@@ -35,7 +35,9 @@ const { makeWorld, install, login, LEO, PW, page, startLesson, ok, summary } = r
     await admin.fill('#password', PW);
     await admin.click('#unlock');
     const status = admin.locator('[data-student="leo"] .kid-activity');
-    await status.filter({ hasText: 'Aucun quiz détecté' }).waitFor();
+    await admin.waitForSelector('#admin-area:not([hidden])');
+    await status.waitFor({ state: 'hidden' });
+    ok(await status.isHidden(), 'aucun quiz ouvert : pas de ligne de suivi, la fiche reste compacte');
     const student = await ctx.newPage();
     await student.goto(page('Index.html'));
     await login(student, LEO);
@@ -58,8 +60,8 @@ const { makeWorld, install, login, LEO, PW, page, startLesson, ok, summary } = r
       document.dispatchEvent(new Event('visibilitychange'));
     });
     await refresh();
-    await status.filter({ hasText: 'Aucun quiz détecté' }).waitFor();
-    ok(!activity(), 'masquer l’onglet arrête le signal de Quizy');
+    await status.waitFor({ state: 'hidden' });
+    ok(!activity(), 'masquer l’onglet arrête le signal de Quizy (la ligne de suivi disparaît)');
   } finally {
     await browser.close();
   }
