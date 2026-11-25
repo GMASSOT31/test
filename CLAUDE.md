@@ -4,7 +4,7 @@ Application de révision scolaire (élèves + espace parents). Ce fichier est **
 données, parcours, commandes, déploiement. `AGENTS.md` y renvoie. Détails métier : `docs/LOGIQUE-APP.md` (invariants §10).
 Historique et procédures : `docs/REPRISE.md`, `docs/MIGRATION-CLOUDFLARE.md`, `docs/PARCOURS-V3.md`.
 
-Passation vérifiée le 23 novembre 2026. Voir [docs/REPRISE.md](docs/REPRISE.md) pour les dernières PR, les décisions à conserver et le prompt de reprise.
+Passation vérifiée le 25 novembre 2026. Voir [docs/REPRISE.md](docs/REPRISE.md) pour les dernières PR, les décisions à conserver et le prompt de reprise.
 
 ## 1. Consignes de l'utilisateur (toujours valables)
 - Répondre en **français**. Être autonome : branche, code, tests, commit, push, déploiement, vérification en ligne, PR, fusion.
@@ -21,7 +21,7 @@ Passation vérifiée le 23 novembre 2026. Voir [docs/REPRISE.md](docs/REPRISE.md
 | Dépôt GitHub | https://github.com/GMASSOT31/test |
 | Dossier de l'application | `cloudflare/` (sources à modifier : `cloudflare/source/`, `cloudflare/static/`, `cloudflare/src/`, `cloudflare/theme/`) |
 | Branche principale | `main` (branche par défaut, vérifié) |
-| Branche de production | Déploiement manuel avec Wrangler depuis main après fusion. Version vérifiée le 23 novembre : a2776710-0196-45ba-89e4-cac0c1a85296 à 100 %, PR nº 67 (ed2e7ce). Les deux pages publiques correspondent à la compilation. |
+| Branche de production | Déploiement manuel avec Wrangler depuis main après fusion. Version vérifiée le 25 novembre : a2776710-0196-45ba-89e4-cac0c1a85296 à 100 %, PR nº 67 (ed2e7ce). Les deux pages publiques correspondent à la compilation. |
 | Site public | https://quizy.gabriel-massot31.workers.dev (élève `/`, parents `/parents`, installation `/installer`) |
 | Hébergeur | Cloudflare Workers, offre gratuite |
 | Projet | Worker **`quizy`** (`cloudflare/wrangler.toml`), compte Cloudflare `f4ec7fb04d7a99f9e990a5396cf4319d`, sous-domaine `gabriel-massot31.workers.dev` |

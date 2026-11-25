@@ -2,7 +2,7 @@
 
 Passation entre Claude Code et Codex. [CLAUDE.md](../CLAUDE.md) décrit le dépôt, les accès et les commandes. [LOGIQUE-APP.md](LOGIQUE-APP.md) décrit les règles métier. [PARCOURS-V3.md](PARCOURS-V3.md) résume la révision espacée. [MIGRATION-CLOUDFLARE.md](MIGRATION-CLOUDFLARE.md) conserve l’historique du transfert.
 
-## État vérifié le 23 novembre 2026
+## État vérifié le 25 novembre 2026
 
 | Élément | État |
 |---|---|
@@ -13,6 +13,8 @@ Passation entre Claude Code et Codex. [CLAUDE.md](../CLAUDE.md) décrit le dép�
 | Dernière suite complète | 41 suites Cloudflare, 1 109 contrôles réussis sur le même contenu que ed2e7ce |
 
 [Quizy](https://quizy.gabriel-massot31.workers.dev/) · [Espace parents](https://quizy.gabriel-massot31.workers.dev/parents)
+
+La dernière tâche applicative documentée est terminée et déployée. La documentation de passation est disponible sur `docs/passation-claude-code` et attend sa fusion dans `main`. Claude Code peut déjà la lire sur cette branche, puis partir de `origin/main` pour la prochaine demande.
 
 ## Changements récents
 
@@ -46,4 +48,4 @@ Commencer par git status -sb et git fetch origin main. Pour une tâche en cours,
 
 ## Prompt à copier dans Claude Code ou Codex
 
-> Je reprends QUIZy, dépôt GMASSOT31/test. Lis AGENTS.md, CLAUDE.md et docs/REPRISE.md, puis les sections pertinentes de docs/LOGIQUE-APP.md. Vérifie l’état Git et le dernier main. Travaille sur cloudflare/, réponds en français et reprends la tâche documentée si elle est encore ouverte. Sinon, attends ma prochaine demande. Préserve les données réelles et les décisions déjà prises. Gère la branche, les tests, la PR, le déploiement autorisé et la vérification en ligne. Demande mon intervention uniquement si un accès ou une validation indispensable la requiert. Avant de passer le relais, consigne la branche, la PR, les tests, l’état en production et la prochaine action dans docs/REPRISE.md ou la PR ouverte.
+> Je reprends QUIZy, dépôt GMASSOT31/test. Lis AGENTS.md, CLAUDE.md et docs/REPRISE.md sur main, ou sur docs/passation-claude-code si la documentation attend sa fusion. Consulte les sections pertinentes de docs/LOGIQUE-APP.md. Vérifie l’état Git et le dernier main. Travaille sur cloudflare/, réponds en français et reprends la tâche documentée si elle est encore ouverte. Sinon, attends ma prochaine demande. Préserve les données réelles et les décisions déjà prises. Gère la branche, les tests, la PR, le déploiement autorisé et la vérification en ligne. Demande mon intervention uniquement si un accès ou une validation indispensable la requiert. Avant de passer le relais, consigne la branche, la PR, les tests, l’état en production et la prochaine action dans docs/REPRISE.md ou la PR ouverte.
