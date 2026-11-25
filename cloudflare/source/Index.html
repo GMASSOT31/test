@@ -724,6 +724,8 @@
             if (!img || !/^\/media\/[0-9a-f]{32}$/.test(img.src || "")) return null;
             const alt = img.alt || "Illustration de la question";
             const pic = h("img", { class: "question-image q-media", src: img.src, alt, loading: "lazy", decoding: "async" });
+            // image effacée (nettoyage automatique quand l'espace des images est plein) : elle disparaît sans laisser de cadre vide
+            pic.addEventListener("error", () => { (pic.parentElement && pic.parentElement.classList.contains("img-zoom") ? pic.parentElement : pic).remove(); });
             if (!zoom) return pic;
             return h("button", { class: "img-zoom", type: "button", "aria-label": "Agrandir l'image : " + alt, onclick: e => { e.stopPropagation(); openZoom(img.src, alt, e.currentTarget); } }, pic);
         }

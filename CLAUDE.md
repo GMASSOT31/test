@@ -107,7 +107,7 @@ Fonctions client dans `cloudflare/source/Index.html` (élève) et `cloudflare/so
 | Installation / import / export | `/installer` (`static/installer.html`) ; menu 👤 → Exporter | `/setup/status`, `/setup/install`, `/setup/import` (`core.js`) ; `backupData` | toute la table `props` | secret `INSTALL_CODE` ; admin principal | 28, 29, 31 |
 | Profils « Qui es-tu ? » | `static/profils.js` | — (navigateur seul) | localStorage `profiles` | — | 32 |
 | Installer l'appli (PWA) | `static/installation.js`, `static/sw.js`, manifestes | — | localStorage `quizy-installation` | — | 36 |
-| Images des questions | Éditeur : bloc « 🖼️ Images » de chaque question (`imageSlot`, `prepareImage` : JPEG ≤ 1600 px) ; IA : champ « illustration » (figure SVG → image, sinon suggestion, `resolveIllustrations`) ; élève : `questionImage()` (énoncé, correction, carte, agrandissement) | `POST /media/upload`, `GET /media/<id>` (`src/core.js`) ; `validateImage_` (`Code.gs`) ; export `backupData` + `medias`, import | table `media`, `quiz_*` | envoi : `checkAdmin_` ; lecture : identifiant aléatoire non devinable, CSP `sandbox` ; SVG sans script, lien ni ressource extérieure ; 1,2 Mo par image, 400 Mo au total | 39 |
+| Images des questions | Éditeur : bloc « 🖼️ Images » de chaque question (`imageSlot`, `prepareImage` : JPEG ≤ 1600 px) ; IA : champ « illustration » (figure SVG → image, sinon suggestion, `resolveIllustrations`) ; élève : `questionImage()` (énoncé, correction, carte, agrandissement) | `POST /media/upload`, `GET /media/<id>` (`src/core.js`) ; `validateImage_` (`Code.gs`) ; export `backupData` + `medias`, import | table `media`, `quiz_*` | envoi : `checkAdmin_` ; lecture : identifiant aléatoire non devinable, CSP `sandbox` ; SVG sans script, lien ni ressource extérieure ; 1,2 Mo par image, 400 Mo au total ; **nettoyage automatique** dès qu'un envoi atteint 90 % : inutilisées les plus anciennes, puis utilisées les plus anciennes, jusqu'à 80 % (`makeRoom`, images de moins de 24 h non enregistrées en dernier) | 39, 46 |
 | Quiz intégré illustré « Poker ALL IN » | `Index.html` `questionContent()` : questions `a1100001`…`a1100020` du quiz `poker-all-in` → image `static/poker-all-in-01…20.png` | données dans `source/Contenu.gs` (`BUILTIN_QUIZZES`) | `builtin_assign` | comme les autres leçons intégrées | 37 |
 
 ⚠️ **Import** (`/setup/import`) **remplace toutes les données** (et les images si le fichier en contient) : jamais en production sans accord explicite.
@@ -137,6 +137,7 @@ Dès l’ouverture d’une leçon, le lecteur masque la navigation et utilise to
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | variables du shell qui déploie | `wrangler deploy`, `secret list`… (droits Workers Scripts : édition) |
 | `QUIZY_TARGET` | tests | `cloudflare` (défaut) ou `apps-script` (ancienne version figée) |
 | `WRANGLER_SEND_METRICS=false` | facultatif | pas de télémétrie wrangler |
+| `MEDIA_QUOTA_BYTES` | variable du Worker, **non définie** en production (défaut 400 Mo) ; tests | espace réservé aux images (le nettoyage part à 90 %) |
 
 Dans les sessions Claude Code cloud, l’accès est fourni par le proxy. Dans l’espace Codex déjà autorisé, Wrangler
 réutilise sa session OAuth via `XDG_CONFIG_HOME=/workspace/.quizy-wrangler`. Si elle a expiré ou si l’espace a été remplacé,
