@@ -2549,7 +2549,8 @@
         function paintQuizActivity() {
             $("prog-list").querySelectorAll(".kid-activity").forEach(status => {
                 const active = activeQuizzes?.[status.closest("[data-student]").dataset.student];
-                status.hidden = activeQuizzes === null;
+                // fiche compacte : la ligne de suivi n'apparaît que pendant qu'un quiz est ouvert (rien quand l'enfant ne révise pas)
+                status.hidden = activeQuizzes === null || !active;
                 status.classList.toggle("active", !!active);
                 status.textContent = active
                     ? "🟢 Quiz ouvert : " + active.titre + " · " +

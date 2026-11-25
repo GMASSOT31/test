@@ -114,7 +114,7 @@ Fonctions client dans `cloudflare/source/Index.html` (élève) et `cloudflare/so
 
 Dans l’onglet Leçons, l’administrateur crée des disciplines et classe les éléments via « Gérer ». Les quatre rubriques restent distinctes. Un bouton crayon permet de renommer une discipline en conservant son classement. Les fonctions `createLessonDiscipline`, `renameLessonDiscipline` et `classifyLesson` enregistrent ce classement séparément et `adminData` le renvoie uniquement à l’administrateur principal. Le classement est inclus dans la sauvegarde. Voir la suite 39.
 
-L’onglet Enfants de l’administrateur principal affiche les séances visibles de ses enfants. La page élève envoie un signal au début, toutes les 35 secondes et après une réponse. Le cache « quiz-visible » expire après 75 secondes et le tableau se rafraîchit toutes les 25 secondes. Les comptes invités sont exclus et aucun historique de ce signal n’est exporté. Voir la suite 41.
+L’onglet Enfants de l’administrateur principal affiche les séances visibles de ses enfants. La page élève envoie un signal au début, toutes les 35 secondes et après une réponse. Le cache « quiz-visible » expire après 75 secondes et le tableau se rafraîchit toutes les 25 secondes. Les comptes invités sont exclus et aucun historique de ce signal n’est exporté. La ligne de suivi n’apparaît que pendant qu’un quiz est ouvert : sans quiz, la fiche repliée reste sur une ligne (suite 21). Voir la suite 41.
 
 Les rappels sont programmés entre 7 h et 22 h, heure de Paris. L’élève peut commencer une séance à toute heure. Pour un contrôle le lendemain, le rappel à +1 h est omis s’il tombe à 22 h ou plus tard. Le rappel du matin est facultatif et commence à 7 h. Les anciens créneaux nocturnes sont normalisés à la lecture (suite 43).
 
