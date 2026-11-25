@@ -77,6 +77,9 @@ morcelées `~0, ~1…`), `override_<id>` (leçon intégrée modifiée ; originau
 (partage aux familles), `guest_<id>` (id `invite-<32 hex>` ; pseudo, copie du quiz, expiration, empreintes du lien élève et du lien parent à usage unique),
 `srs_<élève ou invité>__<quiz>` (révision espacée), `INVITE_CODE`, `ADMIN_PSEUDO`, `ADMIN_PASS_HASH`,
 `schema_version`. Table `cache` : compteurs anti-force-brute (`echecs|…`, `admin-echecs|…`).
+Table `media` (`id`, `type`, `data` base64, `size`, `created`) : images des questions, **hors des propriétés** (jauge de 500 Ko
+inchangée). Une question n'en garde que la référence : `image` / `imageReponse` = `{ src: '/media/<32 hex>', alt? }`,
+`imageSuggeree` = `{ moment: 'question'|'reponse', description }` (rappel dans l'éditeur seulement).
 
 ### Règles d'accès (dans `cloudflare/source/Code.gs`, pas de RLS)
 - Élève : `authStudent_(classe, pseudo, pin)` — 5 erreurs → blocage 5 min. Ne reçoit que les leçons dont il est destinataire.
@@ -104,9 +107,10 @@ Fonctions client dans `cloudflare/source/Index.html` (élève) et `cloudflare/so
 | Installation / import / export | `/installer` (`static/installer.html`) ; menu 👤 → Exporter | `/setup/status`, `/setup/install`, `/setup/import` (`core.js`) ; `backupData` | toute la table `props` | secret `INSTALL_CODE` ; admin principal | 28, 29, 31 |
 | Profils « Qui es-tu ? » | `static/profils.js` | — (navigateur seul) | localStorage `profiles` | — | 32 |
 | Installer l'appli (PWA) | `static/installation.js`, `static/sw.js`, manifestes | — | localStorage `quizy-installation` | — | 36 |
+| Images des questions | Éditeur : bloc « 🖼️ Images » de chaque question (`imageSlot`, `prepareImage` : JPEG ≤ 1600 px) ; IA : champ « illustration » (figure SVG → image, sinon suggestion, `resolveIllustrations`) ; élève : `questionImage()` (énoncé, correction, carte, agrandissement) | `POST /media/upload`, `GET /media/<id>` (`src/core.js`) ; `validateImage_` (`Code.gs`) ; export `backupData` + `medias`, import | table `media`, `quiz_*` | envoi : `checkAdmin_` ; lecture : identifiant aléatoire non devinable, CSP `sandbox` ; SVG sans script, lien ni ressource extérieure ; 1,2 Mo par image, 400 Mo au total | 39 |
 | Quiz intégré illustré « Poker ALL IN » | `Index.html` `questionContent()` : questions `a1100001`…`a1100020` du quiz `poker-all-in` → image `static/poker-all-in-01…20.png` | données dans `source/Contenu.gs` (`BUILTIN_QUIZZES`) | `builtin_assign` | comme les autres leçons intégrées | 37 |
 
-⚠️ **Import** (`/setup/import`) **remplace toutes les données** : jamais en production sans accord explicite.
+⚠️ **Import** (`/setup/import`) **remplace toutes les données** (et les images si le fichier en contient) : jamais en production sans accord explicite.
 
 Dans l’onglet Leçons, l’administrateur crée des disciplines et classe les éléments via « Gérer ». Les quatre rubriques restent distinctes. Un bouton crayon permet de renommer une discipline en conservant son classement. Les fonctions `createLessonDiscipline`, `renameLessonDiscipline` et `classifyLesson` enregistrent ce classement séparément et `adminData` le renvoie uniquement à l’administrateur principal. Le classement est inclus dans la sauvegarde. Voir la suite 39.
 

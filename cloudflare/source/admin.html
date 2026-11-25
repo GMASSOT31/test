@@ -359,6 +359,16 @@
         .question[hidden] { display: none; }
         .question.collapsed > :not(.question-head):not(.q-text) { display: none !important; }
         .question-head .q-type { min-width: 0; max-width: 100%; }
+        /* images d'une question : avec l'énoncé, avec la correction */
+        .q-images { margin-top: 10px; border: 1px dashed #c9d2f0; border-radius: 12px; padding: 4px 10px; background: #fafbff; }
+        .q-images > summary { cursor: pointer; font-weight: 700; padding: 8px 0; min-height: 32px; }
+        .q-img-slot { display: grid; gap: 6px; padding: 8px 0 10px; border-top: 1px solid #e6eaf7; }
+        .q-img-slot .slot-title { font-weight: 700; }
+        .q-img-slot img { display: block; max-width: 100%; max-height: 220px; border-radius: 10px; background: #fff; border: 1px solid #e0e5f5; object-fit: contain; }
+        .q-img-slot .slot-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .q-img-slot .slot-actions .btn { min-height: 44px; }
+        .q-img-sugg { margin: 0; padding: 8px 10px; border-radius: 10px; background: #fff7e0; color: #6b4d00; font-size: .9rem; }
+        .ia-img { display: block; max-width: 220px; max-height: 160px; margin-top: 6px; background: #fff; border: 1px solid #e0e5f5; border-radius: 8px; }
         .q-toggle { padding: 4px 10px; }
         .badge-modifie { font-size: .75rem; font-weight: 800; padding: 2px 9px; border-radius: 999px; background: #fff6dc; color: #8a6100; margin-left: 8px; }
         .parcours-admin { font-size: .8rem; font-weight: 800; padding: 2px 10px; border-radius: 999px; background: #f1eeff; color: var(--violet); }
@@ -1239,6 +1249,107 @@
             }
         }
 
+        // ================= IMAGES DES QUESTIONS =================
+        // Photo choisie (appareil photo ou galerie) : réduite dans le navigateur (1600 px, JPEG) avant l'envoi ; figure SVG : envoyée telle quelle.
+        // Le serveur la range à part (/media/<identifiant>) ; la question ne garde que { src, alt }.
+        const IMG_MAX_SIDE = 1600, IMG_MAX_BYTES = 1150000;
+        function fileToImage(file) {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(file), img = new Image();
+                img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+                img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Cette image ne peut pas être lue. Essaie une photo JPEG ou PNG.")); };
+                img.src = url;
+            });
+        }
+        const blobToBase64 = blob => new Promise((resolve, reject) => {
+            const fr = new FileReader();
+            fr.onload = () => resolve(String(fr.result).split(",")[1] || "");
+            fr.onerror = () => reject(new Error("Lecture de l'image impossible."));
+            fr.readAsDataURL(blob);
+        });
+        async function prepareImage(file) {
+            if (file.type === "image/svg+xml") return { type: "image/svg+xml", data: await file.text() };
+            const img = await fileToImage(file);
+            let side = IMG_MAX_SIDE, quality = 0.85;
+            for (let i = 0; i < 6; i++) {
+                const k = Math.min(1, side / Math.max(img.naturalWidth, img.naturalHeight));
+                const c = document.createElement("canvas");
+                c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+                const ctx = c.getContext("2d");
+                ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);   // fond blanc (figures transparentes)
+                ctx.drawImage(img, 0, 0, c.width, c.height);
+                const blob = await new Promise(res => c.toBlob(res, "image/jpeg", quality));
+                if (blob && blob.size <= IMG_MAX_BYTES) return { type: "image/jpeg", data: await blobToBase64(blob) };
+                side = Math.round(side * 0.8); quality = Math.max(0.6, quality - 0.08);
+            }
+            throw new Error("Image trop lourde, même réduite.");
+        }
+        async function uploadImage(payload) {
+            if (!hasServer) throw new Error("Cette page doit être ouverte depuis le site QUIZy pour envoyer une image.");
+            const r = await fetch("/media/upload", { method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
+                body: JSON.stringify({ cred: pw(), type: payload.type, data: payload.data }) });
+            const d = await r.json().catch(() => null);
+            if (!d) throw new Error("Envoi de l'image impossible (" + r.status + ").");
+            if (d.error) throw new Error(d.error);
+            return d.value;
+        }
+        // Un emplacement d'image (« Avec la question » ou « Avec la correction ») dans le bloc d'une question
+        function imageSlot(moment, img, sugg) {
+            const isQ = moment === "question";
+            const slot = h("div", { class: "q-img-slot", "data-moment": moment });
+            const preview = h("img", { alt: "" });
+            const alt = h("input", { type: "text", class: "q-img-alt", maxlength: "200",
+                placeholder: isQ ? "Ce que montre l'image (ex : triangle ABC rectangle en A)" : "Ce que montre l'image (ex : frise de 1789 à 1815)",
+                "aria-label": "Description de l'image " + (isQ ? "de la question" : "de la correction") });
+            const file = h("input", { type: "file", accept: "image/*", hidden: true });
+            const pick = h("button", { class: "btn secondary small", type: "button" }, "📷 Ajouter une image");
+            const removeBtn = h("button", { class: "btn danger small", type: "button" }, "Retirer");
+            const status = h("span", { class: "status inline", role: "status" });
+            const suggBox = h("p", { class: "q-img-sugg" });
+            const show = () => {
+                const has = !!slot.dataset.src;
+                preview.hidden = !has; if (has) { preview.src = slot.dataset.src; preview.alt = alt.value || "Aperçu"; }
+                alt.hidden = !has; removeBtn.hidden = !has;
+                pick.textContent = has ? "🔁 Remplacer l'image" : "📷 Ajouter une image";
+                suggBox.hidden = has || !slot.dataset.sugg;
+                suggBox.textContent = "💡 Image suggérée par l'IA : " + (slot.dataset.sugg || "");
+            };
+            if (img && img.src) { slot.dataset.src = img.src; alt.value = img.alt || ""; }
+            if (sugg) slot.dataset.sugg = sugg;
+            pick.addEventListener("click", () => file.click());
+            removeBtn.addEventListener("click", () => { delete slot.dataset.src; alt.value = ""; status.textContent = ""; show(); });
+            file.addEventListener("change", async () => {
+                const f = file.files && file.files[0];
+                file.value = "";
+                if (!f) return;
+                slot.dataset.busy = "1"; pick.disabled = true;
+                showStatus(status, "info", "Envoi de l'image…");
+                try {
+                    const res = await uploadImage(await prepareImage(f));
+                    slot.dataset.src = res.src;
+                    if (!alt.value && slot.dataset.sugg) alt.value = slot.dataset.sugg;
+                    showStatus(status, "ok", "✅ Image ajoutée. N'oublie pas d'enregistrer la leçon.");
+                    show();
+                    if (!alt.value) alt.focus();
+                } catch (e) {
+                    showStatus(status, "err", e.message);
+                } finally { delete slot.dataset.busy; pick.disabled = false; }
+            });
+            alt.addEventListener("input", () => { preview.alt = alt.value || "Aperçu"; });
+            slot.append(h("span", { class: "slot-title" }, isQ ? "🖼️ Avec la question" : "✅ Avec la correction"),
+                h("span", { class: "hint" }, isQ ? "Visible pendant que l'enfant répond : figure, carte, document…" : "Visible après la réponse, avec l'explication : schéma, frise…"),
+                suggBox, preview, alt, h("div", { class: "slot-actions" }, pick, removeBtn), status, file);
+            show();
+            return slot;
+        }
+        function readSlot(blk, moment) {
+            const slot = blk.querySelector('.q-img-slot[data-moment="' + moment + '"]');
+            if (!slot) return {};
+            if (slot.dataset.busy) throw new Error("Une image est encore en cours d'envoi : patiente un instant.");
+            const alt = slot.querySelector(".q-img-alt").value.trim();
+            return { image: slot.dataset.src ? (alt ? { src: slot.dataset.src, alt } : { src: slot.dataset.src }) : null, sugg: slot.dataset.sugg || "" };
+        }
+
         // ================= QUIZ =================
         function addQuestion(data) {
             const n = ++questionCount;
@@ -1322,8 +1433,14 @@
                 block.classList.toggle("collapsed");
                 toggle.textContent = block.classList.contains("collapsed") ? "▸" : "▾";
             } }, "▾");
+            // Images facultatives (photo, figure, carte, frise…) : avec l'énoncé et/ou avec la correction
+            const sugg = data && data.imageSuggeree && data.imageSuggeree.description ? data.imageSuggeree : null;
+            const images = h("details", { class: "q-images" }, h("summary", {}, "🖼️ Images (facultatif)"),
+                imageSlot("question", data && data.image, sugg && sugg.moment !== "reponse" ? sugg.description : ""),
+                imageSlot("reponse", data && data.imageReponse, sugg && sugg.moment === "reponse" ? sugg.description : ""));
+            if (data && (data.image || data.imageReponse || sugg)) images.open = true;
             block.append(h("div", { class: "question-head" }, toggle, title, type, remove), text, choiceArea, typedArea, fieldsArea, syntheseArea,
-                h("label", {}, "Explication"), explication);
+                h("label", {}, "Explication"), explication, images);
             sync();
             qList.append(block);
             renumber();
@@ -1404,6 +1521,12 @@
                 }
                 const explication = blk.querySelector(".q-expl").value.trim();
                 if (explication) out.explication = explication;
+                const iq = readSlot(blk, "question"), ir = readSlot(blk, "reponse");
+                if (iq.image) out.image = iq.image;
+                if (ir.image) out.imageReponse = ir.image;
+                // suggestion de l'IA gardée tant que l'image n'est pas ajoutée
+                if (iq.sugg && !iq.image) out.imageSuggeree = { moment: "question", description: iq.sugg };
+                else if (ir.sugg && !ir.image) out.imageSuggeree = { moment: "reponse", description: ir.sugg };
                 return out;
             });
 
@@ -1488,14 +1611,15 @@
                 "7. « explication » : une phrase courte qui aide à retenir (le pourquoi, une astuce), tirée de la leçon.",
                 "8. En français, adapté à un élève de " + classe + " ; pour une leçon de langue étrangère, garde les mots dans la langue étudiée.",
                 "9. Longueur maximale : question 200 caractères, réponse 80, explication 200.",
+                "10. « illustration » (facultatif, seulement quand une image aide vraiment, environ une question sur cinq au plus) : figure de géométrie, graphique, schéma, frise chronologique, carte… Indique « moment » : \"question\" si l'élève en a besoin pour répondre, \"correction\" si elle explique la réponse après coup. « description » : ce que montre l'image, en une phrase. « svg » : la figure dessinée en SVG simple, exact et lisible (viewBox, fond blanc, textes d'au moins 12 px, moins de 6000 caractères, apostrophes ' pour les attributs, sans script, sans lien, sans image extérieure). Pour une carte détaillée, une photo, une œuvre ou un document que tu ne peux pas dessiner fidèlement, ne mets PAS de « svg » : décris seulement l'image idéale dans « description », je l'ajouterai moi-même. Sans image utile, pas de champ « illustration ».",
                 "",
                 "En plus, écris " + m + " QUESTIONS DE SYNTHÈSE (dans « syntheses ») : l'élève y répond en rédigeant quelques phrases, puis compare avec ton corrigé.",
-                "10. Chaque question de synthèse relie plusieurs informations de la leçon (au moins 2 notions) : explique comment, pourquoi, quelles conséquences, compare, raconte un enchaînement. Jamais une simple question de cours.",
-                "11. Adaptée à un élève de " + classe + " : il doit pouvoir y répondre en 3 à 6 phrases avec ce qu'il a appris.",
-                "12. « reponse_modele » : la réponse attendue, rédigée simplement, en 2 à 5 phrases, uniquement avec le contenu de la leçon.",
-                "13. « elements_attendus » : 3 à 5 idées essentielles que la réponse doit contenir, chacune en une phrase courte et vérifiable.",
-                "14. Si la leçon est trop courte pour écrire " + m + " questions de synthèse vraiment pertinentes, écris-en moins, voire aucune (« syntheses » vide) : n'invente rien.",
-                "15. Longueur maximale : question de synthèse 300 caractères, réponse modèle 600, élément attendu 120.",
+                "11. Chaque question de synthèse relie plusieurs informations de la leçon (au moins 2 notions) : explique comment, pourquoi, quelles conséquences, compare, raconte un enchaînement. Jamais une simple question de cours.",
+                "12. Adaptée à un élève de " + classe + " : il doit pouvoir y répondre en 3 à 6 phrases avec ce qu'il a appris.",
+                "13. « reponse_modele » : la réponse attendue, rédigée simplement, en 2 à 5 phrases, uniquement avec le contenu de la leçon.",
+                "14. « elements_attendus » : 3 à 5 idées essentielles que la réponse doit contenir, chacune en une phrase courte et vérifiable.",
+                "15. Si la leçon est trop courte pour écrire " + m + " questions de synthèse vraiment pertinentes, écris-en moins, voire aucune (« syntheses » vide) : n'invente rien.",
+                "16. Longueur maximale : question de synthèse 300 caractères, réponse modèle 600, élément attendu 120.",
                 "",
                 "Réponds UNIQUEMENT par un seul bloc de code JSON, sans texte avant ni après, exactement dans ce format :",
                 "",
@@ -1512,6 +1636,18 @@
                 '      "bonne_reponse": "1789",',
                 '      "rappel": ["1789"],',
                 '      "explication": "La prise de la Bastille, le 14 juillet 1789, marque le début de la Révolution."',
+                "    },",
+                "    {",
+                '      "question": "Dans le triangle ABC, l\'angle A mesure 50° et l\'angle B mesure 60°. Combien mesure l\'angle C ?",',
+                '      "options": ["70°", "60°", "80°", "110°"],',
+                '      "bonne_reponse": "70°",',
+                '      "rappel": ["70°", "70"],',
+                '      "explication": "La somme des angles d\'un triangle vaut 180° : 180 − 50 − 60 = 70°.",',
+                '      "illustration": {',
+                '        "moment": "question",',
+                '        "description": "Triangle ABC avec un angle de 50° en A et de 60° en B",',
+                '        "svg": "<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 240 150\'><rect width=\'240\' height=\'150\' fill=\'white\'/><polygon points=\'20,125 220,125 80,20\' fill=\'none\' stroke=\'black\' stroke-width=\'2\'/><text x=\'8\' y=\'142\' font-size=\'14\'>A</text><text x=\'222\' y=\'142\' font-size=\'14\'>B</text><text x=\'76\' y=\'15\' font-size=\'14\'>C</text><text x=\'42\' y=\'118\' font-size=\'13\'>50°</text><text x=\'176\' y=\'118\' font-size=\'13\'>60°</text></svg>"',
+                "      }",
                 "    }",
                 "  ],",
                 '  "syntheses": [',
@@ -1527,7 +1663,7 @@
                 "(Les exemples ci-dessus montrent seulement le format : écris tes propres questions sur la leçon jointe.)",
                 "",
                 "Avant de répondre, vérifie : exactement " + n + " questions, chaque « bonne_reponse » recopiée à l'identique dans « options », " +
-                    m + " questions de synthèse (ou moins si la leçon est trop courte) avec 3 à 5 éléments attendus chacune, JSON valide."
+                    m + " questions de synthèse (ou moins si la leçon est trop courte) avec 3 à 5 éléments attendus chacune, chaque figure SVG exacte et cohérente avec sa question, JSON valide."
             ].join("\n");
         }
         function renderAiSettings() {
@@ -1623,6 +1759,18 @@
             return null;
         }
         const pick = (o, keys) => { for (const k of keys) if (o && o[k] != null && o[k] !== "") return o[k]; return null; };
+        // « illustration » de l'IA : figure SVG dessinée (envoyée comme image à l'enregistrement) ou simple suggestion à ajouter soi-même
+        function normalizeIllustration(q) {
+            const il = pick(q, ["illustration", "figure", "image"]);
+            if (!il || typeof il !== "object") return null;
+            const moment = /corr|r[eé]pon|apr[eè]s|explic/i.test(String(il.moment || il.quand || "")) ? "reponse" : "question";
+            const svg = String(il.svg || "").trim();
+            const okSvg = /^<svg[\s>]/i.test(svg) && /<\/svg>\s*$/i.test(svg) && svg.length <= 100000;
+            const description = String(il.description || il.alt || "").trim().slice(0, 200);
+            if (!okSvg && !description) return null;
+            return { moment, svg: okSvg ? svg : "", description };
+        }
+        const svgDataUrl = svg => "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
         function normalizeQuestion(q) {
             if (!q || typeof q !== "object") return null;
             const question = String(pick(q, ["question", "enonce", "énoncé", "q"]) || "").trim();
@@ -1652,6 +1800,8 @@
             if (Array.isArray(rappel)) { rappel = rappel.map(r => String(r).trim()).filter(Boolean).slice(0, 10); if (rappel.length) out.rappel = rappel; }
             const expl = pick(q, ["explication", "explanation", "astuce"]);
             if (expl) out.explication = String(expl).trim().slice(0, 400);
+            const il = normalizeIllustration(q);
+            if (il) out.illustration = il;
             return out;
         }
         // Question de synthèse lue avec tolérance (noms de champs avec ou sans accents, éléments en texte ou en objets)
@@ -1665,7 +1815,10 @@
             if (typeof att === "string") att = att.split(/\n|;/);
             const attendus = [...new Set((Array.isArray(att) ? att : []).map(a => str(typeof a === "object" && a ? (a.texte || a.element || a.text || "") : a, 200).replace(/^[-•*\d.)\s]+/, "")).filter(Boolean))].slice(0, 5);
             if (!question || !modele || attendus.length < 2) return null;
-            return { question, synthese: true, modele, attendus };
+            const out = { question, synthese: true, modele, attendus };
+            const il = normalizeIllustration(x);
+            if (il) out.illustration = il;
+            return out;
         }
         const looksSynthese = x => x && typeof x === "object" && ("reponse_modele" in x || "réponse_modèle" in x || "elements_attendus" in x || "éléments_attendus" in x || x.type === "synthese" || x.type === "synthèse");
         function parseAiQuiz(text) {
@@ -1717,6 +1870,8 @@
             if (AI.cut) notes.push("⚠️ " + AI.cut + " question" + (AI.cut > 1 ? "s" : "") + " en trop retirée" + (AI.cut > 1 ? "s" : "") + " (60 au maximum).");
             if (n < AI.count && !AI.ignored) notes.push("ℹ️ L'IA a écrit " + n + " questions au lieu de " + AI.count + ".");
             const voulu = nbSyntheses(AI.count || n);
+            const figs = q.questions.filter(x => x.illustration && x.illustration.svg).length, toAdd = q.questions.filter(x => x.illustration && !x.illustration.svg).length;
+            if (figs || toAdd) notes.push("🖼️ " + [figs ? figs + " figure" + (figs > 1 ? "s dessinées" : " dessinée") + " par l'IA" : "", toAdd ? toAdd + " image" + (toAdd > 1 ? "s suggérées" : " suggérée") + " à ajouter toi-même (avec « Retoucher »)" : ""].filter(Boolean).join(" · ") + ".");
             if (AI.ignoredSyn) notes.push("⚠️ " + AI.ignoredSyn + " question" + (AI.ignoredSyn > 1 ? "s" : "") + " de synthèse ignorée" + (AI.ignoredSyn > 1 ? "s" : "") + " (réponse modèle ou éléments attendus manquants).");
             else if (syn.length < voulu) notes.push("ℹ️ " + (syn.length ? syn.length + " question" + (syn.length > 1 ? "s" : "") + " de synthèse au lieu de " + voulu : "Aucune question de synthèse") + " : la leçon est peut-être trop courte. Tu peux en ajouter à la main.");
             $("ia-summary").replaceChildren(h("div", { class: "ia-sum" },
@@ -1727,10 +1882,38 @@
             pourBoxes($("ia-pour"), keep.length ? keep : DATA.students.length === 1 ? [DATA.students[0].id] : []);
             $("ia-exam").min = new Date(DATA.now || Date.now()).toISOString().slice(0, 10);
             $("ia-preview-sum").textContent = "👀 Voir les " + (n + syn.length) + " questions";
+            const ill = x => !x.illustration ? null : x.illustration.svg
+                ? h("span", { class: "ok-ans" }, (x.illustration.moment === "reponse" ? "🖼️ Figure avec la correction" : "🖼️ Figure avec la question"),
+                    h("img", { class: "ia-img", src: svgDataUrl(x.illustration.svg), alt: x.illustration.description || "Figure" }))
+                : h("span", { class: "ok-ans" }, "💡 Image à ajouter toi-même : " + x.illustration.description);
             $("ia-questions").replaceChildren(...q.questions.map(x => x.synthese
-                ? h("li", { class: "ia-syn" }, "🧩 " + x.question, h("span", { class: "ok-ans" }, "📘 " + x.modele), h("span", { class: "ok-ans" }, "☑️ " + x.attendus.join(" · ")))
-                : h("li", {}, x.question, h("span", { class: "ok-ans" }, "✅ " + x.options[x.correct]))));
+                ? h("li", { class: "ia-syn" }, "🧩 " + x.question, h("span", { class: "ok-ans" }, "📘 " + x.modele), h("span", { class: "ok-ans" }, "☑️ " + x.attendus.join(" · ")), ill(x))
+                : h("li", {}, x.question, h("span", { class: "ok-ans" }, "✅ " + x.options[x.correct]), ill(x))));
             $("ia-status").className = "status";
+        }
+        // Les figures SVG de l'IA deviennent des images de QUIZy (/media/…) ; les simples suggestions restent comme rappel dans l'éditeur.
+        // Une figure refusée (ou un envoi impossible) n'empêche pas la leçon : elle redevient une suggestion.
+        async function resolveIllustrations(questions) {
+            AI.medias = AI.medias || new Map();
+            const out = [];
+            let refused = 0;
+            for (const q0 of questions) {
+                const { illustration: il, ...q } = q0;
+                if (il) {
+                    const key = il.moment === "reponse" ? "imageReponse" : "image";
+                    let done = false;
+                    if (il.svg) {
+                        try {
+                            if (!AI.medias.has(il.svg)) AI.medias.set(il.svg, (await uploadImage({ type: "image/svg+xml", data: il.svg })).src);
+                            q[key] = il.description ? { src: AI.medias.get(il.svg), alt: il.description } : { src: AI.medias.get(il.svg) };
+                            done = true;
+                        } catch (e) { refused++; }
+                    }
+                    if (!done) q.imageSuggeree = { moment: key === "image" ? "question" : "reponse", description: il.description || "Figure proposée par l'IA (non retenue)" };
+                }
+                out.push(q);
+            }
+            return { questions: out, refused };
         }
         async function saveAiQuiz() {
             const st = $("ia-status"), btn = $("ia-save");
@@ -1740,13 +1923,15 @@
             btn.disabled = true;
             showStatus(st, "info", "Création de la leçon…");
             try {
-                const res = await server("saveQuiz", pw(), { ...AI.quiz, titre, pour });
+                const ready = await resolveIllustrations(AI.quiz.questions);
+                const res = await server("saveQuiz", pw(), { ...AI.quiz, questions: ready.questions, titre, pour });
                 if (exam) for (const sid of pour) await server("setLessonPlanAdmin", pw(), sid, res.id, exam);
                 pour.forEach(id => setKidOpen(id, true));   // avant le rechargement : les fiches s'affichent ouvertes
                 await reload();
                 const names = pour.map(studentName).filter(Boolean);
                 const nbSyn = AI.quiz.questions.filter(x => x.synthese).length;
-                const msg = "✅ Leçon « " + titre + " » créée (" + (AI.quiz.questions.length - nbSyn) + " questions" + (nbSyn ? " + " + nbSyn + " de synthèse" : "") + ")";
+                const msg = "✅ Leçon « " + titre + " » créée (" + (AI.quiz.questions.length - nbSyn) + " questions" + (nbSyn ? " + " + nbSyn + " de synthèse" : "") + ")"
+                    + (ready.refused ? " · " + ready.refused + " figure" + (ready.refused > 1 ? "s" : "") + " de l'IA refusée" + (ready.refused > 1 ? "s" : "") + " (à ajouter à la main)" : "");
                 AI.quiz = null;
                 if (names.length) {
                     go("programmes");
@@ -1760,8 +1945,14 @@
             } finally { btn.disabled = false; }
         }
         // Retoucher : le quiz lu part dans le formulaire « à la main » (nouvelle leçon, rien n'est encore enregistré)
-        function editAiQuiz() {
-            loadQuiz({ ...AI.quiz, titre: $("ia-titre").value.trim() || AI.quiz.titre, pour: pourValues($("ia-pour")) });
+        async function editAiQuiz() {
+            const btn = $("ia-edit");
+            btn.disabled = true;
+            if (AI.quiz.questions.some(x => x.illustration && x.illustration.svg)) showStatus($("ia-status"), "info", "Préparation des figures…");
+            let ready;
+            try { ready = await resolveIllustrations(AI.quiz.questions); } finally { btn.disabled = false; }
+            $("ia-status").className = "status"; $("ia-status").textContent = "";
+            loadQuiz({ ...AI.quiz, questions: ready.questions, titre: $("ia-titre").value.trim() || AI.quiz.titre, pour: pourValues($("ia-pour")) });
             editingQuizId = null;
             $("quiz-form-title").textContent = "✍️ Nouvelle leçon (préparée par l'IA)";
         }

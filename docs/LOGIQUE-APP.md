@@ -57,6 +57,13 @@ Les identifiants (`id`) sont des « slugs » du pseudo / titre, rendus uniques (
 - Comparaison des réponses écrites : insensible à la casse, aux accents, à la ponctuation et aux espaces ; un nombre décimal
   « 0,25 » = « 0.25 » (mais ≠ « 25 »).
 - Limites : 60 questions par leçon, énoncé 300 car., réponse 150, explication 400, 150 cartes par paquet.
+- **Images** (tout type de question, facultatives) : `image` (montrée avec l'énoncé, agrandie au toucher) et `imageReponse`
+  (montrée après la réponse, avec l'explication ; aussi sur la carte « À retenir » et les flashcards tirées des questions).
+  Format `{ src: '/media/<32 hex>', alt? }` : seule une image envoyée dans QUIZy est acceptée (photo réduite à 1600 px en JPEG
+  dans le navigateur, ou figure SVG sans script ni lien extérieur). `imageSuggeree { moment, description }` = image proposée par
+  l'IA mais pas encore ajoutée : visible seulement dans l'éditeur des parents. L'IA peut dessiner une figure en SVG
+  (géométrie, graphique, schéma, frise) ou décrire l'image à ajouter (carte, photo, document) ; une figure refusée par le
+  serveur devient une suggestion, la leçon est créée quand même. Les images sont dans l'export complet et reprises à l'import.
 
 ---
 

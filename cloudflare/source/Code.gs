@@ -1526,6 +1526,18 @@ function validateQuiz_(quiz, allowedIds) {
 
     var explication = str_(q.explication, 400);
     if (explication) out.explication = explication;
+    // Images facultatives : avec l'énoncé (« image ») et avec la correction (« imageReponse »)
+    var image = validateImage_(q.image, label);
+    if (image) out.image = image;
+    var imageReponse = validateImage_(q.imageReponse, label);
+    if (imageReponse) out.imageReponse = imageReponse;
+    // Image suggérée (par l'IA) mais pas encore ajoutée : rappel visible seulement dans l'éditeur des parents
+    var sugg = q.imageSuggeree;
+    if (sugg && typeof sugg === 'object') {
+      var moment = sugg.moment === 'reponse' ? 'reponse' : 'question';
+      var description = str_(sugg.description, 200);
+      if (description && !(moment === 'reponse' ? out.imageReponse : out.image)) out.imageSuggeree = { moment: moment, description: description };
+    }
     return out;
   });
   var clean = {
@@ -1539,6 +1551,18 @@ function validateQuiz_(quiz, allowedIds) {
   var lien = validateLien_(quiz.lien);
   if (lien) clean.lien = lien;
   return clean;
+}
+
+// Image d'une question : uniquement une image envoyée dans QUIZy (/media/<identifiant>), avec sa description (lue à voix haute)
+function validateImage_(img, label) {
+  if (!img || typeof img !== 'object') return null;
+  var src = str_(img.src, 80);
+  if (!src) return null;
+  if (!/^\/media\/[0-9a-f]{32}$/.test(src)) throw new Error((label || '') + "image invalide (envoie-la depuis l'éditeur).");
+  var res = { src: src };
+  var alt = str_(img.alt, 200);
+  if (alt) res.alt = alt;
+  return res;
 }
 
 // Lien utile affiché pendant le quiz (ex. des extraits sonores). Seules les adresses http(s) sont acceptées.
