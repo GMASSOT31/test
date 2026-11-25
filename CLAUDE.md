@@ -4,8 +4,7 @@ Application de révision scolaire (élèves + espace parents). Ce fichier est **
 données, parcours, commandes, déploiement. `AGENTS.md` y renvoie. Détails métier : `docs/LOGIQUE-APP.md` (invariants §10).
 Historique et procédures : `docs/REPRISE.md`, `docs/MIGRATION-CLOUDFLARE.md`, `docs/PARCOURS-V3.md`.
 
-Vérifié le 21/11/2026 (dépôt à `75de053`, accès Cloudflare et GitHub de la session Claude Code). Ce qui n'a pas pu être
-confirmé est marqué **(non vérifié)**.
+Passation vérifiée le 25 novembre 2026. Voir [docs/REPRISE.md](docs/REPRISE.md) pour les dernières PR, les décisions à conserver et le prompt de reprise.
 
 ## 1. Consignes de l'utilisateur (toujours valables)
 - Répondre en **français**. Être autonome : branche, code, tests, commit, push, déploiement, vérification en ligne, PR, fusion.
@@ -22,7 +21,7 @@ confirmé est marqué **(non vérifié)**.
 | Dépôt GitHub | https://github.com/GMASSOT31/test |
 | Dossier de l'application | `cloudflare/` (sources à modifier : `cloudflare/source/`, `cloudflare/static/`, `cloudflare/src/`, `cloudflare/theme/`) |
 | Branche principale | `main` (branche par défaut, vérifié) |
-| Branche de production | **aucune liaison automatique** : la production = ce qui a été publié avec `wrangler deploy`, par convention depuis `main` à jour après fusion. Dernier déploiement (21/11/2026 08:25 UTC, version `e5648755-…`) = `main` à `75de053` (orphelins, #54) : 33 fichiers statiques identiques octet par octet et textes de #54 présents en ligne (vérifié). |
+| Branche de production | Déploiement manuel avec Wrangler depuis main après fusion. Version vérifiée le 25 novembre : 38a3b32f-2d90-4a67-9072-416a86d6d71b à 100 %, PR nº 70 (00e051e). Les deux pages publiques correspondent à la compilation. |
 | Site public | https://quizy.gabriel-massot31.workers.dev (élève `/`, parents `/parents`, installation `/installer`) |
 | Hébergeur | Cloudflare Workers, offre gratuite |
 | Projet | Worker **`quizy`** (`cloudflare/wrangler.toml`), compte Cloudflare `f4ec7fb04d7a99f9e990a5396cf4319d`, sous-domaine `gabriel-massot31.workers.dev` |
@@ -34,7 +33,7 @@ Autres éléments du même compte, **sans rapport avec QUIZy** (ne pas toucher) 
 `corvee`. Les projets Supabase du compte (Zoo de Lecture, Suivy, CRM C2e, Claudine) ne servent pas à QUIZy (aucune référence
 dans le code). Pas de domaine personnalisé, pas de liaison Git « Workers Builds » (vérifié : aucun déclencheur).
 
-Ancienne version (figée, toujours en ligne) : Google Apps Script, URL et identifiants dans `docs/REPRISE.md` §1. Ses données
+Ancienne version Google Apps Script : figée, toujours en ligne. Voir [l’historique de migration](docs/MIGRATION-CLOUDFLARE.md). Ses données
 (propriétés du script Google) sont **distinctes** de celles de Cloudflare (importées une fois à l'installation, puis séparées).
 **(non vérifié aujourd'hui** : aucun accès Google Apps Script depuis la session ; dernier état connu = déploiement @40.)
 
@@ -71,7 +70,7 @@ src/app.gen.js = source/Contenu.gs + source/Code.gs emballés SANS modification 
   chaque fonction**. `router.js` refuse les POST non JSON (protection contre les appels d'une autre origine).
 - Un seul Durable Object traite une requête à la fois (remplace `LockService`).
 
-### Données (table `props`, clé → JSON) — détail dans `docs/REPRISE.md` §3 et `docs/LOGIQUE-APP.md` §2
+### Données (table `props`, clé → JSON) — détail dans `docs/LOGIQUE-APP.md` §2
 `student_<id>` (élève, PIN haché, `fam`), `parent_<id>` (famille invitée), `quiz_<id>` / `deck_<id>` (leçons, cartes ;
 morcelées `~0, ~1…`), `override_<id>` (leçon intégrée modifiée ; originaux dans `Contenu.gs`), `builtin_assign`, `shares`
 (partage aux familles), `guest_<id>` (id `invite-<32 hex>` ; pseudo, copie du quiz, expiration, empreintes du lien élève et du lien parent à usage unique),
@@ -139,16 +138,16 @@ Dès l’ouverture d’une leçon, le lecteur masque la navigation et utilise to
 | `WRANGLER_SEND_METRICS=false` | facultatif | pas de télémétrie wrangler |
 | `MEDIA_QUOTA_BYTES` | variable du Worker, **non définie** en production (défaut 400 Mo) ; tests | espace réservé aux images (le nettoyage part à 90 %) |
 
-Dans les sessions Claude Code cloud, l’accès est fourni par le proxy. Dans l’espace Codex déjà autorisé, Wrangler
-réutilise sa session OAuth via `XDG_CONFIG_HOME=/workspace/.quizy-wrangler`. Si elle a expiré ou si l’espace a été remplacé,
+L’authentification dépend de la session. Vérifier avec Wrangler avant le déploiement. Dans l’espace Codex déjà autorisé, Wrangler
+réutilise sa session OAuth via `XDG_CONFIG_HOME=/workspace/.quizy-cache/wrangler-config`. Si elle a expiré ou si l’espace a été remplacé,
 `wrangler login --device --scopes account:read user:read workers_scripts:write` permet au propriétaire du compte de valider
 l’accès dans son navigateur. Le dossier de configuration reste en dehors du dépôt.
 
-## 8. Commandes (vérifiées le 21/11/2026 sauf mention)
+## 8. Commandes
 ```bash
 cd cloudflare && npm ci                 # dépendances (wrangler 4, mermaid pour la suite 34)
 node build.cjs                          # construction seule → public/ + src/*.gen.js
-cd .. && node tests/run-all.cjs         # toutes les suites (cible cloudflare) — 35 suites, 1010 contrôles, 0 échec (21/11, `75de053`)
+cd .. && node tests/run-all.cjs         # toutes les suites (cible cloudflare) — 43 suites, 1 163 contrôles, 0 échec sur 00e051e
 QUIZY_TARGET=cloudflare node tests/36-installation.js   # une suite
 cd cloudflare && npx wrangler dev       # site local (base locale vide → /installer ; mettre INSTALL_CODE dans .dev.vars)
 npx wrangler deploy                     # ⚠️ MISE EN LIGNE immédiate, données réelles (construit avant d'envoyer)
@@ -156,6 +155,7 @@ npx wrangler deployments list           # versions en ligne (lecture)
 ```
 - Tests : Playwright + Chromium (préinstallés dans les sessions cloud ; sinon `npx playwright install chromium`).
   `tests/harness.js` : `makeWorldCf()`, `install(ctx, world, {profils, installation, auto})`, `page()`, `login()`.
+  Dans Codex, le script de l’environnement définit les chemins du cache de Playwright et de la configuration Wrangler sous /workspace/.quizy-cache/. Les suites de séance utilisent une horloge de journée dans le harnais.
   Les suites commençant par `// cible: cloudflare` ne tournent que pour Cloudflare.
 - Mise en ligne : **seulement** `wrangler deploy` (manuel). Ni un push ni une fusion sur `main` ne déploient QUIZy
   (une fusion relance seulement GitHub Pages, sans effet sur QUIZy).
@@ -182,3 +182,5 @@ npx wrangler deployments list           # versions en ligne (lecture)
 - Mettre à jour **ce fichier** (et `docs/LOGIQUE-APP.md` si règle métier) quand une modification change une règle métier,
   le back-end, les données ou le déploiement. Pas de copie de ces informations dans `AGENTS.md`.
 - Commits et PR en français ; pas de secret ni de donnée personnelle dans les commits, la doc ou les journaux.
+
+À chaque passation, consigner le dernier commit, la PR, les tests, la publication et la prochaine action dans [docs/REPRISE.md](docs/REPRISE.md) ou dans la PR en cours.

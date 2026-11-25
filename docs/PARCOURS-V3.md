@@ -22,17 +22,19 @@ Seule la première réponse d'une question dans une séance compte ; « je crois
 
 ## Date du contrôle et plan (`makePlan_`)
 Fixée par l'enfant à la première ouverture (Demain, Après-demain, Dans une semaine, Pas de contrôle, ou une date) ou par le parent dans le suivi. Avec une date, les questions reviennent aux séances du plan ; les ancrées sautent à la dernière séance.
-- Demain (express) : maintenant, 1 h plus tard, le matin du contrôle (si commencé tard le soir : maintenant et le matin).
+- Demain (express) : premier créneau dans les horaires de révision, rappel à +1 h seulement avant 22 h, puis rappel facultatif dès 7 h le matin du contrôle.
 - 2 jours : aujourd'hui, demain, le matin du contrôle. 3 jours : aujourd'hui, demain, la veille.
 - Plus : aujourd'hui, demain, J+3, J+7, J+15… et toujours la veille.
 Avec une date, toutes les nouvelles questions sont découvertes dès la première séance ; sans date, par blocs de 5 (environ 15 questions par séance).
+Les échéances régulières deviennent disponibles à 7 h, heure de Paris. L’élève peut démarrer une séance à toute heure.
+
 Après la date : l'enfant choisit de garder la leçon en mémoire (entretien) ou de l'archiver (hors révision du jour, réactivable).
 
 ## Séance
-Découvrir (cartes question + réponse) → Tester (QCM) → Corriger (la question ratée revient 4 écrans plus loin) → bilan (réussies du premier coup, questions qui ont progressé, prochaine séance). « Déjà travaillée en classe » : on commence directement par tester. Les questions à revoir sont posées sans choix.
+Découvrir (cartes question + réponse) → Tester (QCM) → Corriger (la question ratée revient 4 écrans plus loin) → bilan (réussies du premier coup, questions qui ont progressé, prochaine séance). « Déjà travaillée en classe » : on commence directement par tester. Les questions à revoir sont posées sans choix. L’immersion commence à l’ouverture de la leçon. Le bouton audio lit les questions, les choix, les cartes et les corrections. Après deux erreurs sur une question, l’enfant décrit une scène familière, puis peut rouvrir « Mon indice » à la demande.
 
 ## Suivi parent
-Par élève : séances et minutes de la semaine, questions à réviser, dernière activité. Par leçon : barre des niveaux, « Prête pour le contrôle ? » (part des questions au moins rappelées : ≥ 90 % prête, ≥ 60 % presque), questions difficiles (erreurs, dont « sûr·e »), historique des séances, date du contrôle et plan, archiver / réactiver, remise à zéro.
+L’administrateur voit la séance Quizy visible et l’heure de la dernière réponse dans Enfants. Par élève : séances et minutes de la semaine, questions à réviser, dernière activité. Par leçon : barre des niveaux, « Prête pour le contrôle ? » (part des questions au moins rappelées : ≥ 90 % prête, ≥ 60 % presque), questions difficiles (erreurs, dont « sûr·e »), historique des séances, date du contrôle et plan, archiver / réactiver, remise à zéro.
 
 ## Passage au v3
 Effacement unique (clé `schema_version`) des anciennes clés `prog_`, `done_`, `parcours_` ; comptes, quiz, paquets et attributions conservés. Sauvegarde possible avant : `backupData(motDePasse)`.
