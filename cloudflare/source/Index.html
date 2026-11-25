@@ -496,6 +496,16 @@
         .guest-focus .bar span { background: var(--blue); }
         .guest-welcome .linkish, .guest-focus .session-head .back { min-height: 44px; }
         .guest-focus .session-count { white-space: nowrap; }
+        /* images ajoutées par les parents (énoncé, correction) : touchées, elles s'affichent en grand */
+        .img-zoom { display: block; width: 100%; padding: 0; margin: 10px 0 0; border: 0; background: none; cursor: zoom-in; border-radius: 12px; }
+        .img-zoom:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+        .img-zoom .question-image { margin-top: 0; }
+        .q-media { background: #fff; object-fit: contain; max-height: 55vh; }
+        .explication .img-zoom, .face-expl .img-zoom, .face-expl .q-media { margin-top: 8px; }
+        .zoom-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(16, 43, 82, .92); display: flex; flex-direction: column;
+                        align-items: center; justify-content: center; padding: 16px; gap: 12px; cursor: zoom-out; }
+        .zoom-overlay img { max-width: 100%; max-height: calc(100% - 70px); background: #fff; border-radius: 10px; object-fit: contain; }
+        .zoom-overlay button { min-height: 48px; padding: 0 22px; border: 0; border-radius: 12px; background: #fff; color: var(--navy); font: inherit; font-weight: 800; }
         .question-image {
             display: block;
             width: 100%;
@@ -708,11 +718,31 @@
             children.flat().forEach(c => { if (c != null) el.append(c); });
             return el;
         }
-        function questionContent(quizId, q) {
+        // Image d'une question (énoncé ou correction), envoyée par un parent : /media/<identifiant>, description en texte alternatif.
+        // zoom : touchée, elle s'affiche en grand (pas sur une carte à retourner, qui est déjà un bouton).
+        function questionImage(img, zoom = true) {
+            if (!img || !/^\/media\/[0-9a-f]{32}$/.test(img.src || "")) return null;
+            const alt = img.alt || "Illustration de la question";
+            const pic = h("img", { class: "question-image q-media", src: img.src, alt, loading: "lazy", decoding: "async" });
+            if (!zoom) return pic;
+            return h("button", { class: "img-zoom", type: "button", "aria-label": "Agrandir l'image : " + alt, onclick: e => { e.stopPropagation(); openZoom(img.src, alt, e.currentTarget); } }, pic);
+        }
+        function openZoom(src, alt, from) {
+            const close = () => { overlay.remove(); document.removeEventListener("keydown", onKey); if (from && from.isConnected) from.focus({ preventScroll: true }); };
+            const onKey = e => { if (e.key === "Escape") close(); };
+            const btn = h("button", { type: "button", onclick: e => { e.stopPropagation(); close(); } }, "✕ Fermer");
+            const overlay = h("div", { class: "zoom-overlay", role: "dialog", "aria-modal": "true", "aria-label": alt, onclick: close },
+                h("img", { src, alt }), btn);
+            document.addEventListener("keydown", onKey);
+            document.body.append(overlay);
+            btn.focus();
+        }
+        function questionContent(quizId, q, zoom = true) {
             // Les illustrations du quiz intégré suivent ses identifiants de question stables.
             const allIn = quizId === "poker-all-in" && /^a11000(?:0[1-9]|1[0-9]|20)$/.test(q.id);
             const outs = quizId === "poker-outs" && /^a12000(?:0[1-9]|1[0-5])$/.test(q.id);
-            if (!allIn && !outs) return q.question;
+            const pic = questionImage(q.image, zoom);
+            if (!allIn && !outs) return pic ? [q.question, pic] : q.question;
             const [prompt, ...lines] = q.question.split("\n");
             const cards = lines.join(" ");
             if (!cards) return q.question;
@@ -1272,7 +1302,7 @@
                         h("div", { class: "face-label" }, "À retenir"),
                         h("div", { class: "face-text" }, questionContent(t.quiz.id, t.q)),
                         h("div", { class: "face-answer" }, answerOf(t.q)),
-                        t.q.explication ? h("div", { class: "face-expl" }, t.q.explication) : null),
+                        t.q.explication || t.q.imageReponse ? h("div", { class: "face-expl" }, t.q.explication || null, questionImage(t.q.imageReponse)) : null),
                     h("div", { class: "actions" }, nextBtn)));
                 nextBtn.focus({ preventScroll: !!guestSession });
                 return;
@@ -1406,7 +1436,8 @@
 
         function renderQuestion(panel, t, done) {
             const q = t.q;
-            const explication = q.explication ? h("div", { class: "explication", style: "display:none" }, q.explication) : null;
+            const corrPic = questionImage(q.imageReponse);
+            const explication = q.explication || corrPic ? h("div", { class: "explication", style: "display:none" }, q.explication || null, corrPic) : null;
             const lvlBefore = levelOf(t.quiz, q);
             const progressLine = h("div", { class: "mastery-line", style: "display:none" });
             const next = h("button", { class: "btn next-btn", style: "display:none", onclick: () => go() }, "Continuer ➔");
@@ -1780,7 +1811,7 @@
                 const c = cards.get(cur);
                 if (!flipped) {
                     const flip = () => { flipped = true; draw(); };
-                    const front = c.question ? questionContent(c.quizId, c.question) : c.recto;
+                    const front = c.question ? questionContent(c.quizId, c.question, false) : c.recto;
                     stage.replaceChildren(
                         ...[readingControl("Écouter la carte", () => [c.recto])].filter(Boolean),
                         h("button", { class: "flashcard", "aria-label": Array.isArray(front) ? c.recto + " Voir la réponse" : "Voir la réponse", onclick: flip },
@@ -1803,7 +1834,7 @@
                     h("div", { class: "flashcard flipped", role: "group", "aria-label": "Réponse" },
                         h("div", { class: "face-label" }, "Réponse"),
                         h("div", { class: "face-text" }, c.verso),
-                        c.explication ? h("div", { class: "face-expl" }, c.explication) : null),
+                        c.explication || (c.question && c.question.imageReponse) ? h("div", { class: "face-expl" }, c.explication || null, c.question ? questionImage(c.question.imageReponse) : null) : null),
                     evalBar);
                 evalBar.querySelector("button").focus();
                 evalBar.scrollIntoView({ block: "nearest" });   // jamais masqué par la barre du bas (scroll-padding)

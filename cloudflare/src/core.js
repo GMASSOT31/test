@@ -40,6 +40,8 @@ const isChunk = k => /~\d+$/.test(k);
 export function createCore({ sql, env = {}, DateImpl = RealDate, testTimeZone = null }) {
   sql.exec('CREATE TABLE IF NOT EXISTS props (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
   sql.exec('CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, exp INTEGER NOT NULL)');
+  // Images des questions (photos, figures) : hors des propriétés (limitées à ~500 Ko), contenu en base64, servies par /media/<id>
+  sql.exec('CREATE TABLE IF NOT EXISTS media (id TEXT PRIMARY KEY, type TEXT NOT NULL, data TEXT NOT NULL, size INTEGER NOT NULL, created INTEGER NOT NULL)');
   const mem = new Map();
   for (const r of sql.exec('SELECT key, value FROM props').toArray()) mem.set(r.key, r.value);
 
@@ -91,10 +93,85 @@ export function createCore({ sql, env = {}, DateImpl = RealDate, testTimeZone = 
     if (!Array.isArray(args)) return { error: 'Requête invalide.' };
     try {
       const v = app[fn](...args);
-      return { ok: true, value: v === undefined ? null : JSON.parse(JSON.stringify(v)) };
+      const value = v === undefined ? null : JSON.parse(JSON.stringify(v));
+      // l'export complet emporte aussi les images (stockées hors des propriétés)
+      if (fn === 'backupData' && value && typeof value === 'object') value.medias = allMedia();
+      return { ok: true, value };
     } catch (e) {
       return { error: String(e && e.message ? e.message : e) };
     }
+  }
+
+  // ---- images des questions ----
+  // Envoi : POST /media/upload { cred, type, data } (parents et administrateur). data = base64 (photo) ou texte (figure SVG).
+  // Lecture : GET /media/<id> (identifiant aléatoire de 128 bits, comme un lien privé). La question ne garde que { src, alt }.
+  const MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+  const MEDIA_MAX = 1200000;           // octets par image (après réduction dans le navigateur, une photo fait ~200 à 500 Ko)
+  const MEDIA_TOTAL_MAX = 400000000;   // octets pour toutes les images
+  const SVG_MAX = 100000;
+  const b64 = { enc: bytes => Buffer.from(bytes).toString('base64'), dec: text => new Uint8Array(Buffer.from(String(text), 'base64')) };
+  function sniff(bytes) {
+    const at = (i, ...v) => v.every((x, j) => bytes[i + j] === x);
+    if (at(0, 0xFF, 0xD8, 0xFF)) return 'image/jpeg';
+    if (at(0, 0x89, 0x50, 0x4E, 0x47)) return 'image/png';
+    if (at(0, 0x47, 0x49, 0x46, 0x38)) return 'image/gif';
+    if (at(0, 0x52, 0x49, 0x46, 0x46) && at(8, 0x57, 0x45, 0x42, 0x50)) return 'image/webp';
+    return null;
+  }
+  // Figure SVG (souvent écrite par une IA) : dessin seul, sans script, sans lien ni ressource extérieure
+  function checkSvg(text) {
+    const t = String(text || '').replace(/^\uFEFF/, '').trim();
+    if (!t || t.length > SVG_MAX) throw new Error('Figure trop grande ou vide.');
+    if (!/^(<\?xml[^>]*>\s*)?(<!--[\s\S]*?-->\s*)*<svg[\s>]/i.test(t) || !/<\/svg>\s*$/i.test(t)) throw new Error("Ce n'est pas une figure SVG.");
+    if (/<!DOCTYPE|<!ENTITY|<script|<foreignObject|<iframe|<embed|<object|<image|<use|<a[\s>]|\son[a-z]+\s*=|javascript:|@import|url\(\s*['"]?\s*(?!#)/i.test(t))
+      throw new Error('Cette figure contient des éléments non autorisés (script, lien ou image extérieure).');
+    if (/\b(xlink:)?href\s*=\s*['"]\s*(?!#)/i.test(t)) throw new Error('Cette figure contient un lien non autorisé.');
+    return t;
+  }
+  const mediaTotal = () => Number((sql.exec('SELECT COALESCE(SUM(size), 0) AS n FROM media').toArray()[0] || {}).n || 0);
+  function cleanMedia(type, data) {
+    if (!MEDIA_TYPES.includes(type)) throw new Error("Format d'image non pris en charge (JPEG, PNG, WebP, GIF ou SVG).");
+    if (type === 'image/svg+xml') { const t = checkSvg(data); return { data: b64.enc(Buffer.from(t, 'utf8')), size: Buffer.byteLength(t, 'utf8') }; }
+    if (typeof data !== 'string' || !/^[A-Za-z0-9+/=\s]+$/.test(data)) throw new Error('Image illisible.');
+    const bytes = b64.dec(data);
+    if (!bytes.length) throw new Error('Image vide.');
+    if (bytes.length > MEDIA_MAX) throw new Error('Image trop lourde (1,2 Mo au plus).');
+    if (sniff(bytes) !== type) throw new Error("Ce fichier n'est pas une image valide.");
+    return { data: b64.enc(bytes), size: bytes.length };
+  }
+  function uploadMedia({ cred, type, data } = {}) {
+    app.checkAdmin_(cred);
+    const m = cleanMedia(String(type || ''), data);
+    if (mediaTotal() + m.size > MEDIA_TOTAL_MAX) throw new Error("L'espace réservé aux images est plein.");
+    const id = crypto.randomUUID().replace(/-/g, '');
+    sql.exec('INSERT INTO media (id, type, data, size, created) VALUES (?, ?, ?, ?, ?)', id, type, m.data, m.size, DateImpl.now());
+    return { src: '/media/' + id, type, size: m.size };
+  }
+  function serveMedia(id) {
+    const r = /^[0-9a-f]{32}$/.test(id) ? sql.exec('SELECT type, data FROM media WHERE id = ?', id).toArray()[0] : null;
+    if (!r) return new Response('Image introuvable', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+    return new Response(b64.dec(r.data), { headers: {
+      'content-type': r.type, 'cache-control': 'public, max-age=31536000, immutable', 'x-content-type-options': 'nosniff',
+      // une figure ouverte seule dans le navigateur ne peut rien exécuter ni charger
+      'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox" } });
+  }
+  const allMedia = () => Object.fromEntries(sql.exec('SELECT id, type, data FROM media').toArray().map(r => [r.id, { type: r.type, data: r.data }]));
+  // Fichier d'export : « medias » { id: { type, data base64 } } (absent des exports plus anciens)
+  function readMedias(medias) {
+    if (medias == null) return null;
+    if (typeof medias !== 'object' || Array.isArray(medias)) throw new Error('Fichier abîmé : images invalides.');
+    const out = [];
+    for (const [id, m] of Object.entries(medias)) {
+      if (!/^[0-9a-f]{32}$/.test(id) || !m || typeof m !== 'object') throw new Error('Fichier abîmé : image « ' + id + ' » invalide.');
+      const data = m.type === 'image/svg+xml' ? Buffer.from(String(m.data || ''), 'base64').toString('utf8') : m.data;
+      out.push({ id, type: m.type, ...cleanMedia(String(m.type || ''), data) });
+    }
+    return out;
+  }
+  function replaceMedias(list) {
+    if (!list) return;   // ancien export sans images : celles déjà présentes restent
+    sql.exec('DELETE FROM media');
+    for (const m of list) sql.exec('INSERT INTO media (id, type, data, size, created) VALUES (?, ?, ?, ?, ?)', m.id, m.type, m.data, m.size, DateImpl.now());
   }
 
   // ---- installation et import (transfert depuis l'appli Apps Script) ----
@@ -117,7 +194,7 @@ export function createCore({ sql, env = {}, DateImpl = RealDate, testTimeZone = 
   function counts() {
     const keys = [...mem.keys()].filter(k => !isChunk(k)), n = p => keys.filter(k => k.startsWith(p)).length;
     return { enfants: n('student_'), familles: n('parent_'), lecons: n('quiz_'), paquets: n('deck_'), leconsFourniesModifiees: n('override_'),
-      progressions: n('srs_'), cles: mem.size, octets: app.storageBytes_(Object.fromEntries(mem)), adminPseudo: mem.get('ADMIN_PSEUDO') || '' };
+      progressions: n('srs_'), images: Number((sql.exec('SELECT COUNT(*) AS n FROM media').toArray()[0] || {}).n || 0), cles: mem.size, octets: app.storageBytes_(Object.fromEntries(mem)), adminPseudo: mem.get('ADMIN_PSEUDO') || '' };
   }
   // Remplace toutes les données par celles du fichier (les morceaux ~0, ~1… sont gardés tels quels : Code.gs les recolle à la lecture)
   function replaceAll(props, keep) {
@@ -140,12 +217,14 @@ export function createCore({ sql, env = {}, DateImpl = RealDate, testTimeZone = 
       throw new Error("Code d'installation incorrect.");
     }
     const props = readExport(data);
+    const medias = data ? readMedias(data.medias) : null;
     const p = String(pseudo == null ? '' : pseudo).trim().slice(0, 30) || props.ADMIN_PSEUDO || '';
     if (!p) throw new Error('Choisis ton pseudo.');
     if (parentPseudos(props).includes(app.norm_(p))) throw new Error('Ce pseudo est déjà celui d\'une famille invitée.');
     app.checkNewPassword_(password);
     const salt = Utilities.getUuid();
     replaceAll(props, { ADMIN_PSEUDO: p, ADMIN_PASS_HASH: salt + ':' + app.hashPin_(salt, password) });
+    replaceMedias(medias);
     if (!mem.has('schema_version')) store.setProperty('schema_version', '3');
     return counts();
   }
@@ -154,9 +233,11 @@ export function createCore({ sql, env = {}, DateImpl = RealDate, testTimeZone = 
     app.ownerOnly_(cred);
     if (data == null) throw new Error('Choisis le fichier exporté.');
     const props = readExport(data);
+    const medias = readMedias(data.medias);
     const keep = { ADMIN_PSEUDO: store.getProperty('ADMIN_PSEUDO'), ADMIN_PASS_HASH: mem.get('ADMIN_PASS_HASH') || null, ADMIN_PASSWORD: mem.get('ADMIN_PASSWORD') || null };
     if (keep.ADMIN_PSEUDO && parentPseudos(props).includes(app.norm_(keep.ADMIN_PSEUDO))) throw new Error('Ton pseudo est celui d\'une famille invitée du fichier.');
     replaceAll(props, keep);
+    replaceMedias(medias);
     return counts();
   }
   const guard = fn => { try { return { ok: true, value: fn() }; } catch (e) { return { error: String(e && e.message ? e.message : e) }; } };
@@ -167,6 +248,7 @@ export function createCore({ sql, env = {}, DateImpl = RealDate, testTimeZone = 
   async function handle(request) {
     const path = new URL(request.url).pathname;
     if (path === '/setup/status') return json(status());
+    if (request.method === 'GET' && path.startsWith('/media/')) return serveMedia(path.slice(7));
     if (request.method !== 'POST') return json({ error: 'Méthode non autorisée.' }, 405);
     if (path.startsWith('/api/')) {
       const args = await body(request);
@@ -178,7 +260,12 @@ export function createCore({ sql, env = {}, DateImpl = RealDate, testTimeZone = 
       if (!b || typeof b !== 'object') return json({ error: 'Requête invalide.' }, 400);
       return json(guard(() => (path === '/setup/install' ? install(b) : importData(b))));
     }
+    if (path === '/media/upload') {
+      const b = await body(request);
+      if (!b || typeof b !== 'object') return json({ error: 'Requête invalide.' }, 400);
+      return json(guard(() => uploadMedia(b)));
+    }
     return json({ error: 'Introuvable.' }, 404);
   }
-  return { app, store, cache, call, status, install, importData, counts, handle, guard, json, body, PUBLIC };
+  return { app, store, cache, call, status, install, importData, counts, handle, guard, json, body, PUBLIC, uploadMedia, serveMedia };
 }
