@@ -1306,6 +1306,17 @@
             const removeBtn = h("button", { class: "btn danger small", type: "button" }, "Retirer");
             const status = h("span", { class: "status inline", role: "status" });
             const suggBox = h("p", { class: "q-img-sugg" });
+            // image effacée par le nettoyage automatique (espace des images plein) : le parent est prévenu
+            preview.addEventListener("error", async () => {
+                const src = slot.dataset.src;
+                if (!src) return;
+                let gone = false;
+                try { gone = (await fetch(src, { cache: "no-store" })).status === 404; } catch (e) { return; }   // hors ligne : on ne dit rien
+                if (slot.dataset.src !== src) return;
+                showStatus(status, "err", gone
+                    ? "⚠️ Cette image a été effacée automatiquement (espace des images plein). Ajoute-la de nouveau ou retire-la."
+                    : "⚠️ Cette image ne s'affiche pas. Remplace-la ou retire-la.");
+            });
             const show = () => {
                 const has = !!slot.dataset.src;
                 preview.hidden = !has; if (has) { preview.src = slot.dataset.src; preview.alt = alt.value || "Aperçu"; }
@@ -1328,7 +1339,10 @@
                     const res = await uploadImage(await prepareImage(f));
                     slot.dataset.src = res.src;
                     if (!alt.value && slot.dataset.sugg) alt.value = slot.dataset.sugg;
-                    showStatus(status, "ok", "✅ Image ajoutée. N'oublie pas d'enregistrer la leçon.");
+                    const eff = res.effacees ? (res.effacees.unused || 0) + (res.effacees.used || 0) : 0;
+                    showStatus(status, "ok", "✅ Image ajoutée. N'oublie pas d'enregistrer la leçon." + (eff
+                        ? " (Espace presque plein : " + eff + " ancienne" + (eff > 1 ? "s images ont été effacées" : " image a été effacée") + " automatiquement" + (res.effacees.used ? ", dont " + res.effacees.used + " encore utilisée" + (res.effacees.used > 1 ? "s" : "") + " dans une leçon" : "") + ".)"
+                        : ""));
                     show();
                     if (!alt.value) alt.focus();
                 } catch (e) {

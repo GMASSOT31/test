@@ -107,7 +107,9 @@ export function createCore({ sql, env = {}, DateImpl = RealDate, testTimeZone = 
   // Lecture : GET /media/<id> (identifiant aléatoire de 128 bits, comme un lien privé). La question ne garde que { src, alt }.
   const MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
   const MEDIA_MAX = 1200000;           // octets par image (après réduction dans le navigateur, une photo fait ~200 à 500 Ko)
-  const MEDIA_TOTAL_MAX = 400000000;   // octets pour toutes les images
+  // octets pour toutes les images (MEDIA_QUOTA_BYTES : réglage facultatif du Worker, utilisé par les tests avec un petit quota)
+  const MEDIA_TOTAL_MAX = Number(env.MEDIA_QUOTA_BYTES) > 0 ? Number(env.MEDIA_QUOTA_BYTES) : 400000000;
+  const MEDIA_CLEAN_AT = 0.9, MEDIA_CLEAN_TO = 0.8;   // nettoyage automatique : dès 90 % de l'espace, on redescend à 80 %
   const SVG_MAX = 100000;
   const b64 = { enc: bytes => Buffer.from(bytes).toString('base64'), dec: text => new Uint8Array(Buffer.from(String(text), 'base64')) };
   function sniff(bytes) {
@@ -139,13 +141,53 @@ export function createCore({ sql, env = {}, DateImpl = RealDate, testTimeZone = 
     if (sniff(bytes) !== type) throw new Error("Ce fichier n'est pas une image valide.");
     return { data: b64.enc(bytes), size: bytes.length };
   }
+  // Images citées par les données (leçons, leçons fournies modifiées, copies des invitations…). Une valeur trop longue est
+  // découpée en morceaux clé~0, clé~1… : on les recolle dans l'ordre avant de chercher, pour ne pas couper une adresse en deux.
+  function usedMediaIds() {
+    const groups = new Map();
+    for (const [k, v] of mem) {
+      const m = /^(.*)~(\d+)$/.exec(k), base = m ? m[1] : k, i = m ? Number(m[2]) : -1;
+      if (!groups.has(base)) groups.set(base, []);
+      groups.get(base).push([i, v]);
+    }
+    const used = new Set();
+    for (const parts of groups.values()) {
+      const text = parts.sort((a, b) => a[0] - b[0]).map(p => p[1]).join('');
+      for (const x of text.matchAll(/\/media\/([0-9a-f]{32})/g)) used.add(x[1]);
+    }
+    return used;
+  }
+  // Nettoyage automatique (choix de l'utilisateur, 25/11/2026) : quand un envoi ferait atteindre 90 % de l'espace, on efface
+  // d'abord les images qui ne servent plus dans aucune leçon, des plus anciennes aux plus récentes, puis, si ça ne suffit pas,
+  // les plus anciennes encore utilisées (la question garde son texte, l'image disparaît), jusqu'à redescendre à 80 % en
+  // comptant la nouvelle image. Rien n'est effacé tant qu'on reste sous 90 %. Les images envoyées depuis moins de 24 h et pas
+  // encore enregistrées dans une leçon passent en tout dernier.
+  function makeRoom(incoming) {
+    let total = mediaTotal();
+    if (total + incoming < MEDIA_TOTAL_MAX * MEDIA_CLEAN_AT) return { unused: 0, used: 0 };
+    const target = MEDIA_TOTAL_MAX * MEDIA_CLEAN_TO - incoming;
+    const used = usedMediaIds();
+    const rows = sql.exec('SELECT id, size, created FROM media ORDER BY created, id').toArray();
+    // une image envoyée il y a moins de 24 h et pas encore dans une leçon est sans doute en cours d'utilisation (éditeur ouvert) : en dernier
+    const recent = r => Number(r.created) > DateImpl.now() - 86400000;
+    const order = rows.filter(r => !used.has(r.id) && !recent(r)).concat(rows.filter(r => used.has(r.id)), rows.filter(r => !used.has(r.id) && recent(r)));
+    const out = { unused: 0, used: 0 };
+    for (const r of order) {
+      if (total <= target) break;
+      sql.exec('DELETE FROM media WHERE id = ?', r.id);
+      total -= Number(r.size);
+      if (used.has(r.id)) out.used++; else out.unused++;
+    }
+    return out;
+  }
   function uploadMedia({ cred, type, data } = {}) {
     app.checkAdmin_(cred);
     const m = cleanMedia(String(type || ''), data);
+    const effacees = makeRoom(m.size);
     if (mediaTotal() + m.size > MEDIA_TOTAL_MAX) throw new Error("L'espace réservé aux images est plein.");
     const id = crypto.randomUUID().replace(/-/g, '');
     sql.exec('INSERT INTO media (id, type, data, size, created) VALUES (?, ?, ?, ?, ?)', id, type, m.data, m.size, DateImpl.now());
-    return { src: '/media/' + id, type, size: m.size };
+    return { src: '/media/' + id, type, size: m.size, effacees };
   }
   function serveMedia(id) {
     const r = /^[0-9a-f]{32}$/.test(id) ? sql.exec('SELECT type, data FROM media WHERE id = ?', id).toArray()[0] : null;

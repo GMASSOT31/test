@@ -64,6 +64,12 @@ Les identifiants (`id`) sont des « slugs » du pseudo / titre, rendus uniques (
   l'IA mais pas encore ajoutée : visible seulement dans l'éditeur des parents. L'IA peut dessiner une figure en SVG
   (géométrie, graphique, schéma, frise) ou décrire l'image à ajouter (carte, photo, document) ; une figure refusée par le
   serveur devient une suggestion, la leçon est créée quand même. Les images sont dans l'export complet et reprises à l'import.
+- **Espace des images** : 400 Mo. Nettoyage automatique (décision de l'utilisateur, 25/11/2026) : quand un envoi ferait
+  atteindre 90 %, QUIZy efface d'abord les images qui ne servent plus dans aucune leçon (les plus anciennes d'abord), puis,
+  si ça ne suffit pas, les plus anciennes encore utilisées, jusqu'à redescendre à 80 % (nouvelle image comprise). Une image
+  envoyée depuis moins de 24 h et pas encore enregistrée passe en dernier. Une question dont l'image a été effacée garde son
+  texte : l'image disparaît chez l'enfant (pas de cadre vide) et l'éditeur prévient le parent. Le parent qui envoie une image
+  est informé du nombre d'images effacées.
 
 ---
 
