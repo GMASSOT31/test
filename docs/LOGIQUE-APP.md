@@ -74,9 +74,7 @@ Les identifiants (`id`) sont des « slugs » du pseudo / titre, rendus uniques (
 ---
 
 ## 3. Les leçons
-- **Leçons fournies** (`Contenu.gs`, 11 aujourd'hui : Byzance, Grand quiz Byzance, Zootopia, Musique, Anglais animaux, Révolution,
-  Technologie 5ᵉ, Physique-chimie 5ᵉ ×4). Chaque parent les donne à ses enfants ; seul l'administrateur principal les modifie
-  (pour tous) ou les rétablit.
+- **Leçons fournies** (Contenu.gs, 13 leçons au 23 novembre 2026, dont les deux quiz de poker illustrés). Chaque parent les attribue aux enfants autorisés. L’administrateur principal peut les modifier, les rétablir et les ranger dans des disciplines.
 - **Leçons créées** par un parent : à la main (formulaire) ou **avec une IA** (assistant en 3 étapes, §8). Rangées dans sa famille.
 - **Flashcards** : chaque leçon donne automatiquement un paquet (recto = question, verso = bonne réponse) ; des paquets « en plus » peuvent être créés.
 
@@ -185,11 +183,13 @@ définitives : PIN incorrect, leçon inaccessible…). Indicateur « ⏳ Sauvega
 
 ## 5. La page élève
 - Connexion **Classe / Pseudo / PIN** (insensible à la casse et aux accents). 5 erreurs sur un couple classe/pseudo → blocage 5 min.
-  Classe et pseudo préremplis (jamais le PIN) ; connecté le temps de l'onglet. Lien discret « 👨‍👩‍👧 Espace parents ».
+  Classe et pseudo préremplis. Le PIN n’est jamais mémorisé dans le profil. La connexion dure le temps de l’onglet. Une panne transitoire déclenche jusqu’à deux relances automatiques. Un refus du serveur arrête les relances et efface la saisie. Lien discret « 👨‍👩‍👧 Espace parents ».
 - **Mes leçons** (accueil) : carte « 🎯 Ta révision du jour » (nb de questions, minutes estimées) ; leçons triées : contrôle le plus
   proche, puis « contrôle passé », à réviser, nouvelle, à découvrir, en attente, ancrée ; archivées repliées.
   Chaque carte : badge du contrôle (🔥 aujourd'hui / demain, 📅 date), barre des 5 niveaux, statut et **une seule action**
   (Commencer, Réviser maintenant, Continuer, Séance bonus, Choisir, Réactiver).
+- **Mode immersif** dès l’ouverture d’une leçon, y compris pendant sa configuration. La navigation revient en quittant la leçon ou au bilan.
+- **Lecture audio** à la demande des questions, des choix visibles, des cartes, des corrections et des indices. La voix vient de l’appareil.
 - **Écran d'une leçon** : contrôle (modifiable), plan en pastilles (✓ séances faites), niveaux, bouton principal, « 🃏 Voir les cartes ».
 - **1re ouverture** : « Quand est ton contrôle ? » + « As-tu déjà travaillé cette leçon en classe ? » (la date du parent est proposée).
 - **Mes progrès** : questions ancrées / total, niveaux, séances et minutes de la semaine, leçons.
@@ -292,11 +292,11 @@ définitives : PIN incorrect, leçon inaccessible…). Indicateur « ⏳ Sauvega
 ---
 
 ## 9. Fonctions serveur (contrat à garder)
-Élève (identifiants classe, pseudo, PIN) : `getStudentData`, `answer`, `endSession`, `setLessonPlan`, `setLessonMode`.
+Élève (classe, pseudo, PIN) : `getStudentData`, `answer`, `answerSynthese`, `endSession`, `setLessonPlan`, `setLessonMode`, `saveMemoryCue`, `reportQuizActivity`.
 Parent (`{pseudo, password}`) : `adminData`, `saveStudent`, `deleteStudent`, `saveQuiz`, `saveDeck`, `deleteQuiz`, `deleteDeck`,
 `setBuiltinAssign`, `setAccess`, `setLessonPlanAdmin`, `setLessonModeAdmin`, `resetProgress`, `changePassword`.
 Administrateur principal : `getBuiltinForEdit`, `saveBuiltin`, `restoreBuiltin`, `setInviteCode`, `resetParentPassword`,
-`deleteFamily`, `backupData`. Public (avec code) : `createFamily`.
+`deleteFamily`, `backupData`, `getQuizActivity`, `createLessonDiscipline`, `renameLessonDiscipline`, `classifyLesson`. Public (avec code) : `createFamily`.
 Les fonctions finissant par `_` sont internes. Écritures sous **verrou** (une à la fois).
 
 ---
@@ -308,4 +308,4 @@ Les fonctions finissant par `_` sont internes. Écritures sous **verrou** (une �
 4. Idempotence par `opId`, première réponse de la séance seule comptée, révision en avance sans effet sur le plan.
 5. Jours calés sur Europe/Paris.
 6. Séparation stricte élèves / familles.
-7. 668 contrôles automatiques dans `tests/` (24 suites) : tous verts avant toute mise en ligne.
+7. Compiler et lancer les suites Cloudflare avant toute mise en ligne. Le bilan vérifié figure dans [docs/REPRISE.md](REPRISE.md).

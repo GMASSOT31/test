@@ -10,3 +10,5 @@
 5. ⚠️ `npx wrangler deploy` met en ligne immédiatement, sur les données réelles : seulement depuis `main` à jour après fusion.
 6. Si une modification change une règle métier, le back-end, les données ou le déploiement, **mettre à jour `CLAUDE.md`**
    (et `docs/LOGIQUE-APP.md` pour les règles métier) dans la même PR.
+
+7. Pour reprendre un chantier ou passer le relais, consulter [docs/REPRISE.md](docs/REPRISE.md) et vérifier le statut de la branche et de la PR.
