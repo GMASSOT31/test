@@ -2,19 +2,20 @@
 
 Passation entre Claude Code et Codex. [CLAUDE.md](../CLAUDE.md) décrit le dépôt, les accès et les commandes. [LOGIQUE-APP.md](LOGIQUE-APP.md) décrit les règles métier. [PARCOURS-V3.md](PARCOURS-V3.md) résume la révision espacée. [MIGRATION-CLOUDFLARE.md](MIGRATION-CLOUDFLARE.md) conserve l’historique du transfert.
 
-## État vérifié le 25 novembre 2026
+## État vérifié le 26 novembre 2026
 
 | Élément | État |
 |---|---|
 | Dépôt et application | GMASSOT31/test, sources sous cloudflare/ |
-| Dernier main applicatif | 00e051e, fusion de la PR nº 70 |
+| Dernier main applicatif | 00e051e, fusion de la PR nº 70 (code identique à la production) |
+| Dernier main | d0cb05e, fusion de la PR nº 71 (documentation seulement) |
 | Production | Worker quizy, version 38a3b32f-2d90-4a67-9072-416a86d6d71b, publiée le 25 novembre depuis 00e051e |
-| Vérification | Les pages publiques élève et parents correspondent octet par octet à leur compilation depuis 00e051e. Aucun compte réel utilisé |
+| Vérification | Le 26 novembre : la version 38a3b32f est toujours la seule à 100 %. Les pages publiques élève et parents correspondent octet par octet à leur compilation depuis d0cb05e (même code que 00e051e). Aucun compte réel utilisé |
 | Dernière suite complète | 43 suites Cloudflare, 1 163 contrôles, 0 échec sur 00e051e |
 
 [Quizy](https://quizy.gabriel-massot31.workers.dev/) · [Espace parents](https://quizy.gabriel-massot31.workers.dev/parents)
 
-La dernière tâche applicative documentée est terminée et déployée. La documentation de passation est fusionnée dans `main` : partir de `origin/main` pour la prochaine demande. Aucune tâche ouverte, aucun test rouge connu.
+**Aucune tâche ouverte, aucune PR ouverte, aucun test rouge connu, aucun déploiement en attente.** Prochaine action : attendre la prochaine demande de l’utilisateur et partir de `origin/main` (`d0cb05e`). La branche `docs/passation-claude-code` est entièrement fusionnée (PR nº 71) et peut être ignorée.
 
 ## Changements récents
 
@@ -30,6 +31,11 @@ La dernière tâche applicative documentée est terminée et déployée. La docu
 | [68](https://github.com/GMASSOT31/test/pull/68) | Images dans les questions : avec l’énoncé et avec la correction, ajoutées dans l’éditeur ou dessinées par l’IA (figure SVG), sinon suggérées. Stockées dans la table `media`, incluses dans l’export |
 | [69](https://github.com/GMASSOT31/test/pull/69) | Nettoyage automatique des images dès 90 % des 400 Mo : inutilisées les plus anciennes, puis utilisées les plus anciennes, jusqu’à 80 % |
 | [70](https://github.com/GMASSOT31/test/pull/70) | Fiche enfant repliée compacte : la ligne de suivi n’apparaît que pendant un quiz ouvert (suite 21 de nouveau verte) |
+
+**Décisions de l’utilisateur du 25 novembre (à conserver).**
+- Images des questions (PR nº 68) : seules les images envoyées dans QUIZy sont acceptées (`/media/<id>`), jamais d’adresse extérieure. L’IA dessine une figure SVG ou décrit l’image à ajouter.
+- Nettoyage des images (PR nº 69) : déclenché seulement par un envoi qui atteindrait 90 % des 400 Mo. Il efface d’abord les images inutilisées, puis les plus anciennes encore utilisées, jusqu’à 80 %. Ne pas l’étendre à d’autres données.
+- Fiche enfant repliée (PR nº 70) : une seule ligne. La ligne de suivi n’apparaît que pendant un quiz ouvert. Ne pas réafficher « Aucun quiz détecté ».
 
 **Décision à conserver.** La branche fix/reponses-espagnol à 2e2992a contient une proposition rejetée par l’utilisateur. Elle acceptait automatiquement la réponse complète du QCM en rappel écrit, ce qui facilitait le copier-coller. Elle reste hors de main. Ne pas la fusionner ni réintroduire ce comportement.
 

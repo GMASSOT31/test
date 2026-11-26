@@ -4,7 +4,7 @@ Application de révision scolaire (élèves + espace parents). Ce fichier est **
 données, parcours, commandes, déploiement. `AGENTS.md` y renvoie. Détails métier : `docs/LOGIQUE-APP.md` (invariants §10).
 Historique et procédures : `docs/REPRISE.md`, `docs/MIGRATION-CLOUDFLARE.md`, `docs/PARCOURS-V3.md`.
 
-Passation vérifiée le 25 novembre 2026. Voir [docs/REPRISE.md](docs/REPRISE.md) pour les dernières PR, les décisions à conserver et le prompt de reprise.
+Passation vérifiée le 26 novembre 2026 (main `d0cb05e`, production `38a3b32f`). Voir [docs/REPRISE.md](docs/REPRISE.md) pour les dernières PR, les décisions à conserver et le prompt de reprise.
 
 ## 1. Consignes de l'utilisateur (toujours valables)
 - Répondre en **français**. Être autonome : branche, code, tests, commit, push, déploiement, vérification en ligne, PR, fusion.
